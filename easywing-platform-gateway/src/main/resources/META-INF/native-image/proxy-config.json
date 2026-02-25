@@ -1,0 +1,9 @@
+[
+  ["org.springframework.cloud.gateway.filter.ratelimit.KeyResolver"],
+  ["org.springframework.cloud.gateway.filter.factory.GatewayFilterFactory"],
+  ["org.springframework.cloud.gateway.handler.predicate.RoutePredicateFactory"],
+  ["org.springframework.cloud.gateway.route.RouteLocator"],
+  ["org.springframework.cloud.client.loadbalancer.ReactorLoadBalancer"],
+  ["org.springframework.cloud.client.ServiceInstance"],
+  ["reactor.core.publisher.FluxOnAssembly$AssemblySnapshot"]
+]
