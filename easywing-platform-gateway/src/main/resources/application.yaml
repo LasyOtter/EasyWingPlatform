@@ -1,20 +1,25 @@
 server:
   port: 8080
   shutdown: graceful
-  tomcat:
-    threads:
-      virtual: true
+  netty:
+    connection-timeout: 10s
+    idle-timeout: 60s
 
 spring:
   application:
     name: easywing-gateway
+  main:
+    lazy-initialization: true
+    web-application-type: reactive
   cloud:
     nacos:
       discovery:
+        enabled: false
         server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
         namespace: ${NACOS_NAMESPACE:}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
       config:
+        enabled: false
         server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
         namespace: ${NACOS_NAMESPACE:}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
@@ -22,8 +27,14 @@ spring:
     gateway:
       discovery:
         locator:
-          enabled: true
+          enabled: false
           lower-case-service-id: true
+      httpclient:
+        pool:
+          type: elastic
+          max-idle-time: 10s
+        connect-timeout: 5000
+        response-timeout: 30s
       routes:
         - id: user-service
           uri: lb://user-service
@@ -31,22 +42,12 @@ spring:
             - Path=/api/users/**
           filters:
             - StripPrefix=1
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 100
-                redis-rate-limiter.burstCapacity: 200
-                key-resolver: "#{@userKeyResolver}"
         - id: order-service
           uri: lb://order-service
           predicates:
             - Path=/api/orders/**
           filters:
             - StripPrefix=1
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 50
-                redis-rate-limiter.burstCapacity: 100
-                key-resolver: "#{@userKeyResolver}"
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
         - name: Retry
@@ -65,30 +66,160 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
       database: 0
+      lettuce:
+        pool:
+          max-active: 50
+          max-idle: 20
+          min-idle: 5
+        shutdown-timeout: 100ms
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus,metrics
+        include: health,info,prometheus,metrics,gateway
   endpoint:
     health:
       show-details: always
+    gateway:
+      enabled: true
   metrics:
     tags:
       application: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true
 
 logging:
   level:
     root: INFO
     com.easywing: DEBUG
-    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.gateway: INFO
+    io.netty: WARN
+    reactor.netty: WARN
+  config: classpath:log4j2-spring.xml
 
 easywing:
-  security:
-    public-paths:
-      - /actuator/**
-      - /swagger-ui/**
-      - /v3/api-docs/**
-      - /api/auth/login
-      - /api/auth/register
+  gateway:
+    jwt:
+      enabled: true
+      issuer: ${JWT_ISSUER:https://auth.easywing.com}
+      jwk-set-uri: ${JWT_JWK_SET_URI:https://auth.easywing.com/.well-known/jwks.json}
+      cache-ttl: 5m
+      cache-max-size: 10000
+      jwk-refresh-interval: 30m
+      ignore-paths:
+        - /actuator/**
+        - /swagger-ui/**
+        - /v3/api-docs/**
+        - /api/auth/login
+        - /api/auth/register
+        - /api/health
+        - /health
+      user-id-claim-name: sub
+      username-claim-name: preferred_username
+      roles-claim-name: roles
+      tenant-id-claim-name: tenant_id
+
+    rate-limit:
+      enabled: true
+      default-rate: 100
+      default-capacity: 200
+      local-cache-size: 1000
+      algorithm: TOKEN_BUCKET
+      enable-fallback: true
+      fallback-rate: 50
+      rules:
+        - id: global-api
+          key-type: ip
+          pattern: /api/**
+          rate: 1000
+          capacity: 2000
+        - id: auth-api
+          key-type: ip
+          pattern: /api/auth/**
+          rate: 10
+          capacity: 20
+
+    gray:
+      enabled: true
+      default-version: v1
+      header-name: X-Gray-Version
+      cookie-name: gray-version
+      parameter-name: grayVersion
+      strategy: WEIGHT
+      services:
+        - service-id: user-service
+          default-version: v1
+          versions:
+            - version: v1
+              weight: 90
+            - version: v2
+              weight: 10
+          rules:
+            - type: header
+              match-key: X-Beta-User
+              match-value: "true"
+              target-version: v2
+            - type: percentage
+              match-value: "10"
+              target-version: v2
+
+    logging:
+      enabled: true
+      desensitize: true
+      sample-rate: 1.0
+      log-request-body: false
+      log-response-body: false
+      max-body-length: 4096
+      sensitive-headers:
+        - Authorization
+        - Cookie
+        - Set-Cookie
+        - X-Auth-Token
+        - X-Api-Key
+      desensitize-patterns:
+        - field: password
+          type: FULL
+        - field: pwd
+          type: FULL
+        - field: mobile
+          type: MASK
+          pattern: "(\\d{3})\\d{4}(\\d{4})"
+          replacement: "$1****$2"
+        - field: phone
+          type: MASK
+          pattern: "(\\d{3})\\d{4}(\\d{4})"
+          replacement: "$1****$2"
+        - field: idCard
+          type: MASK
+          pattern: "(\\d{6})\\d{8}(\\d{4})"
+          replacement: "$1********$2"
+        - field: bankCard
+          type: MASK
+          pattern: "(\\d{4})\\d+(\\d{4})"
+          replacement: "$1****$2"
+        - field: email
+          type: MASK
+          pattern: "(\\w{2})\\w+(@\\w+\\.\\w+)"
+          replacement: "$1***$2"
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        slow-call-duration-threshold: 2s
+        slow-call-rate-threshold: 50
+    instances:
+      user-service:
+        base-config: default
+      order-service:
+        base-config: default
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 3s

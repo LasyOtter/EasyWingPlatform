@@ -15,6 +15,7 @@
  */
 package com.easywing.platform.gateway.config;
 
+import com.easywing.platform.core.constant.HttpHeaders;
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,7 +38,7 @@ public class GatewayConfig {
     @Bean
     public KeyResolver userKeyResolver() {
         return exchange -> {
-            String userId = exchange.getRequest().getHeaders().getFirst("X-User-Id");
+            String userId = exchange.getRequest().getHeaders().getFirst(HttpHeaders.X_USER_ID);
             if (userId != null && !userId.isEmpty()) {
                 return Mono.just(userId);
             }
@@ -54,5 +55,40 @@ public class GatewayConfig {
     @Bean
     public KeyResolver apiKeyResolver() {
         return exchange -> Mono.just(exchange.getRequest().getPath().value());
+    }
+
+    /**
+     * IP限流Key解析器
+     */
+    @Bean
+    public KeyResolver ipKeyResolver() {
+        return exchange -> {
+            String xForwardedFor = exchange.getRequest().getHeaders().getFirst(HttpHeaders.X_FORWARDED_FOR);
+            if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+                return Mono.just(xForwardedFor.split(",")[0].trim());
+            }
+            
+            String xRealIp = exchange.getRequest().getHeaders().getFirst(HttpHeaders.X_REAL_IP);
+            if (xRealIp != null && !xRealIp.isEmpty()) {
+                return Mono.just(xRealIp);
+            }
+            
+            if (exchange.getRequest().getRemoteAddress() != null) {
+                return Mono.just(exchange.getRequest().getRemoteAddress().getAddress().getHostAddress());
+            }
+            
+            return Mono.just("unknown");
+        };
+    }
+
+    /**
+     * 租户限流Key解析器
+     */
+    @Bean
+    public KeyResolver tenantKeyResolver() {
+        return exchange -> {
+            String tenantId = exchange.getRequest().getHeaders().getFirst(HttpHeaders.X_TENANT_ID);
+            return Mono.just(tenantId != null ? tenantId : "default");
+        };
     }
 }

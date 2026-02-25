@@ -1,0 +1,22 @@
+{
+  "resources": {
+    "includes": [
+      {"pattern": "application.yml"},
+      {"pattern": "application.yaml"},
+      {"pattern": "application-*.yml"},
+      {"pattern": "application-*.yaml"},
+      {"pattern": "log4j2-spring.xml"},
+      {"pattern": "log4j2.xml"},
+      {"pattern": "META-INF/spring.factories"},
+      {"pattern": "META-INF/spring/*.imports"},
+      {"pattern": "META-INF/native-image/.*"},
+      {"pattern": ".*\\.json"},
+      {"pattern": ".*\\.properties"},
+      {"pattern": ".*\\.xml"}
+    ]
+  },
+  "bundles": [
+    {"name": "ValidationMessages"},
+    {"name": "org.hibernate.validator.ValidationMessages"}
+  ]
+}

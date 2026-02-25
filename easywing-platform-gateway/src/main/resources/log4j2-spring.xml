@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+    <Properties>
+        <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{traceId}] %-5level %logger{36} - %msg%n</Property>
+        <Property name="LOG_DIR">logs</Property>
+    </Properties>
+
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+        </Console>
+
+        <RollingFile name="RollingFile" fileName="${LOG_DIR}/gateway.log"
+                     filePattern="${LOG_DIR}/gateway-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="100MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30">
+                <Delete basePath="${LOG_DIR}" maxDepth="1">
+                    <IfFileName glob="gateway-*.log.gz"/>
+                    <IfLastModified age="30d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+
+        <RollingFile name="AccessLog" fileName="${LOG_DIR}/access.log"
+                     filePattern="${LOG_DIR}/access-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="%msg%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="100MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30">
+                <Delete basePath="${LOG_DIR}" maxDepth="1">
+                    <IfFileName glob="access-*.log.gz"/>
+                    <IfLastModified age="30d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+
+        <Async name="AsyncConsole">
+            <AppenderRef ref="Console"/>
+        </Async>
+
+        <Async name="AsyncRollingFile">
+            <AppenderRef ref="RollingFile"/>
+        </Async>
+
+        <Async name="AsyncAccessLog">
+            <AppenderRef ref="AccessLog"/>
+        </Async>
+    </Appenders>
+
+    <Loggers>
+        <Logger name="com.easywing.platform.gateway" level="DEBUG" additivity="false">
+            <AppenderRef ref="AsyncConsole"/>
+            <AppenderRef ref="AsyncRollingFile"/>
+        </Logger>
+
+        <Logger name="AccessLog" level="INFO" additivity="false">
+            <AppenderRef ref="AsyncAccessLog"/>
+        </Logger>
+
+        <Logger name="org.springframework.cloud.gateway" level="INFO"/>
+        <Logger name="io.netty" level="WARN"/>
+        <Logger name="reactor.netty" level="WARN"/>
+        <Logger name="org.springframework.data.redis" level="WARN"/>
+        <Logger name="com.nimbusds" level="WARN"/>
+
+        <Root level="INFO">
+            <AppenderRef ref="AsyncConsole"/>
+            <AppenderRef ref="AsyncRollingFile"/>
+        </Root>
+    </Loggers>
+</Configuration>
