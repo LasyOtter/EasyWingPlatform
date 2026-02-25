@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>com.easywing.platform</groupId>
+        <artifactId>easywing-platform-starters</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    
+    <artifactId>easywing-boot-starter-gray</artifactId>
+    
+    <name>EasyWing Boot Starter Gray</name>
+    <description>灰度发布启动器，提供流量染色、版本路由、金丝雀发布能力</description>
+    
+    <dependencies>
+        <!-- EasyWing Cloud -->
+        <dependency>
+            <groupId>com.easywing.platform</groupId>
+            <artifactId>easywing-cloud</artifactId>
+        </dependency>
+        
+        <!-- Spring Cloud LoadBalancer -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+        </dependency>
+        
+        <!-- Nacos Discovery -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>

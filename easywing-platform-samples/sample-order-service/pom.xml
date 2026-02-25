@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>com.easywing.platform</groupId>
+        <artifactId>easywing-platform-samples</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    
+    <artifactId>sample-order-service</artifactId>
+    
+    <name>Sample Order Service</name>
+    <description>订单服务示例，展示Seata分布式事务、服务调用</description>
+    
+    <dependencies>
+        <!-- EasyWing Web Starter -->
+        <dependency>
+            <groupId>com.easywing.platform</groupId>
+            <artifactId>easywing-boot-starter-web</artifactId>
+        </dependency>
+        
+        <!-- EasyWing Security Starter -->
+        <dependency>
+            <groupId>com.easywing.platform</groupId>
+            <artifactId>easywing-boot-starter-security-oauth2</artifactId>
+        </dependency>
+        
+        <!-- EasyWing OTel Starter -->
+        <dependency>
+            <groupId>com.easywing.platform</groupId>
+            <artifactId>easywing-boot-starter-otel</artifactId>
+        </dependency>
+        
+        <!-- EasyWing Data Starter -->
+        <dependency>
+            <groupId>com.easywing.platform</groupId>
+            <artifactId>easywing-boot-starter-data</artifactId>
+        </dependency>
+        
+        <!-- EasyWing Feign Starter -->
+        <dependency>
+            <groupId>com.easywing.platform</groupId>
+            <artifactId>easywing-boot-starter-feign</artifactId>
+        </dependency>
+        
+        <!-- EasyWing Seata Starter -->
+        <dependency>
+            <groupId>com.easywing.platform</groupId>
+            <artifactId>easywing-boot-starter-seata</artifactId>
+        </dependency>
+        
+        <!-- EasyWing Resilience4j Starter -->
+        <dependency>
+            <groupId>com.easywing.platform</groupId>
+            <artifactId>easywing-boot-starter-resilience4j</artifactId>
+        </dependency>
+        
+        <!-- Nacos Discovery -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
+        
+        <!-- MySQL -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+    
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

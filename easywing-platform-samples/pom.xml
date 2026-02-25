@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>com.easywing.platform</groupId>
+        <artifactId>easywing-platform-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../easywing-platform-parent/pom.xml</relativePath>
+    </parent>
+    
+    <artifactId>easywing-platform-samples</artifactId>
+    <packaging>pom</packaging>
+    
+    <name>EasyWing Platform Samples</name>
+    <description>示例项目模块</description>
+    
+    <modules>
+        <module>sample-user-service</module>
+        <module>sample-order-service</module>
+    </modules>
+</project>

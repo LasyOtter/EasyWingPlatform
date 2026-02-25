@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>com.easywing.platform</groupId>
+        <artifactId>easywing-platform-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../easywing-platform-parent/pom.xml</relativePath>
+    </parent>
+    
+    <artifactId>easywing-platform-framework</artifactId>
+    <packaging>pom</packaging>
+    
+    <name>EasyWing Platform Framework</name>
+    <description>核心框架模块，包含基础工具、Web层、可观测性、安全、云原生能力</description>
+    
+    <modules>
+        <module>easywing-core</module>
+        <module>easywing-web</module>
+        <module>easywing-observability</module>
+        <module>easywing-security</module>
+        <module>easywing-cloud</module>
+    </modules>
+    
+    <dependencies>
+        <!-- Spring Boot Configuration Processor -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>

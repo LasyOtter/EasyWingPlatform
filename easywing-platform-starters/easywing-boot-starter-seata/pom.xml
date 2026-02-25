@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>com.easywing.platform</groupId>
+        <artifactId>easywing-platform-starters</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    
+    <artifactId>easywing-boot-starter-seata</artifactId>
+    
+    <name>EasyWing Boot Starter Seata</name>
+    <description>分布式事务启动器，集成Seata AT/TCC/Saga/XA模式</description>
+    
+    <dependencies>
+        <!-- EasyWing Core -->
+        <dependency>
+            <groupId>com.easywing.platform</groupId>
+            <artifactId>easywing-core</artifactId>
+        </dependency>
+        
+        <!-- Seata -->
+        <dependency>
+            <groupId>io.seata</groupId>
+            <artifactId>seata-spring-boot-starter</artifactId>
+        </dependency>
+        
+        <!-- Seata All -->
+        <dependency>
+            <groupId>io.seata</groupId>
+            <artifactId>seata-all</artifactId>
+        </dependency>
+    </dependencies>
+</project>

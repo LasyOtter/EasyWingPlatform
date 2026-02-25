@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>com.easywing.platform</groupId>
+        <artifactId>easywing-platform-starters</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    
+    <artifactId>easywing-boot-starter-security-oauth2</artifactId>
+    
+    <name>EasyWing Boot Starter Security OAuth2</name>
+    <description>安全启动器，集成OAuth2.1/OIDC资源服务器</description>
+    
+    <dependencies>
+        <!-- EasyWing Security -->
+        <dependency>
+            <groupId>com.easywing.platform</groupId>
+            <artifactId>easywing-security</artifactId>
+        </dependency>
+    </dependencies>
+</project>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>com.easywing.platform</groupId>
+        <artifactId>easywing-platform-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../easywing-platform-parent/pom.xml</relativePath>
+    </parent>
+    
+    <artifactId>easywing-platform-test</artifactId>
+    <packaging>pom</packaging>
+    
+    <name>EasyWing Platform Test</name>
+    <description>测试支持模块，提供Testcontainers、WireMock等测试工具</description>
+    
+    <modules>
+        <module>easywing-testcontainers</module>
+    </modules>
+    
+    <dependencies>
+        <!-- Testcontainers -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        
+        <!-- JUnit 5 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
