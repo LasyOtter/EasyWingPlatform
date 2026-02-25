@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>com.easywing.platform</groupId>
+        <artifactId>easywing-platform-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../easywing-platform-parent/pom.xml</relativePath>
+    </parent>
+    
+    <artifactId>easywing-platform-starters</artifactId>
+    <packaging>pom</packaging>
+    
+    <name>EasyWing Platform Starters</name>
+    <description>场景启动器模块，提供开箱即用的集成配置</description>
+    
+    <modules>
+        <module>easywing-boot-starter-web</module>
+        <module>easywing-boot-starter-otel</module>
+        <module>easywing-boot-starter-security-oauth2</module>
+        <module>easywing-boot-starter-resilience4j</module>
+        <module>easywing-boot-starter-data</module>
+        <module>easywing-boot-starter-cache</module>
+        <module>easywing-boot-starter-feign</module>
+        <module>easywing-boot-starter-messaging</module>
+        <module>easywing-boot-starter-seata</module>
+        <module>easywing-boot-starter-gray</module>
+        <module>easywing-boot-starter-virtual-thread</module>
+    </modules>
+</project>

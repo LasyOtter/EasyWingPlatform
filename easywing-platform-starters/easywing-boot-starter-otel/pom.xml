@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>com.easywing.platform</groupId>
+        <artifactId>easywing-platform-starters</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    
+    <artifactId>easywing-boot-starter-otel</artifactId>
+    
+    <name>EasyWing Boot Starter OpenTelemetry</name>
+    <description>OpenTelemetry启动器，集成分布式追踪、指标、日志</description>
+    
+    <dependencies>
+        <!-- EasyWing Observability -->
+        <dependency>
+            <groupId>com.easywing.platform</groupId>
+            <artifactId>easywing-observability</artifactId>
+        </dependency>
+    </dependencies>
+</project>
