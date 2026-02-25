@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    EasyWing Platform Spotless Configuration
+    用于 Maven Spotless 插件的独立配置文件
+    
+    使用方法:
+    mvn spotless:check   - 检查代码格式
+    mvn spotless:apply   - 自动格式化代码
+    
+    注意: 此文件提供参考配置，实际格式化规则在 Parent POM 中配置
+-->
+<spotless>
+    <java>
+        <!-- 移除未使用的导入 -->
+        <removeUnusedImports/>
+        
+        <!-- 导入顺序 -->
+        <importOrder>
+            <order>java,jakarta,org,com,com.easywing,</order>
+        </importOrder>
+        
+        <!-- 使用 Palantir Java Format (Google Style 的改进版本) -->
+        <palantirJavaFormat>
+            <version>2.40.0</version>
+            <style>PALANTIR</style>
+        </palantirJavaFormat>
+        
+        <!-- 格式化注解 -->
+        <formatAnnotations/>
+        
+        <!-- 移除多余的空行 -->
+        <trimTrailingWhitespace/>
+        
+        <!-- 确保文件以换行符结束 -->
+        <endWithNewline/>
+        
+        <!-- 缩进配置 -->
+        <indent>
+            <spaces>true</spaces>
+            <spacesPerTab>4</spacesPerTab>
+        </indent>
+        
+        <!-- 行长度限制 -->
+        <lineLength>120</lineLength>
+    </java>
+    
+    <!-- POM 文件格式化 -->
+    <pom>
+        <sortPom>
+            <expandEmptyElements>false</expandEmptyElements>
+            <spaceBeforeCloseEmptyElement>true</spaceBeforeCloseEmptyElement>
+            <indentSchemaLocation>true</indentSchemaLocation>
+            <nrOfIndentSpace>4</nrOfIndentSpace>
+        </sortPom>
+    </pom>
+    
+    <!-- XML 文件格式化 -->
+    <xml>
+        <indent>
+            <spaces>true</spaces>
+            <spacesPerTab>4</spacesPerTab>
+        </indent>
+        <trimTrailingWhitespace/>
+        <endWithNewline/>
+    </xml>
+    
+    <!-- YAML 文件格式化 -->
+    <yaml>
+        <indent>
+            <spaces>true</spaces>
+            <spacesPerTab>2</spacesPerTab>
+        </indent>
+        <trimTrailingWhitespace/>
+        <endWithNewline/>
+    </yaml>
+    
+    <!-- JSON 文件格式化 -->
+    <json>
+        <indent>
+            <spaces>true</spaces>
+            <spacesPerTab>2</spacesPerTab>
+        </indent>
+        <trimTrailingWhitespace/>
+        <endWithNewline/>
+    </json>
+    
+    <!-- Markdown 文件格式化 -->
+    <markdown>
+        <indent>
+            <spaces>true</spaces>
+            <spacesPerTab>2</spacesPerTab>
+        </indent>
+        <trimTrailingWhitespace/>
+        <endWithNewline/>
+    </markdown>
+</spotless>
