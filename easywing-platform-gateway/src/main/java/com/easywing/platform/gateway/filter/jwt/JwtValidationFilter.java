@@ -129,8 +129,11 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
                         return unauthorized(exchange, "Token expired");
                     }
                     
+                    String roles = String.join(",", claims.getRoles());
                     ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
                             .header(HttpHeaders.X_USER_ID, claims.getSubject())
+                            .header(HttpHeaders.X_USERNAME, claims.getUsername() != null ? claims.getUsername() : "")
+                            .header(HttpHeaders.X_ROLES, roles)
                             .header(HttpHeaders.X_TENANT_ID, claims.getTenantId() != null ? claims.getTenantId() : "")
                             .build();
                     

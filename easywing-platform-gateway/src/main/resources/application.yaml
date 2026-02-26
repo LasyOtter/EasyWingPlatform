@@ -36,6 +36,12 @@ spring:
         connect-timeout: 5000
         response-timeout: 30s
       routes:
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=1
         - id: user-service
           uri: lb://user-service
           predicates:
@@ -104,7 +110,7 @@ easywing:
     jwt:
       enabled: true
       issuer: ${JWT_ISSUER:https://auth.easywing.com}
-      jwk-set-uri: ${JWT_JWK_SET_URI:https://auth.easywing.com/.well-known/jwks.json}
+      jwk-set-uri: ${JWT_JWK_SET_URI:http://auth-service/.well-known/jwks.json}
       cache-ttl: 5m
       cache-max-size: 10000
       jwk-refresh-interval: 30m
@@ -112,8 +118,9 @@ easywing:
         - /actuator/**
         - /swagger-ui/**
         - /v3/api-docs/**
-        - /api/auth/login
-        - /api/auth/register
+        - /api/auth/token/login
+        - /api/auth/token/refresh
+        - /api/auth/.well-known/jwks.json
         - /api/health
         - /health
       user-id-claim-name: sub

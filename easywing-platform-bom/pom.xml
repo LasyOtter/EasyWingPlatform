@@ -124,6 +124,12 @@
             <!-- ==================== 核心框架模块 ==================== -->
             <dependency>
                 <groupId>com.easywing.platform</groupId>
+                <artifactId>easywing-platform-auth</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.easywing.platform</groupId>
                 <artifactId>easywing-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
