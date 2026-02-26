@@ -1,0 +1,61 @@
+/*
+ * Copyright 2024-2026 EasyWing Platform Team.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.easywing.platform.auth.dto;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+/**
+ * 令牌响应DTO
+ *
+ * @author EasyWing Team
+ * @since 1.0.0
+ */
+public class TokenResponse {
+
+    @JsonProperty("access_token")
+    private String accessToken;
+
+    @JsonProperty("refresh_token")
+    private String refreshToken;
+
+    @JsonProperty("token_type")
+    private String tokenType = "Bearer";
+
+    @JsonProperty("expires_in")
+    private long expiresIn;
+
+    public TokenResponse(String accessToken, String refreshToken, long expiresIn) {
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
+        this.expiresIn = expiresIn;
+    }
+
+    public String getAccessToken() {
+        return accessToken;
+    }
+
+    public String getRefreshToken() {
+        return refreshToken;
+    }
+
+    public String getTokenType() {
+        return tokenType;
+    }
+
+    public long getExpiresIn() {
+        return expiresIn;
+    }
+}

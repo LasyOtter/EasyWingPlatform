@@ -63,6 +63,9 @@
         <!-- Starters -->
         <module>easywing-platform-starters</module>
         
+        <!-- Auth Service -->
+        <module>easywing-platform-auth</module>
+        
         <!-- Gateway -->
         <module>easywing-platform-gateway</module>
         

@@ -53,6 +53,8 @@ public final class HttpHeaders {
     // ==================== 认证相关 ====================
     public static final String BEARER_PREFIX = "Bearer ";
     public static final String BASIC_PREFIX = "Basic ";
+    public static final String X_USERNAME = "X-Username";
+    public static final String X_ROLES = "X-Roles";
 
     // ==================== Content-Type ====================
     public static final String APPLICATION_JSON = "application/json";
