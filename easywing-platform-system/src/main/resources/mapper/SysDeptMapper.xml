@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.easywing.platform.system.mapper.SysDeptMapper">
+
+    <resultMap id="SysDeptResult" type="com.easywing.platform.system.domain.entity.SysDept">
+        <id property="id" column="dept_id"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="ancestors" column="ancestors"/>
+        <result property="deptName" column="dept_name"/>
+        <result property="deptCode" column="dept_code"/>
+        <result property="orderNum" column="order_num"/>
+        <result property="leader" column="leader"/>
+        <result property="phone" column="phone"/>
+        <result property="email" column="email"/>
+        <result property="status" column="status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="deleted" column="deleted"/>
+        <result property="tenantId" column="tenant_id"/>
+    </resultMap>
+
+    <select id="selectDeptList" resultMap="SysDeptResult">
+        SELECT * FROM sys_dept WHERE deleted = 0 ORDER BY order_num
+    </select>
+
+    <select id="selectDeptByUserId" resultMap="SysDeptResult">
+        SELECT d.* FROM sys_dept d
+        INNER JOIN sys_user u ON d.dept_id = u.dept_id
+        WHERE u.user_id = #{userId} AND d.deleted = 0
+    </select>
+
+    <select id="selectChildrenByParentId" resultMap="SysDeptResult">
+        SELECT * FROM sys_dept WHERE parent_id = #{parentId} AND deleted = 0 ORDER BY order_num
+    </select>
+
+    <select id="selectChildrenCountByParentId" resultType="int">
+        SELECT COUNT(1) FROM sys_dept WHERE parent_id = #{parentId} AND deleted = 0
+    </select>
+
+    <select id="checkDeptExistUser" resultType="int">
+        SELECT COUNT(1) FROM sys_user WHERE dept_id = #{deptId} AND deleted = 0
+    </select>
+
+    <select id="checkDeptNameUnique" resultType="int">
+        SELECT COUNT(1) FROM sys_dept WHERE dept_name = #{deptName}
+        AND parent_id = #{parentId} AND deleted = 0 AND dept_id != #{deptId}
+    </select>
+
+    <select id="selectDeptIdsByParentId" resultType="Long">
+        SELECT dept_id FROM sys_dept 
+        WHERE deleted = 0 AND FIND_IN_SET(#{deptId}, ancestors)
+    </select>
+
+</mapper>

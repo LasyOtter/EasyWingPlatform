@@ -1,0 +1,28 @@
+server:
+  port: 8082
+
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 10
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+
+easywing:
+  security:
+    oauth2:
+      jwt:
+        jwk-set-uri: ${JWK_SET_URI}
+        issuer-uri: ${ISSUER_URI}
+
+logging:
+  level:
+    root: INFO
+    com.easywing: INFO

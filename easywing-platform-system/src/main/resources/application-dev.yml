@@ -1,0 +1,24 @@
+server:
+  port: 8082
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/easywing_system?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+easywing:
+  security:
+    oauth2:
+      jwt:
+        jwk-set-uri: http://localhost:8080/realms/easywing/protocol/openid-connect/certs
+        issuer-uri: http://localhost:8080/realms/easywing
+
+logging:
+  level:
+    com.easywing: DEBUG
+    org.springframework.security: DEBUG

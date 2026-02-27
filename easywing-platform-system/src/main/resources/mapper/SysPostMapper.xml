@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.easywing.platform.system.mapper.SysPostMapper">
+
+    <resultMap id="SysPostResult" type="com.easywing.platform.system.domain.entity.SysPost">
+        <id property="id" column="post_id"/>
+        <result property="postCode" column="post_code"/>
+        <result property="postName" column="post_name"/>
+        <result property="postCategory" column="post_category"/>
+        <result property="orderNum" column="order_num"/>
+        <result property="status" column="status"/>
+        <result property="remark" column="remark"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="deleted" column="deleted"/>
+        <result property="tenantId" column="tenant_id"/>
+    </resultMap>
+
+    <select id="selectPostsByUserId" resultMap="SysPostResult">
+        SELECT p.* FROM sys_post p
+        INNER JOIN sys_user_post up ON p.post_id = up.post_id
+        WHERE up.user_id = #{userId} AND p.deleted = 0
+        ORDER BY p.order_num
+    </select>
+
+    <select id="checkPostCodeUnique" resultType="int">
+        SELECT COUNT(1) FROM sys_post WHERE post_code = #{postCode}
+        AND deleted = 0 AND post_id != #{postId}
+    </select>
+
+    <delete id="deleteUserPostByUserId">
+        DELETE FROM sys_user_post WHERE user_id = #{userId}
+    </delete>
+
+    <insert id="batchInsertUserPost">
+        INSERT INTO sys_user_post (user_id, post_id) VALUES
+        <foreach collection="postIds" item="postId" separator=",">
+            (#{userId}, #{postId})
+        </foreach>
+    </insert>
+
+</mapper>
