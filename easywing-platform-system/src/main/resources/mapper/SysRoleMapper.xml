@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.easywing.platform.system.mapper.SysRoleMapper">
+
+    <resultMap id="SysRoleResult" type="com.easywing.platform.system.domain.entity.SysRole">
+        <id property="id" column="role_id"/>
+        <result property="roleName" column="role_name"/>
+        <result property="roleCode" column="role_code"/>
+        <result property="roleKey" column="role_key"/>
+        <result property="dataScope" column="data_scope"/>
+        <result property="dataScopeDeptIds" column="data_scope_dept_ids"/>
+        <result property="menuCheckStrictly" column="menu_check_strictly"/>
+        <result property="deptCheckStrictly" column="dept_check_strictly"/>
+        <result property="orderNum" column="order_num"/>
+        <result property="status" column="status"/>
+        <result property="remark" column="remark"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="deleted" column="deleted"/>
+    </resultMap>
+
+    <select id="selectRolesByUserId" resultMap="SysRoleResult">
+        SELECT r.* FROM sys_role r
+        INNER JOIN sys_user_role ur ON r.role_id = ur.role_id
+        WHERE ur.user_id = #{userId} AND r.deleted = 0
+        ORDER BY r.order_num
+    </select>
+
+    <select id="selectRoleCodesByUserId" resultType="String">
+        SELECT r.role_code FROM sys_role r
+        INNER JOIN sys_user_role ur ON r.role_id = ur.role_id
+        WHERE ur.user_id = #{userId} AND r.deleted = 0 AND r.status = 0
+    </select>
+
+    <select id="checkRoleNameUnique" resultType="int">
+        SELECT COUNT(1) FROM sys_role WHERE role_name = #{roleName}
+        AND deleted = 0 AND role_id != #{roleId}
+    </select>
+
+    <select id="checkRoleCodeUnique" resultType="int">
+        SELECT COUNT(1) FROM sys_role WHERE role_code = #{roleCode}
+        AND deleted = 0 AND role_id != #{roleId}
+    </select>
+
+    <delete id="deleteRoleMenuByRoleId">
+        DELETE FROM sys_role_menu WHERE role_id = #{roleId}
+    </delete>
+
+    <insert id="batchInsertRoleMenu">
+        INSERT INTO sys_role_menu (role_id, menu_id) VALUES
+        <foreach collection="menuIds" item="menuId" separator=",">
+            (#{roleId}, #{menuId})
+        </foreach>
+    </insert>
+
+    <delete id="deleteRoleDeptByRoleId">
+        DELETE FROM sys_role_dept WHERE role_id = #{roleId}
+    </delete>
+
+    <insert id="batchInsertRoleDept">
+        INSERT INTO sys_role_dept (role_id, dept_id) VALUES
+        <foreach collection="deptIds" item="deptId" separator=",">
+            (#{roleId}, #{deptId})
+        </foreach>
+    </insert>
+
+    <select id="selectMenusByRoleId" resultType="com.easywing.platform.system.domain.entity.SysMenu">
+        SELECT m.* FROM sys_menu m
+        INNER JOIN sys_role_menu rm ON m.menu_id = rm.menu_id
+        WHERE rm.role_id = #{roleId} AND m.deleted = 0
+        ORDER BY m.order_num
+    </select>
+
+</mapper>
