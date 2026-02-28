@@ -87,6 +87,8 @@ public final class ErrorCode {
     public static final String OPERATION_NOT_ALLOWED = "BIZ004";
     public static final String BUSINESS_RULE_VIOLATION = "BIZ005";
     public static final String USERNAME_EXISTS = "BIZ006";
+    public static final String PAGE_TOO_DEEP = "BIZ007";
+    public static final String EXPORT_SIZE_EXCEEDED = "BIZ008";
 
     // ==================== 限流熔断错误 ====================
     public static final String RATE_LIMITED = "RATE001";
@@ -134,6 +136,8 @@ public final class ErrorCode {
         register(OPERATION_NOT_ALLOWED, FORBIDDEN_STATUS, "Operation Not Allowed", "操作不被允许");
         register(BUSINESS_RULE_VIOLATION, UNPROCESSABLE_ENTITY_STATUS, "Business Rule Violation", "业务规则校验失败");
         register(USERNAME_EXISTS, CONFLICT_STATUS, "Username Exists", "用户名已存在");
+        register(PAGE_TOO_DEEP, BAD_REQUEST_STATUS, "Page Too Deep", "页码过大，请添加筛选条件");
+        register(EXPORT_SIZE_EXCEEDED, BAD_REQUEST_STATUS, "Export Size Exceeded", "导出数据量过大，请添加筛选条件");
 
         // 限流熔断
         register(RATE_LIMITED, TOO_MANY_REQUESTS_STATUS, "Rate Limited", "请求过于频繁，请稍后重试");
