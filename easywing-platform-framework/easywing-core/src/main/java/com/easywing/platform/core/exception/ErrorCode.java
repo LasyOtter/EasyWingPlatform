@@ -86,6 +86,7 @@ public final class ErrorCode {
     public static final String RESOURCE_CONFLICT = "BIZ003";
     public static final String OPERATION_NOT_ALLOWED = "BIZ004";
     public static final String BUSINESS_RULE_VIOLATION = "BIZ005";
+    public static final String USERNAME_EXISTS = "BIZ006";
 
     // ==================== 限流熔断错误 ====================
     public static final String RATE_LIMITED = "RATE001";
@@ -132,6 +133,7 @@ public final class ErrorCode {
         register(RESOURCE_CONFLICT, CONFLICT_STATUS, "Resource Conflict", "资源冲突");
         register(OPERATION_NOT_ALLOWED, FORBIDDEN_STATUS, "Operation Not Allowed", "操作不被允许");
         register(BUSINESS_RULE_VIOLATION, UNPROCESSABLE_ENTITY_STATUS, "Business Rule Violation", "业务规则校验失败");
+        register(USERNAME_EXISTS, CONFLICT_STATUS, "Username Exists", "用户名已存在");
 
         // 限流熔断
         register(RATE_LIMITED, TOO_MANY_REQUESTS_STATUS, "Rate Limited", "请求过于频繁，请稍后重试");
