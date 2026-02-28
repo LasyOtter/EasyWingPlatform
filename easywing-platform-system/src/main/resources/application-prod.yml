@@ -21,6 +21,8 @@ easywing:
       jwt:
         jwk-set-uri: ${JWK_SET_URI}
         issuer-uri: ${ISSUER_URI}
+  user:
+    default-password: ${DEFAULT_PASSWORD}
 
 logging:
   level:

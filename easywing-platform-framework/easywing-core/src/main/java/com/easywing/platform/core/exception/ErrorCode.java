@@ -76,6 +76,9 @@ public final class ErrorCode {
     public static final String FORBIDDEN = "SEC001";
     public static final String ACCESS_DENIED = "SEC002";
     public static final String INSUFFICIENT_SCOPE = "SEC003";
+    public static final String WEAK_PASSWORD = "SEC004";
+    public static final String PASSWORD_REUSED = "SEC005";
+    public static final String ACCOUNT_LOCKED = "SEC006";
 
     // ==================== 业务错误 ====================
     public static final String RESOURCE_NOT_FOUND = "BIZ001";
@@ -115,6 +118,9 @@ public final class ErrorCode {
         register(FORBIDDEN, FORBIDDEN_STATUS, "Forbidden", "禁止访问");
         register(ACCESS_DENIED, FORBIDDEN_STATUS, "Access Denied", "权限不足");
         register(INSUFFICIENT_SCOPE, FORBIDDEN_STATUS, "Insufficient Scope", "权限范围不足");
+        register(WEAK_PASSWORD, BAD_REQUEST_STATUS, "Weak Password", "密码强度不足");
+        register(PASSWORD_REUSED, BAD_REQUEST_STATUS, "Password Reused", "密码近期已使用");
+        register(ACCOUNT_LOCKED, FORBIDDEN_STATUS, "Account Locked", "账户已锁定");
 
         // 业务错误
         register(RESOURCE_NOT_FOUND, NOT_FOUND_STATUS, "Resource Not Found", "请求的资源不存在");

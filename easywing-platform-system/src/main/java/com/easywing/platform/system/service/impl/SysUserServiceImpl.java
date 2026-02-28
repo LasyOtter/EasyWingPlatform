@@ -6,12 +6,15 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.easywing.platform.core.exception.BizException;
 import com.easywing.platform.core.exception.ErrorCode;
+import com.easywing.platform.system.config.UserProperties;
 import com.easywing.platform.system.domain.dto.SysUserDTO;
 import com.easywing.platform.system.domain.entity.SysUser;
 import com.easywing.platform.system.domain.query.SysUserQuery;
 import com.easywing.platform.system.domain.vo.SysUserVO;
 import com.easywing.platform.system.mapper.SysUserMapper;
+import com.easywing.platform.system.service.PasswordHistoryService;
 import com.easywing.platform.system.service.SysUserService;
+import com.easywing.platform.system.util.PasswordValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,7 +31,9 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
     private final SysUserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
-    private static final String DEFAULT_PASSWORD = "123456";
+    private final PasswordHistoryService passwordHistoryService;
+    private final PasswordValidator passwordValidator;
+    private final UserProperties userProperties;
 
     @Override
     public Page<SysUserVO> selectUserPage(Page<SysUser> page, SysUserQuery query) {
@@ -56,7 +61,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         validateUser(userDTO);
         SysUser user = new SysUser();
         BeanUtils.copyProperties(userDTO, user);
-        user.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
+        user.setPassword(passwordEncoder.encode(userProperties.getDefaultPassword()));
         user.setStatus(0);
         userMapper.insert(user);
         return user.getId();
@@ -82,8 +87,21 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     }
 
     @Override
-    public int resetPassword(Long userId, String password) {
-        return userMapper.resetPassword(userId, passwordEncoder.encode(password));
+    public int resetPassword(Long userId, String newPassword) {
+        if (!passwordValidator.isStrong(newPassword, userProperties.getMinPasswordLength())) {
+            throw new BizException(ErrorCode.WEAK_PASSWORD,
+                    "密码必须包含大小写字母、数字和特殊字符，且长度不少于" + userProperties.getMinPasswordLength() + "位");
+        }
+
+        if (passwordHistoryService.isUsedRecently(userId, newPassword)) {
+            throw new BizException(ErrorCode.PASSWORD_REUSED,
+                    "近期已使用过该密码，请选择其他密码");
+        }
+
+        String encodedPassword = passwordEncoder.encode(newPassword);
+        passwordHistoryService.recordPassword(userId, encodedPassword);
+
+        return userMapper.resetPassword(userId, encodedPassword);
     }
 
     @Override
