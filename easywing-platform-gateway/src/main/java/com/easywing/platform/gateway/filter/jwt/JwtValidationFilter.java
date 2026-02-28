@@ -28,6 +28,9 @@ import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.slf4j.Logger;
@@ -141,9 +144,21 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
                     
                     return chain.filter(exchange.mutate().request(mutatedRequest).build());
                 })
+                .onErrorResume(SignatureException.class, e -> {
+                    log.warn("JWT signature verification failed: {}", e.getMessage());
+                    return unauthorized(exchange, "Token签名无效");
+                })
+                .onErrorResume(ExpiredJwtException.class, e -> {
+                    log.warn("JWT token expired: sub={}", e.getClaims().getSubject());
+                    return unauthorized(exchange, "Token已过期，请重新登录");
+                })
+                .onErrorResume(MalformedJwtException.class, e -> {
+                    log.warn("Malformed JWT token: {}", e.getMessage());
+                    return unauthorized(exchange, "Token格式错误");
+                })
                 .onErrorResume(Exception.class, e -> {
-                    log.debug("JWT validation failed: {}", e.getMessage());
-                    return unauthorized(exchange, "Invalid token: " + e.getMessage());
+                    log.error("Unexpected JWT validation error", e);
+                    return unauthorized(exchange, "认证失败，请稍后重试");
                 });
     }
 

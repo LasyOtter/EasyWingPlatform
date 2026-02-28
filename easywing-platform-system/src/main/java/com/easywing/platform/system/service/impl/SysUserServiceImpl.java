@@ -15,7 +15,9 @@ import com.easywing.platform.system.mapper.SysUserMapper;
 import com.easywing.platform.system.service.PasswordHistoryService;
 import com.easywing.platform.system.service.SysUserService;
 import com.easywing.platform.system.util.PasswordValidator;
+import com.easywing.platform.system.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,7 @@ import org.springframework.util.CollectionUtils;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> implements SysUserService {
@@ -58,13 +61,24 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long insertUser(SysUserDTO userDTO) {
-        validateUser(userDTO);
-        SysUser user = new SysUser();
-        BeanUtils.copyProperties(userDTO, user);
-        user.setPassword(passwordEncoder.encode(userProperties.getDefaultPassword()));
-        user.setStatus(0);
-        userMapper.insert(user);
-        return user.getId();
+        log.info("Creating new user: username={}, operator={}",
+                userDTO.getUsername(), SecurityUtils.getCurrentUsername());
+
+        try {
+            validateUser(userDTO);
+            SysUser user = new SysUser();
+            BeanUtils.copyProperties(userDTO, user);
+            user.setPassword(passwordEncoder.encode(userProperties.getDefaultPassword()));
+            user.setStatus(0);
+            userMapper.insert(user);
+
+            log.info("User created successfully: userId={}, username={}",
+                    user.getId(), user.getUsername());
+            return user.getId();
+        } catch (Exception e) {
+            log.error("Failed to create user: username={}", userDTO.getUsername(), e);
+            throw e;
+        }
     }
 
     @Override
