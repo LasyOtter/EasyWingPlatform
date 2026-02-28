@@ -9,9 +9,9 @@ import com.easywing.platform.system.domain.dto.SysDeptDTO;
 import com.easywing.platform.system.domain.entity.SysDept;
 import com.easywing.platform.system.domain.vo.SysDeptVO;
 import com.easywing.platform.system.mapper.SysDeptMapper;
+import com.easywing.platform.system.mapper.struct.DeptMapper;
 import com.easywing.platform.system.service.SysDeptService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> implements SysDeptService {
 
     private final SysDeptMapper deptMapper;
+    private final DeptMapper deptMapperStruct;
 
     @Override
     public List<SysDeptVO> selectDeptList(SysDeptDTO deptDTO) {
@@ -35,25 +36,39 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
         }
         wrapper.orderByAsc(SysDept::getOrderNum);
         List<SysDept> depts = deptMapper.selectList(wrapper);
-        return buildDeptTree(depts.stream().map(this::convertToVO).collect(Collectors.toList()));
+        List<SysDeptVO> deptVOs = deptMapperStruct.toVOList(depts);
+        deptVOs.forEach(vo -> vo.setChildren(new ArrayList<>()));
+        return buildDeptTree(deptVOs);
     }
 
     @Override
     public List<SysDeptVO> selectDeptTreeList() {
         List<SysDept> depts = deptMapper.selectList(new LambdaQueryWrapper<SysDept>().orderByAsc(SysDept::getOrderNum));
-        return buildDeptTree(depts.stream().map(this::convertToVO).collect(Collectors.toList()));
+        List<SysDeptVO> deptVOs = deptMapperStruct.toVOList(depts);
+        deptVOs.forEach(vo -> vo.setChildren(new ArrayList<>()));
+        return buildDeptTree(deptVOs);
     }
 
     @Override
     public SysDeptVO selectDeptById(Long deptId) {
         SysDept dept = deptMapper.selectById(deptId);
-        return dept != null ? convertToVO(dept) : null;
+        if (dept == null) {
+            return null;
+        }
+        SysDeptVO vo = deptMapperStruct.toVO(dept);
+        vo.setChildren(new ArrayList<>());
+        return vo;
     }
 
     @Override
     public SysDeptVO selectDeptByUserId(Long userId) {
         SysDept dept = deptMapper.selectDeptByUserId(userId);
-        return dept != null ? convertToVO(dept) : null;
+        if (dept == null) {
+            return null;
+        }
+        SysDeptVO vo = deptMapperStruct.toVO(dept);
+        vo.setChildren(new ArrayList<>());
+        return vo;
     }
 
     @Override
@@ -63,7 +78,16 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
             throw new BizException(ErrorCode.BUSINESS_RULE_VIOLATION, "部门名称已存在");
         }
         SysDept dept = new SysDept();
-        BeanUtils.copyProperties(deptDTO, dept);
+        dept.setId(deptDTO.getId());
+        dept.setParentId(deptDTO.getParentId());
+        dept.setDeptName(deptDTO.getDeptName());
+        dept.setDeptCode(deptDTO.getDeptCode());
+        dept.setOrderNum(deptDTO.getOrderNum());
+        dept.setLeader(deptDTO.getLeader());
+        dept.setPhone(deptDTO.getPhone());
+        dept.setEmail(deptDTO.getEmail());
+        dept.setStatus(deptDTO.getStatus());
+        dept.setRemark(deptDTO.getRemark());
         if (deptDTO.getParentId() != null && deptDTO.getParentId() != 0L) {
             SysDept parentDept = deptMapper.selectById(deptDTO.getParentId());
             if (parentDept != null) dept.setAncestors(parentDept.getAncestors() + "," + deptDTO.getParentId());
@@ -82,7 +106,16 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
             throw new BizException(ErrorCode.BUSINESS_RULE_VIOLATION, "部门名称已存在");
         }
         SysDept dept = new SysDept();
-        BeanUtils.copyProperties(deptDTO, dept);
+        dept.setId(deptDTO.getId());
+        dept.setParentId(deptDTO.getParentId());
+        dept.setDeptName(deptDTO.getDeptName());
+        dept.setDeptCode(deptDTO.getDeptCode());
+        dept.setOrderNum(deptDTO.getOrderNum());
+        dept.setLeader(deptDTO.getLeader());
+        dept.setPhone(deptDTO.getPhone());
+        dept.setEmail(deptDTO.getEmail());
+        dept.setStatus(deptDTO.getStatus());
+        dept.setRemark(deptDTO.getRemark());
         return deptMapper.updateById(dept);
     }
 
@@ -111,13 +144,6 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
 
     @Override
     public List<Long> selectDeptIdsByParentId(Long deptId) { return deptMapper.selectDeptIdsByParentId(deptId); }
-
-    private SysDeptVO convertToVO(SysDept dept) {
-        SysDeptVO vo = new SysDeptVO();
-        BeanUtils.copyProperties(dept, vo);
-        vo.setChildren(new ArrayList<>());
-        return vo;
-    }
 
     private List<SysDeptVO> buildDeptTree(List<SysDeptVO> depts) {
         List<SysDeptVO> returnList = new ArrayList<>();

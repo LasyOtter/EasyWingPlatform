@@ -8,9 +8,10 @@ import com.easywing.platform.system.domain.entity.SysOperLog;
 import com.easywing.platform.system.domain.query.SysOperLogQuery;
 import com.easywing.platform.system.domain.vo.SysOperLogVO;
 import com.easywing.platform.system.mapper.SysOperLogMapper;
+import com.easywing.platform.system.mapper.struct.OperLogMapper;
 import com.easywing.platform.system.service.SysOperLogService;
+import com.easywing.platform.system.util.PageUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -25,21 +26,20 @@ import java.util.stream.Collectors;
 public class SysOperLogServiceImpl extends ServiceImpl<SysOperLogMapper, SysOperLog> implements SysOperLogService {
 
     private final SysOperLogMapper operLogMapper;
+    private final OperLogMapper operLogMapperStruct;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Override
     public Page<SysOperLogVO> selectOperLogPage(Page<SysOperLog> page, SysOperLogQuery query) {
         LambdaQueryWrapper<SysOperLog> wrapper = buildQueryWrapper(query);
         Page<SysOperLog> logPage = operLogMapper.selectPage(page, wrapper);
-        Page<SysOperLogVO> voPage = new Page<>(logPage.getCurrent(), logPage.getSize(), logPage.getTotal());
-        voPage.setRecords(logPage.getRecords().stream().map(this::convertToVO).collect(Collectors.toList()));
-        return voPage;
+        return PageUtil.convert(logPage, operLogMapperStruct::toVO);
     }
 
     @Override
     public SysOperLogVO selectOperLogById(Long operId) {
         SysOperLog log = operLogMapper.selectById(operId);
-        return log != null ? convertToVO(log) : null;
+        return log != null ? operLogMapperStruct.toVO(log) : null;
     }
 
     @Override
@@ -68,11 +68,5 @@ public class SysOperLogServiceImpl extends ServiceImpl<SysOperLogMapper, SysOper
             wrapper.le(SysOperLog::getOperTime, LocalDateTime.parse(query.getEndTime() + " 23:59:59", DATE_FORMATTER));
         }
         return wrapper.orderByDesc(SysOperLog::getOperTime);
-    }
-
-    private SysOperLogVO convertToVO(SysOperLog log) {
-        SysOperLogVO vo = new SysOperLogVO();
-        BeanUtils.copyProperties(log, vo);
-        return vo;
     }
 }

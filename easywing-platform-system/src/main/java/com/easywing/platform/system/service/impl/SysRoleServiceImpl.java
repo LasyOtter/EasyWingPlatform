@@ -12,9 +12,10 @@ import com.easywing.platform.system.domain.query.SysRoleQuery;
 import com.easywing.platform.system.domain.vo.SysRoleVO;
 import com.easywing.platform.system.enums.DataScope;
 import com.easywing.platform.system.mapper.SysRoleMapper;
+import com.easywing.platform.system.mapper.struct.RoleMapper;
 import com.easywing.platform.system.service.SysRoleService;
+import com.easywing.platform.system.util.PageUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -27,31 +28,47 @@ import java.util.stream.Collectors;
 public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> implements SysRoleService {
 
     private final SysRoleMapper roleMapper;
+    private final RoleMapper roleMapperStruct;
 
     @Override
     public Page<SysRoleVO> selectRolePage(Page<SysRole> page, SysRoleQuery query) {
         LambdaQueryWrapper<SysRole> wrapper = buildQueryWrapper(query);
         Page<SysRole> rolePage = roleMapper.selectPage(page, wrapper);
-        Page<SysRoleVO> voPage = new Page<>(rolePage.getCurrent(), rolePage.getSize(), rolePage.getTotal());
-        voPage.setRecords(rolePage.getRecords().stream().map(this::convertToVO).collect(Collectors.toList()));
-        return voPage;
+        return PageUtil.convert(rolePage, roleMapperStruct::toVO);
     }
 
     @Override
     public List<SysRoleVO> selectRoleAll() {
-        return roleMapper.selectList(new LambdaQueryWrapper<SysRole>().eq(SysRole::getStatus, 0))
-                .stream().map(this::convertToVO).collect(Collectors.toList());
+        List<SysRole> roles = roleMapper.selectList(new LambdaQueryWrapper<SysRole>().eq(SysRole::getStatus, 0));
+        List<SysRoleVO> roleVOs = roleMapperStruct.toVOList(roles);
+        roleVOs.forEach(vo -> {
+            DataScope dataScope = DataScope.values()[vo.getDataScope() - 1];
+            if (dataScope != null) vo.setDataScopeDesc(dataScope.getDescription());
+        });
+        return roleVOs;
     }
 
     @Override
     public SysRoleVO selectRoleById(Long roleId) {
         SysRole role = roleMapper.selectById(roleId);
-        return role != null ? convertToVO(role) : null;
+        if (role == null) {
+            return null;
+        }
+        SysRoleVO vo = roleMapperStruct.toVO(role);
+        DataScope dataScope = DataScope.values()[role.getDataScope() - 1];
+        if (dataScope != null) vo.setDataScopeDesc(dataScope.getDescription());
+        return vo;
     }
 
     @Override
     public List<SysRoleVO> selectRolesByUserId(Long userId) {
-        return roleMapper.selectRolesByUserId(userId).stream().map(this::convertToVO).collect(Collectors.toList());
+        List<SysRole> roles = roleMapper.selectRolesByUserId(userId);
+        List<SysRoleVO> roleVOs = roleMapperStruct.toVOList(roles);
+        roleVOs.forEach(vo -> {
+            DataScope dataScope = DataScope.values()[vo.getDataScope() - 1];
+            if (dataScope != null) vo.setDataScopeDesc(dataScope.getDescription());
+        });
+        return roleVOs;
     }
 
     @Override
@@ -63,8 +80,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         if (!checkRoleCodeUnique(roleDTO.getRoleCode(), null)) {
             throw new BizException(ErrorCode.BUSINESS_RULE_VIOLATION, "角色权限字符已存在");
         }
-        SysRole role = new SysRole();
-        BeanUtils.copyProperties(roleDTO, role);
+        SysRole role = roleMapperStruct.toEntity(roleDTO);
         roleMapper.insert(role);
         return role.getId();
     }
@@ -81,8 +97,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         if (!checkRoleCodeUnique(roleDTO.getRoleCode(), roleDTO.getId())) {
             throw new BizException(ErrorCode.BUSINESS_RULE_VIOLATION, "角色权限字符已存在");
         }
-        SysRole role = new SysRole();
-        BeanUtils.copyProperties(roleDTO, role);
+        SysRole role = roleMapperStruct.toEntity(roleDTO);
         return roleMapper.updateById(role);
     }
 
@@ -146,13 +161,5 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
                 .eq(query.getStatus() != null, SysRole::getStatus, query.getStatus())
                 .orderByAsc(SysRole::getOrderNum);
         return wrapper;
-    }
-
-    private SysRoleVO convertToVO(SysRole role) {
-        SysRoleVO vo = new SysRoleVO();
-        BeanUtils.copyProperties(role, vo);
-        DataScope dataScope = DataScope.values()[role.getDataScope() - 1];
-        if (dataScope != null) vo.setDataScopeDesc(dataScope.getDescription());
-        return vo;
     }
 }

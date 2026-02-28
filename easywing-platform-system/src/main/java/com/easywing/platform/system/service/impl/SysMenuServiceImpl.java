@@ -10,9 +10,9 @@ import com.easywing.platform.system.domain.entity.SysMenu;
 import com.easywing.platform.system.domain.vo.RouterVO;
 import com.easywing.platform.system.domain.vo.SysMenuVO;
 import com.easywing.platform.system.mapper.SysMenuMapper;
+import com.easywing.platform.system.mapper.struct.MenuMapper;
 import com.easywing.platform.system.service.SysMenuService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> implements SysMenuService {
 
     private final SysMenuMapper menuMapper;
+    private final MenuMapper menuMapperStruct;
 
     @Override
     public List<SysMenuVO> selectMenuList(SysMenuDTO menuDTO) {
@@ -34,14 +35,17 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         }
         wrapper.orderByAsc(SysMenu::getParentId, SysMenu::getOrderNum);
         List<SysMenu> menus = menuMapper.selectList(wrapper);
-        List<SysMenuVO> menuVOs = menus.stream().map(this::convertToVO).collect(Collectors.toList());
+        List<SysMenuVO> menuVOs = menuMapperStruct.toVOList(menus);
+        menuVOs.forEach(vo -> vo.setChildren(new ArrayList<>()));
         return buildMenuTree(menuVOs);
     }
 
     @Override
     public List<SysMenuVO> selectMenusByUserId(Long userId) {
         List<SysMenu> menus = menuMapper.selectMenusByUserId(userId);
-        return buildMenuTree(menus.stream().map(this::convertToVO).collect(Collectors.toList()));
+        List<SysMenuVO> menuVOs = menuMapperStruct.toVOList(menus);
+        menuVOs.forEach(vo -> vo.setChildren(new ArrayList<>()));
+        return buildMenuTree(menuVOs);
     }
 
     @Override
@@ -52,7 +56,12 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     @Override
     public SysMenuVO selectMenuById(Long menuId) {
         SysMenu menu = menuMapper.selectById(menuId);
-        return menu != null ? convertToVO(menu) : null;
+        if (menu == null) {
+            return null;
+        }
+        SysMenuVO vo = menuMapperStruct.toVO(menu);
+        vo.setChildren(new ArrayList<>());
+        return vo;
     }
 
     @Override
@@ -61,8 +70,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         if (!checkMenuNameUnique(menuDTO.getMenuName(), menuDTO.getParentId(), null)) {
             throw new BizException(ErrorCode.BUSINESS_RULE_VIOLATION, "同级菜单名称已存在");
         }
-        SysMenu menu = new SysMenu();
-        BeanUtils.copyProperties(menuDTO, menu);
+        SysMenu menu = menuMapperStruct.toEntity(menuDTO);
         menuMapper.insert(menu);
         return menu.getId();
     }
@@ -74,8 +82,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         if (!checkMenuNameUnique(menuDTO.getMenuName(), menuDTO.getParentId(), menuDTO.getId())) {
             throw new BizException(ErrorCode.BUSINESS_RULE_VIOLATION, "同级菜单名称已存在");
         }
-        SysMenu menu = new SysMenu();
-        BeanUtils.copyProperties(menuDTO, menu);
+        SysMenu menu = menuMapperStruct.toEntity(menuDTO);
         return menuMapper.updateById(menu);
     }
 
@@ -135,13 +142,6 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
 
     @Override
     public boolean checkMenuExistRole(Long menuId) { return menuMapper.checkMenuExistRole(menuId) > 0; }
-
-    private SysMenuVO convertToVO(SysMenu menu) {
-        SysMenuVO vo = new SysMenuVO();
-        BeanUtils.copyProperties(menu, vo);
-        vo.setChildren(new ArrayList<>());
-        return vo;
-    }
 
     private String getRouterPath(SysMenuVO menu) {
         String routerPath = menu.getPath();
