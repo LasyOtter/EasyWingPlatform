@@ -17,6 +17,8 @@ easywing:
       jwt:
         jwk-set-uri: http://localhost:8080/realms/easywing/protocol/openid-connect/certs
         issuer-uri: http://localhost:8080/realms/easywing
+  user:
+    default-password: DevPass@123
 
 logging:
   level:

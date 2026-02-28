@@ -88,3 +88,10 @@ easywing:
   data:
     audit-enabled: true
     tenant-enabled: false
+  user:
+    default-password: ${DEFAULT_PASSWORD:ChangeMe@123}
+    min-password-length: 8
+    max-failed-attempts: 5
+    lock-duration-minutes: 30
+    password-history-count: 5
+    password-expire-days: 90
