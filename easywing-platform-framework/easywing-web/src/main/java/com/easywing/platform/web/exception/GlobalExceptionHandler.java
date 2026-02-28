@@ -36,9 +36,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.ErrorResponseException;
@@ -372,7 +375,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<Rfc9457ProblemDetail> handleAuthenticationException(
             AuthenticationException ex, HttpServletRequest request) {
-        log.warn("Authentication failed: {}", ex.getMessage());
+        String clientIp = getClientIp(request);
+        String username = extractUsername(ex);
+
+        if (ex instanceof BadCredentialsException) {
+            log.warn("Authentication failed from IP {}: username={}, reason={}", clientIp, username, ex.getMessage());
+        } else if (ex instanceof AuthenticationCredentialsNotFoundException) {
+            log.warn("Authentication token missing from IP {}: {}", clientIp, ex.getMessage());
+        } else {
+            log.warn("Authentication failed from IP {}: {}", clientIp, ex.getMessage());
+        }
 
         String errorCode = ErrorCode.UNAUTHORIZED;
         String detail = "认证失败";
@@ -407,12 +419,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Rfc9457ProblemDetail> handleAccessDeniedException(
             AccessDeniedException ex, HttpServletRequest request) {
-        log.warn("Access denied: {}", ex.getMessage());
+        String username = getCurrentUsername();
+        String requestUri = request.getRequestURI();
+        String httpMethod = request.getMethod();
+        String clientIp = getClientIp(request);
+
+        log.warn("Access denied for user {} to resource {} {} from IP {}: {}",
+                username, httpMethod, requestUri, clientIp, ex.getMessage());
 
         Rfc9457ProblemDetail problem = Rfc9457ProblemDetail.builder()
                 .status(HttpStatus.FORBIDDEN)
                 .title("Access Denied")
-                .detail("权限不足")
+                .detail("您没有权限访问该资源")
                 .errorCode(ErrorCode.ACCESS_DENIED)
                 .traceId(getTraceId())
                 .instance(request.getRequestURI())
@@ -494,14 +512,15 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Rfc9457ProblemDetail> handleException(Exception ex, HttpServletRequest request) {
-        log.error("Unexpected exception occurred", ex);
+        String traceId = getTraceId();
+        log.error("Unexpected system error [traceId={}] from IP {}: ", traceId, getClientIp(request), ex);
 
         Rfc9457ProblemDetail problem = Rfc9457ProblemDetail.builder()
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .title("Internal Server Error")
-                .detail("系统内部错误，请稍后重试")
+                .detail("系统发生未知错误，请联系管理员 [traceId=" + traceId + "]")
                 .errorCode(ErrorCode.SYSTEM_ERROR)
-                .traceId(getTraceId())
+                .traceId(traceId)
                 .instance(request.getRequestURI())
                 .build();
 
@@ -535,5 +554,42 @@ public class GlobalExceptionHandler {
 
     private String getTraceId() {
         return MDC.get("traceId");
+    }
+
+    /**
+     * 获取客户端IP地址
+     */
+    private String getClientIp(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+        String xRealIp = request.getHeader("X-Real-IP");
+        if (xRealIp != null && !xRealIp.isEmpty()) {
+            return xRealIp;
+        }
+        return request.getRemoteAddr();
+    }
+
+    /**
+     * 获取当前用户名
+     */
+    private String getCurrentUsername() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken)) {
+            return authentication.getName();
+        }
+        return "anonymous";
+    }
+
+    /**
+     * 从认证异常中提取用户名
+     */
+    private String extractUsername(AuthenticationException ex) {
+        if (ex instanceof BadCredentialsException && ex.getMessage() != null) {
+            return ex.getMessage().contains(":") ? ex.getMessage().split(":")[0] : "unknown";
+        }
+        return "unknown";
     }
 }

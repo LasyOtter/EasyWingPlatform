@@ -2,12 +2,19 @@
 <Configuration status="WARN" monitorInterval="30">
     <Properties>
         <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{traceId}] %-5level %logger{36} - %msg%n</Property>
+        <Property name="JSON_PATTERN">{"timestamp":"%d{ISO8601}","level":"%-5level","thread":"%t","traceId":"%X{traceId}","logger":"%c{1.}","message":"%enc{%m}{JSON}","exception":"%enc{%ex}{JSON}"}%n</Property>
         <Property name="LOG_DIR">logs</Property>
     </Properties>
 
     <Appenders>
+        <!-- 开发环境控制台输出 -->
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="${LOG_PATTERN}"/>
+        </Console>
+
+        <!-- 生产环境JSON格式输出 -->
+        <Console name="JsonConsole" target="SYSTEM_OUT">
+            <PatternLayout pattern="${JSON_PATTERN}" alwaysWriteExceptions="false"/>
         </Console>
 
         <RollingFile name="RollingFile" fileName="${LOG_DIR}/gateway.log"
@@ -44,6 +51,10 @@
             <AppenderRef ref="Console"/>
         </Async>
 
+        <Async name="AsyncJsonConsole">
+            <AppenderRef ref="JsonConsole"/>
+        </Async>
+
         <Async name="AsyncRollingFile">
             <AppenderRef ref="RollingFile"/>
         </Async>
@@ -54,6 +65,7 @@
     </Appenders>
 
     <Loggers>
+        <!-- 网关模块日志 -->
         <Logger name="com.easywing.platform.gateway" level="DEBUG" additivity="false">
             <AppenderRef ref="AsyncConsole"/>
             <AppenderRef ref="AsyncRollingFile"/>
@@ -63,12 +75,14 @@
             <AppenderRef ref="AsyncAccessLog"/>
         </Logger>
 
+        <!-- 框架日志级别控制 -->
         <Logger name="org.springframework.cloud.gateway" level="INFO"/>
         <Logger name="io.netty" level="WARN"/>
         <Logger name="reactor.netty" level="WARN"/>
         <Logger name="org.springframework.data.redis" level="WARN"/>
         <Logger name="com.nimbusds" level="WARN"/>
 
+        <!-- 生产环境根日志配置 -->
         <Root level="INFO">
             <AppenderRef ref="AsyncConsole"/>
             <AppenderRef ref="AsyncRollingFile"/>
