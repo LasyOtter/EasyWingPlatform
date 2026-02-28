@@ -15,27 +15,46 @@
  */
 package com.easywing.platform.system.config;
 
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * 系统服务配置
+ * 分页配置属性
  *
  * @author EasyWing Team
  * @since 1.0.0
  */
-@Configuration
-@EnableConfigurationProperties({UserProperties.class, PageProperties.class})
-public class SystemServiceConfig {
+@Data
+@ConfigurationProperties(prefix = "easywing.page")
+public class PageProperties {
 
     /**
-     * 密码编码器
+     * 最大页码
      */
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+    private int maxPage = 1000;
+
+    /**
+     * 默认每页大小
+     */
+    private int defaultSize = 10;
+
+    /**
+     * 最大每页大小
+     */
+    private int maxSize = 100;
+
+    /**
+     * 深度分页阈值（超过此页码优化count查询）
+     */
+    private int deepPageThreshold = 100;
+
+    /**
+     * 是否启用count查询缓存
+     */
+    private boolean countCacheEnabled = true;
+
+    /**
+     * count查询缓存时间（秒）
+     */
+    private int countCacheSeconds = 60;
 }

@@ -11,11 +11,15 @@ import com.easywing.platform.system.enums.BusinessType;
 import com.easywing.platform.system.service.SysUserService;
 import com.easywing.platform.web.idempotent.Idempotent;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +28,7 @@ import java.util.List;
 @RequestMapping("/api/system/users")
 @Tag(name = "用户管理")
 @RequiredArgsConstructor
+@Validated
 public class SysUserController {
 
     private final SysUserService userService;
@@ -31,9 +36,11 @@ public class SysUserController {
     @GetMapping
     @Operation(summary = "分页查询用户列表")
     @PreAuthorize("hasAuthority('system:user:list')")
-    public ResponseEntity<Page<SysUserVO>> list(@RequestParam(defaultValue = "1") long current,
-                                                @RequestParam(defaultValue = "10") long size, SysUserQuery query) {
-        return ResponseEntity.ok(userService.selectUserPage(new Page<>(current, size), query));
+    public ResponseEntity<Page<SysUserVO>> list(
+            @Parameter(description = "当前页码，默认1") @RequestParam(defaultValue = "1") @Min(1) long current,
+            @Parameter(description = "每页大小，默认10") @RequestParam(defaultValue = "10") @Min(1) @Max(100) long size,
+            SysUserQuery query) {
+        return ResponseEntity.ok(userService.selectUserPage(current, size, query));
     }
 
     @GetMapping("/{id}")

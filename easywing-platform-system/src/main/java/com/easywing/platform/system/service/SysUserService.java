@@ -6,10 +6,11 @@ import com.easywing.platform.system.domain.dto.SysUserDTO;
 import com.easywing.platform.system.domain.entity.SysUser;
 import com.easywing.platform.system.domain.query.SysUserQuery;
 import com.easywing.platform.system.domain.vo.SysUserVO;
+import java.io.OutputStream;
 import java.util.List;
 
 public interface SysUserService extends IService<SysUser> {
-    Page<SysUserVO> selectUserPage(Page<SysUser> page, SysUserQuery query);
+    Page<SysUserVO> selectUserPage(long current, long size, SysUserQuery query);
     SysUserVO selectUserById(Long userId);
     SysUser selectUserByUsername(String username);
     Long insertUser(SysUserDTO userDTO);
@@ -21,5 +22,6 @@ public interface SysUserService extends IService<SysUser> {
     boolean checkPhoneUnique(String phone, Long userId);
     boolean checkEmailUnique(String email, Long userId);
     List<SysUserVO> exportUsers(SysUserQuery query);
+    void exportLargeData(SysUserQuery query, OutputStream outputStream);
     SysUserVO getCurrentUserInfo();
 }
