@@ -19,6 +19,8 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 缓存配置属性
@@ -51,6 +53,16 @@ public class CacheProperties {
     private String keyPrefix = "easywing:";
 
     /**
+     * 是否缓存null值
+     */
+    private boolean cacheNullValues = false;
+
+    /**
+     * 是否启用统计信息
+     */
+    private boolean statsEnabled = true;
+
+    /**
      * Caffeine 本地缓存配置
      */
     private CaffeineConfig caffeine = new CaffeineConfig();
@@ -59,6 +71,11 @@ public class CacheProperties {
      * Redis 分布式缓存配置
      */
     private RedisConfig redis = new RedisConfig();
+
+    /**
+     * 自定义缓存配置（按缓存名称）
+     */
+    private Map<String, CacheTtlConfig> caches = new HashMap<>();
 
     @Data
     public static class CaffeineConfig {
@@ -70,12 +87,22 @@ public class CacheProperties {
         /**
          * 最大容量
          */
-        private int maximumSize = 1000;
+        private int maximumSize = 10000;
 
         /**
-         * 过期时间
+         * 写入后过期时间
          */
-        private Duration expireAfterWrite = Duration.ofMinutes(10);
+        private Duration expireAfterWrite = Duration.ofMinutes(1);
+
+        /**
+         * 访问后过期时间
+         */
+        private Duration expireAfterAccess;
+
+        /**
+         * 是否记录统计信息
+         */
+        private boolean recordStats = true;
     }
 
     @Data
@@ -83,11 +110,49 @@ public class CacheProperties {
         /**
          * 默认过期时间
          */
-        private Duration defaultTtl = Duration.ofMinutes(30);
+        private Duration defaultTtl = Duration.ofMinutes(10);
 
         /**
          * 批量操作大小
          */
         private int batchSize = 100;
+
+        /**
+         * 是否使用键前缀
+         */
+        private boolean useKeyPrefix = true;
+
+        /**
+         * 缓存主题名称（用于集群间缓存同步）
+         */
+        private String cacheTopic = "cache:evict";
+    }
+
+    /**
+     * 单个缓存的TTL配置
+     */
+    @Data
+    public static class CacheTtlConfig {
+        /**
+         * 本地缓存过期时间（秒）
+         */
+        private int localExpire = 60;
+
+        /**
+         * Redis缓存过期时间（秒）
+         */
+        private int redisExpire = 300;
+
+        /**
+         * 是否缓存null值
+         */
+        private boolean cacheNull = false;
+    }
+
+    /**
+     * 获取指定缓存名称的配置
+     */
+    public CacheTtlConfig getCacheConfig(String cacheName) {
+        return caches.getOrDefault(cacheName, new CacheTtlConfig());
     }
 }
