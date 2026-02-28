@@ -1,0 +1,62 @@
+groups:
+  - name: easywing-alerts
+    rules:
+      # 登录失败率告警
+      - alert: HighLoginFailureRate
+        expr: rate(auth_login_failure_total[5m]) / rate(auth_login_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "登录失败率过高"
+          description: "过去5分钟登录失败率超过10%"
+
+      # 慢查询告警
+      - alert: SlowDatabaseQueries
+        expr: histogram_quantile(0.95, rate(db_operation_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "数据库查询缓慢"
+          description: "95分位数据库操作耗时超过1秒"
+
+      # 活跃用户数突降
+      - alert: ActiveUsersDrop
+        expr: auth_users_active < 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "活跃用户数量异常"
+          description: "活跃用户数低于5，可能存在服务问题"
+
+      # 错误率告警
+      - alert: HighErrorRate
+        expr: rate(http_server_requests_seconds_count{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HTTP错误率过高"
+          description: "5xx错误率超过5%"
+
+      # 令牌颁发超时告警
+      - alert: TokenIssuanceSlow
+        expr: histogram_quantile(0.95, rate(auth_token_issuance_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "令牌颁发缓慢"
+          description: "95分位令牌颁发耗时超过1秒"
+
+      # 用户查询慢查询告警
+      - alert: SlowUserQueries
+        expr: histogram_quantile(0.95, rate(user_query_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "用户查询缓慢"
+          description: "95分位用户查询耗时超过500ms"

@@ -18,6 +18,7 @@ package com.easywing.platform.auth.service;
 import com.easywing.platform.auth.config.AuthProperties;
 import com.easywing.platform.auth.domain.AuthUser;
 import com.easywing.platform.auth.dto.TokenResponse;
+import com.easywing.platform.auth.metrics.AuthMetrics;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
@@ -25,6 +26,7 @@ import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import io.micrometer.core.instrument.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -59,20 +61,33 @@ public class TokenService {
     private final RSAKey rsaKey;
     private final StringRedisTemplate redisTemplate;
     private final UserDetailsService userDetailsService;
+    private final AuthMetrics authMetrics;
 
     public TokenService(AuthProperties properties, RSAKey rsaKey,
                         StringRedisTemplate redisTemplate,
-                        UserDetailsService userDetailsService) {
+                        UserDetailsService userDetailsService,
+                        AuthMetrics authMetrics) {
         this.properties = properties;
         this.rsaKey = rsaKey;
         this.redisTemplate = redisTemplate;
         this.userDetailsService = userDetailsService;
+        this.authMetrics = authMetrics;
     }
 
     public TokenResponse issueTokenPair(AuthUser user) {
-        String accessToken = buildToken(user, TOKEN_TYPE_ACCESS, properties.getJwt().getAccessTokenTtl().getSeconds());
-        String refreshToken = buildToken(user, TOKEN_TYPE_REFRESH, properties.getJwt().getRefreshTokenTtl().getSeconds());
-        return new TokenResponse(accessToken, refreshToken, properties.getJwt().getAccessTokenTtl().getSeconds());
+        Timer.Sample sample = authMetrics.startTokenIssuance();
+        try {
+            String accessToken = buildToken(user, TOKEN_TYPE_ACCESS, properties.getJwt().getAccessTokenTtl().getSeconds());
+            String refreshToken = buildToken(user, TOKEN_TYPE_REFRESH, properties.getJwt().getRefreshTokenTtl().getSeconds());
+
+            authMetrics.recordTokenIssuance(sample, "PAIR");
+            authMetrics.recordLoginSuccess(user.getUsername(), "PASSWORD");
+
+            return new TokenResponse(accessToken, refreshToken, properties.getJwt().getAccessTokenTtl().getSeconds());
+        } catch (Exception e) {
+            authMetrics.recordLoginFailure(user.getUsername(), "TOKEN_BUILD_ERROR");
+            throw e;
+        }
     }
 
     public TokenResponse refreshTokenPair(String rawRefreshToken) {

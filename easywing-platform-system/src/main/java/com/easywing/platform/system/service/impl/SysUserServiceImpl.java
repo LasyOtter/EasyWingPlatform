@@ -12,12 +12,14 @@ import com.easywing.platform.system.domain.entity.SysUser;
 import com.easywing.platform.system.domain.query.SysUserQuery;
 import com.easywing.platform.system.domain.vo.SysUserVO;
 import com.easywing.platform.system.mapper.SysUserMapper;
+import com.easywing.platform.system.metrics.UserMetrics;
 import com.easywing.platform.system.service.PasswordHistoryService;
 import com.easywing.platform.system.service.SysUserService;
 import com.easywing.platform.system.util.PasswordValidator;
 import com.easywing.platform.system.util.SecurityUtils;
 import com.easywing.platform.system.mapper.struct.UserMapper;
 import com.easywing.platform.system.util.PageUtil;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -39,12 +41,18 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     private final PasswordValidator passwordValidator;
     private final UserProperties userProperties;
     private final UserMapper userMapperStruct;
+    private final UserMetrics userMetrics;
 
     @Override
     public Page<SysUserVO> selectUserPage(Page<SysUser> page, SysUserQuery query) {
+        Timer.Sample sample = userMetrics.startUserQuery();
+
         LambdaQueryWrapper<SysUser> wrapper = buildQueryWrapper(query);
         Page<SysUser> userPage = userMapper.selectPage(page, wrapper);
-        return PageUtil.convert(userPage, userMapperStruct::toVO);
+        Page<SysUserVO> result = PageUtil.convert(userPage, userMapperStruct::toVO);
+
+        userMetrics.recordUserQuery(sample, "PAGE_QUERY", result.getRecords().size());
+        return result;
     }
 
     @Override
@@ -64,20 +72,24 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         log.info("Creating new user: username={}, operator={}",
                 userDTO.getUsername(), SecurityUtils.getCurrentUsername());
 
-        try {
-            validateUser(userDTO);
-            SysUser user = userMapperStruct.toEntity(userDTO);
-            user.setPassword(passwordEncoder.encode(userProperties.getDefaultPassword()));
-            user.setStatus(0);
-            userMapper.insert(user);
+        return userMetrics.recordDbOperation("INSERT_USER", () -> {
+            try {
+                validateUser(userDTO);
+                SysUser user = userMapperStruct.toEntity(userDTO);
+                user.setPassword(passwordEncoder.encode(userProperties.getDefaultPassword()));
+                user.setStatus(0);
+                userMapper.insert(user);
 
-            log.info("User created successfully: userId={}, username={}",
-                    user.getId(), user.getUsername());
-            return user.getId();
-        } catch (Exception e) {
-            log.error("Failed to create user: username={}", userDTO.getUsername(), e);
-            throw e;
-        }
+                userMetrics.recordUserOperation("CREATE", SecurityUtils.getCurrentUsername());
+
+                log.info("User created successfully: userId={}, username={}",
+                        user.getId(), user.getUsername());
+                return user.getId();
+            } catch (Exception e) {
+                log.error("Failed to create user: username={}", userDTO.getUsername(), e);
+                throw e;
+            }
+        });
     }
 
     @Override
