@@ -75,7 +75,7 @@ class TokenControllerTest {
         request.setUsername("admin");
         request.setPassword("admin123");
 
-        mockMvc.perform(post("/token/login")
+        mockMvc.perform(post("/api/v1/token/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -96,7 +96,7 @@ class TokenControllerTest {
         request.setUsername("admin");
         request.setPassword("wrongpassword");
 
-        mockMvc.perform(post("/token/login")
+        mockMvc.perform(post("/api/v1/token/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());
@@ -108,7 +108,7 @@ class TokenControllerTest {
         LoginRequest request = new LoginRequest();
         request.setPassword("admin123");
 
-        mockMvc.perform(post("/token/login")
+        mockMvc.perform(post("/api/v1/token/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());

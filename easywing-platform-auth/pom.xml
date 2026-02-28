@@ -23,6 +23,12 @@
             <artifactId>easywing-core</artifactId>
         </dependency>
 
+        <!-- EasyWing Web -->
+        <dependency>
+            <groupId>com.easywing.platform</groupId>
+            <artifactId>easywing-web</artifactId>
+        </dependency>
+
         <!-- Spring Boot Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

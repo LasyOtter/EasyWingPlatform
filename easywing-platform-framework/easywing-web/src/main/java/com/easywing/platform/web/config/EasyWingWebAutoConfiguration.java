@@ -16,11 +16,17 @@
 package com.easywing.platform.web.config;
 
 import com.easywing.platform.web.exception.GlobalExceptionHandler;
+import com.easywing.platform.web.idempotent.IdempotentAspect;
+import com.easywing.platform.web.ratelimit.RateLimitAspect;
+import com.easywing.platform.web.version.ApiVersionConfig;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.servlet.DispatcherServlet;
 
 /**
@@ -32,10 +38,31 @@ import org.springframework.web.servlet.DispatcherServlet;
 @AutoConfiguration(before = WebMvcAutoConfiguration.class)
 @ConditionalOnClass(DispatcherServlet.class)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+@Import(ApiVersionConfig.class)
 public class EasyWingWebAutoConfiguration {
 
     @Bean
     public GlobalExceptionHandler globalExceptionHandler() {
         return new GlobalExceptionHandler();
+    }
+
+    /**
+     * 幂等性保护切面
+     */
+    @Bean
+    @ConditionalOnClass(StringRedisTemplate.class)
+    @ConditionalOnBean(StringRedisTemplate.class)
+    public IdempotentAspect idempotentAspect(StringRedisTemplate redisTemplate) {
+        return new IdempotentAspect(redisTemplate);
+    }
+
+    /**
+     * 限流保护切面
+     */
+    @Bean
+    @ConditionalOnClass(StringRedisTemplate.class)
+    @ConditionalOnBean(StringRedisTemplate.class)
+    public RateLimitAspect rateLimitAspect(StringRedisTemplate redisTemplate) {
+        return new RateLimitAspect(redisTemplate);
     }
 }
