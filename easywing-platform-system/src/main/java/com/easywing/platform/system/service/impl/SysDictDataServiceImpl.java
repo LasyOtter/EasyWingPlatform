@@ -8,9 +8,10 @@ import com.easywing.platform.system.domain.dto.SysDictDataDTO;
 import com.easywing.platform.system.domain.entity.SysDictData;
 import com.easywing.platform.system.domain.vo.SysDictDataVO;
 import com.easywing.platform.system.mapper.SysDictDataMapper;
+import com.easywing.platform.system.mapper.struct.DictDataMapper;
 import com.easywing.platform.system.service.SysDictDataService;
+import com.easywing.platform.system.util.PageUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 public class SysDictDataServiceImpl extends ServiceImpl<SysDictDataMapper, SysDictData> implements SysDictDataService {
 
     private final SysDictDataMapper dictDataMapper;
+    private final DictDataMapper dictDataMapperStruct;
     private static final String CACHE_NAME = "sys_dict";
 
     @Override
@@ -36,28 +38,35 @@ public class SysDictDataServiceImpl extends ServiceImpl<SysDictDataMapper, SysDi
         }
         wrapper.orderByAsc(SysDictData::getDictSort);
         Page<SysDictData> dictDataPage = dictDataMapper.selectPage(page, wrapper);
-        Page<SysDictDataVO> voPage = new Page<>(dictDataPage.getCurrent(), dictDataPage.getSize(), dictDataPage.getTotal());
-        voPage.setRecords(dictDataPage.getRecords().stream().map(this::convertToVO).collect(Collectors.toList()));
-        return voPage;
+        return PageUtil.convert(dictDataPage, dictDataMapperStruct::toVO);
     }
 
     @Override
     @Cacheable(value = CACHE_NAME, key = "'data:' + #dictType")
     public List<SysDictDataVO> selectDictDataByType(String dictType) {
-        return dictDataMapper.selectDictDataByType(dictType).stream().map(this::convertToVO).collect(Collectors.toList());
+        List<SysDictData> dictDataList = dictDataMapper.selectDictDataByType(dictType);
+        return dictDataMapperStruct.toVOList(dictDataList);
     }
 
     @Override
     public SysDictDataVO selectDictDataById(Long dictCode) {
         SysDictData dictData = dictDataMapper.selectById(dictCode);
-        return dictData != null ? convertToVO(dictData) : null;
+        return dictData != null ? dictDataMapperStruct.toVO(dictData) : null;
     }
 
     @Override
     @CacheEvict(value = CACHE_NAME, key = "'data:' + #dictDataDTO.dictType")
     public Long insertDictData(SysDictDataDTO dictDataDTO) {
         SysDictData dictData = new SysDictData();
-        BeanUtils.copyProperties(dictDataDTO, dictData);
+        dictData.setDictSort(dictDataDTO.getDictSort());
+        dictData.setDictLabel(dictDataDTO.getDictLabel());
+        dictData.setDictValue(dictDataDTO.getDictValue());
+        dictData.setDictType(dictDataDTO.getDictType());
+        dictData.setCssClass(dictDataDTO.getCssClass());
+        dictData.setListClass(dictDataDTO.getListClass());
+        dictData.setIsDefault(dictDataDTO.getIsDefault());
+        dictData.setStatus(dictDataDTO.getStatus());
+        dictData.setRemark(dictDataDTO.getRemark());
         dictDataMapper.insert(dictData);
         return dictData.getId();
     }
@@ -67,7 +76,16 @@ public class SysDictDataServiceImpl extends ServiceImpl<SysDictDataMapper, SysDi
     public int updateDictData(SysDictDataDTO dictDataDTO) {
         if (dictDataDTO.getId() == null) throw new IllegalArgumentException("字典编码不能为空");
         SysDictData dictData = new SysDictData();
-        BeanUtils.copyProperties(dictDataDTO, dictData);
+        dictData.setId(dictDataDTO.getId());
+        dictData.setDictSort(dictDataDTO.getDictSort());
+        dictData.setDictLabel(dictDataDTO.getDictLabel());
+        dictData.setDictValue(dictDataDTO.getDictValue());
+        dictData.setDictType(dictDataDTO.getDictType());
+        dictData.setCssClass(dictDataDTO.getCssClass());
+        dictData.setListClass(dictDataDTO.getListClass());
+        dictData.setIsDefault(dictDataDTO.getIsDefault());
+        dictData.setStatus(dictDataDTO.getStatus());
+        dictData.setRemark(dictDataDTO.getRemark());
         return dictDataMapper.updateById(dictData);
     }
 
@@ -84,11 +102,5 @@ public class SysDictDataServiceImpl extends ServiceImpl<SysDictDataMapper, SysDi
     @Override
     public List<String> getDictValues(String dictType) {
         return selectDictDataByType(dictType).stream().map(SysDictDataVO::getDictValue).collect(Collectors.toList());
-    }
-
-    private SysDictDataVO convertToVO(SysDictData dictData) {
-        SysDictDataVO vo = new SysDictDataVO();
-        BeanUtils.copyProperties(dictData, vo);
-        return vo;
     }
 }

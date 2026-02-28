@@ -16,9 +16,10 @@ import com.easywing.platform.system.service.PasswordHistoryService;
 import com.easywing.platform.system.service.SysUserService;
 import com.easywing.platform.system.util.PasswordValidator;
 import com.easywing.platform.system.util.SecurityUtils;
+import com.easywing.platform.system.mapper.struct.UserMapper;
+import com.easywing.platform.system.util.PageUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,20 +38,19 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     private final PasswordHistoryService passwordHistoryService;
     private final PasswordValidator passwordValidator;
     private final UserProperties userProperties;
+    private final UserMapper userMapperStruct;
 
     @Override
     public Page<SysUserVO> selectUserPage(Page<SysUser> page, SysUserQuery query) {
         LambdaQueryWrapper<SysUser> wrapper = buildQueryWrapper(query);
         Page<SysUser> userPage = userMapper.selectPage(page, wrapper);
-        Page<SysUserVO> voPage = new Page<>(userPage.getCurrent(), userPage.getSize(), userPage.getTotal());
-        voPage.setRecords(userPage.getRecords().stream().map(this::convertToVO).collect(Collectors.toList()));
-        return voPage;
+        return PageUtil.convert(userPage, userMapperStruct::toVO);
     }
 
     @Override
     public SysUserVO selectUserById(Long userId) {
         SysUser user = userMapper.selectById(userId);
-        return user != null ? convertToVO(user) : null;
+        return user != null ? userMapperStruct.toVO(user) : null;
     }
 
     @Override
@@ -66,8 +66,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
         try {
             validateUser(userDTO);
-            SysUser user = new SysUser();
-            BeanUtils.copyProperties(userDTO, user);
+            SysUser user = userMapperStruct.toEntity(userDTO);
             user.setPassword(passwordEncoder.encode(userProperties.getDefaultPassword()));
             user.setStatus(0);
             userMapper.insert(user);
@@ -88,8 +87,11 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             throw new BizException(ErrorCode.INVALID_PARAMETER, "用户ID不能为空");
         }
         validateUser(userDTO);
-        SysUser user = new SysUser();
-        BeanUtils.copyProperties(userDTO, user);
+        SysUser user = userMapper.selectById(userDTO.getId());
+        if (user == null) {
+            throw new BizException(ErrorCode.RESOURCE_NOT_FOUND, "用户不存在");
+        }
+        userMapperStruct.updateEntity(user, userDTO);
         return userMapper.updateById(user);
     }
 
@@ -141,7 +143,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @Override
     public List<SysUserVO> exportUsers(SysUserQuery query) {
         List<SysUser> users = userMapper.selectList(buildQueryWrapper(query));
-        return users.stream().map(this::convertToVO).collect(Collectors.toList());
+        return userMapperStruct.toVOList(users);
     }
 
     @Override
@@ -161,12 +163,6 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
                 .eq(query.getStatus() != null, SysUser::getStatus, query.getStatus())
                 .orderByDesc(SysUser::getCreateTime);
         return wrapper;
-    }
-
-    private SysUserVO convertToVO(SysUser user) {
-        SysUserVO vo = new SysUserVO();
-        BeanUtils.copyProperties(user, vo);
-        return vo;
     }
 
     private void validateUser(SysUserDTO userDTO) {

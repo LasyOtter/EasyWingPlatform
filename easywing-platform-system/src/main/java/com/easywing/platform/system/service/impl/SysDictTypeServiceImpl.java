@@ -10,9 +10,10 @@ import com.easywing.platform.system.domain.dto.SysDictTypeDTO;
 import com.easywing.platform.system.domain.entity.SysDictType;
 import com.easywing.platform.system.domain.vo.SysDictTypeVO;
 import com.easywing.platform.system.mapper.SysDictTypeMapper;
+import com.easywing.platform.system.mapper.struct.DictTypeMapper;
 import com.easywing.platform.system.service.SysDictTypeService;
+import com.easywing.platform.system.util.PageUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDictType> implements SysDictTypeService {
 
     private final SysDictTypeMapper dictTypeMapper;
+    private final DictTypeMapper dictTypeMapperStruct;
     private static final String CACHE_NAME = "sys_dict";
 
     @Override
@@ -36,28 +38,26 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
                     .eq(dictTypeDTO.getStatus() != null, SysDictType::getStatus, dictTypeDTO.getStatus());
         }
         Page<SysDictType> dictTypePage = dictTypeMapper.selectPage(page, wrapper);
-        Page<SysDictTypeVO> voPage = new Page<>(dictTypePage.getCurrent(), dictTypePage.getSize(), dictTypePage.getTotal());
-        voPage.setRecords(dictTypePage.getRecords().stream().map(this::convertToVO).collect(Collectors.toList()));
-        return voPage;
+        return PageUtil.convert(dictTypePage, dictTypeMapperStruct::toVO);
     }
 
     @Override
     public List<SysDictTypeVO> selectDictTypeAll() {
-        return dictTypeMapper.selectList(new LambdaQueryWrapper<SysDictType>().eq(SysDictType::getStatus, 0))
-                .stream().map(this::convertToVO).collect(Collectors.toList());
+        List<SysDictType> dictTypes = dictTypeMapper.selectList(new LambdaQueryWrapper<SysDictType>().eq(SysDictType::getStatus, 0));
+        return dictTypeMapperStruct.toVOList(dictTypes);
     }
 
     @Override
     @Cacheable(value = CACHE_NAME, key = "'type:' + #dictType")
     public SysDictTypeVO selectDictTypeByType(String dictType) {
         SysDictType type = dictTypeMapper.selectDictTypeByType(dictType);
-        return type != null ? convertToVO(type) : null;
+        return type != null ? dictTypeMapperStruct.toVO(type) : null;
     }
 
     @Override
     public SysDictTypeVO selectDictTypeById(Long dictId) {
         SysDictType type = dictTypeMapper.selectById(dictId);
-        return type != null ? convertToVO(type) : null;
+        return type != null ? dictTypeMapperStruct.toVO(type) : null;
     }
 
     @Override
@@ -67,7 +67,10 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
             throw new BizException(ErrorCode.BUSINESS_RULE_VIOLATION, "字典类型已存在");
         }
         SysDictType dictType = new SysDictType();
-        BeanUtils.copyProperties(dictTypeDTO, dictType);
+        dictType.setDictName(dictTypeDTO.getDictName());
+        dictType.setDictType(dictTypeDTO.getDictType());
+        dictType.setStatus(dictTypeDTO.getStatus());
+        dictType.setRemark(dictTypeDTO.getRemark());
         dictTypeMapper.insert(dictType);
         return dictType.getId();
     }
@@ -80,7 +83,11 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
             throw new BizException(ErrorCode.BUSINESS_RULE_VIOLATION, "字典类型已存在");
         }
         SysDictType dictType = new SysDictType();
-        BeanUtils.copyProperties(dictTypeDTO, dictType);
+        dictType.setId(dictTypeDTO.getId());
+        dictType.setDictName(dictTypeDTO.getDictName());
+        dictType.setDictType(dictTypeDTO.getDictType());
+        dictType.setStatus(dictTypeDTO.getStatus());
+        dictType.setRemark(dictTypeDTO.getRemark());
         return dictTypeMapper.updateById(dictType);
     }
 
@@ -100,11 +107,5 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
         LambdaQueryWrapper<SysDictType> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysDictType::getDictType, dictType).ne(dictId != null, SysDictType::getId, dictId);
         return dictTypeMapper.selectCount(wrapper) == 0;
-    }
-
-    private SysDictTypeVO convertToVO(SysDictType dictType) {
-        SysDictTypeVO vo = new SysDictTypeVO();
-        BeanUtils.copyProperties(dictType, vo);
-        return vo;
     }
 }

@@ -9,9 +9,10 @@ import com.easywing.platform.system.domain.dto.SysPostDTO;
 import com.easywing.platform.system.domain.entity.SysPost;
 import com.easywing.platform.system.domain.vo.SysPostVO;
 import com.easywing.platform.system.mapper.SysPostMapper;
+import com.easywing.platform.system.mapper.struct.PostMapper;
 import com.easywing.platform.system.service.SysPostService;
+import com.easywing.platform.system.util.PageUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 public class SysPostServiceImpl extends ServiceImpl<SysPostMapper, SysPost> implements SysPostService {
 
     private final SysPostMapper postMapper;
+    private final PostMapper postMapperStruct;
 
     @Override
     public Page<SysPostVO> selectPostPage(Page<SysPost> page, SysPostDTO postDTO) {
@@ -33,26 +35,25 @@ public class SysPostServiceImpl extends ServiceImpl<SysPostMapper, SysPost> impl
         }
         wrapper.orderByAsc(SysPost::getOrderNum);
         Page<SysPost> postPage = postMapper.selectPage(page, wrapper);
-        Page<SysPostVO> voPage = new Page<>(postPage.getCurrent(), postPage.getSize(), postPage.getTotal());
-        voPage.setRecords(postPage.getRecords().stream().map(this::convertToVO).collect(Collectors.toList()));
-        return voPage;
+        return PageUtil.convert(postPage, postMapperStruct::toVO);
     }
 
     @Override
     public List<SysPostVO> selectPostAll() {
-        return postMapper.selectList(new LambdaQueryWrapper<SysPost>().eq(SysPost::getStatus, 0).orderByAsc(SysPost::getOrderNum))
-                .stream().map(this::convertToVO).collect(Collectors.toList());
+        List<SysPost> posts = postMapper.selectList(new LambdaQueryWrapper<SysPost>().eq(SysPost::getStatus, 0).orderByAsc(SysPost::getOrderNum));
+        return postMapperStruct.toVOList(posts);
     }
 
     @Override
     public SysPostVO selectPostById(Long postId) {
         SysPost post = postMapper.selectById(postId);
-        return post != null ? convertToVO(post) : null;
+        return post != null ? postMapperStruct.toVO(post) : null;
     }
 
     @Override
     public List<SysPostVO> selectPostsByUserId(Long userId) {
-        return postMapper.selectPostsByUserId(userId).stream().map(this::convertToVO).collect(Collectors.toList());
+        List<SysPost> posts = postMapper.selectPostsByUserId(userId);
+        return postMapperStruct.toVOList(posts);
     }
 
     @Override
@@ -61,7 +62,12 @@ public class SysPostServiceImpl extends ServiceImpl<SysPostMapper, SysPost> impl
             throw new BizException(ErrorCode.BUSINESS_RULE_VIOLATION, "岗位编码已存在");
         }
         SysPost post = new SysPost();
-        BeanUtils.copyProperties(postDTO, post);
+        post.setPostCode(postDTO.getPostCode());
+        post.setPostName(postDTO.getPostName());
+        post.setPostCategory(postDTO.getPostCategory());
+        post.setOrderNum(postDTO.getOrderNum());
+        post.setStatus(postDTO.getStatus());
+        post.setRemark(postDTO.getRemark());
         postMapper.insert(post);
         return post.getId();
     }
@@ -73,7 +79,13 @@ public class SysPostServiceImpl extends ServiceImpl<SysPostMapper, SysPost> impl
             throw new BizException(ErrorCode.BUSINESS_RULE_VIOLATION, "岗位编码已存在");
         }
         SysPost post = new SysPost();
-        BeanUtils.copyProperties(postDTO, post);
+        post.setId(postDTO.getId());
+        post.setPostCode(postDTO.getPostCode());
+        post.setPostName(postDTO.getPostName());
+        post.setPostCategory(postDTO.getPostCategory());
+        post.setOrderNum(postDTO.getOrderNum());
+        post.setStatus(postDTO.getStatus());
+        post.setRemark(postDTO.getRemark());
         return postMapper.updateById(post);
     }
 
@@ -88,11 +100,5 @@ public class SysPostServiceImpl extends ServiceImpl<SysPostMapper, SysPost> impl
         LambdaQueryWrapper<SysPost> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysPost::getPostCode, postCode).ne(postId != null, SysPost::getId, postId);
         return postMapper.selectCount(wrapper) == 0;
-    }
-
-    private SysPostVO convertToVO(SysPost post) {
-        SysPostVO vo = new SysPostVO();
-        BeanUtils.copyProperties(post, vo);
-        return vo;
     }
 }

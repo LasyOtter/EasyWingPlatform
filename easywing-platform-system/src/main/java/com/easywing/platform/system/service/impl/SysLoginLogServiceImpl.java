@@ -8,9 +8,10 @@ import com.easywing.platform.system.domain.entity.SysLoginLog;
 import com.easywing.platform.system.domain.query.SysLoginLogQuery;
 import com.easywing.platform.system.domain.vo.SysLoginLogVO;
 import com.easywing.platform.system.mapper.SysLoginLogMapper;
+import com.easywing.platform.system.mapper.struct.LoginLogMapper;
 import com.easywing.platform.system.service.SysLoginLogService;
+import com.easywing.platform.system.util.PageUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -24,21 +25,20 @@ import java.util.stream.Collectors;
 public class SysLoginLogServiceImpl extends ServiceImpl<SysLoginLogMapper, SysLoginLog> implements SysLoginLogService {
 
     private final SysLoginLogMapper loginLogMapper;
+    private final LoginLogMapper loginLogMapperStruct;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Override
     public Page<SysLoginLogVO> selectLoginLogPage(Page<SysLoginLog> page, SysLoginLogQuery query) {
         LambdaQueryWrapper<SysLoginLog> wrapper = buildQueryWrapper(query);
         Page<SysLoginLog> logPage = loginLogMapper.selectPage(page, wrapper);
-        Page<SysLoginLogVO> voPage = new Page<>(logPage.getCurrent(), logPage.getSize(), logPage.getTotal());
-        voPage.setRecords(logPage.getRecords().stream().map(this::convertToVO).collect(Collectors.toList()));
-        return voPage;
+        return PageUtil.convert(logPage, loginLogMapperStruct::toVO);
     }
 
     @Override
     public SysLoginLogVO selectLoginLogById(Long infoId) {
         SysLoginLog log = loginLogMapper.selectById(infoId);
-        return log != null ? convertToVO(log) : null;
+        return log != null ? loginLogMapperStruct.toVO(log) : null;
     }
 
     @Override
@@ -65,11 +65,5 @@ public class SysLoginLogServiceImpl extends ServiceImpl<SysLoginLogMapper, SysLo
             wrapper.le(SysLoginLog::getLoginTime, LocalDateTime.parse(query.getEndTime() + " 23:59:59", DATE_FORMATTER));
         }
         return wrapper.orderByDesc(SysLoginLog::getLoginTime);
-    }
-
-    private SysLoginLogVO convertToVO(SysLoginLog log) {
-        SysLoginLogVO vo = new SysLoginLogVO();
-        BeanUtils.copyProperties(log, vo);
-        return vo;
     }
 }
