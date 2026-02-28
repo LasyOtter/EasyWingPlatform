@@ -91,6 +91,10 @@ public final class ErrorCode {
     public static final String RATE_LIMITED = "RATE001";
     public static final String RETRY_EXHAUSTED = "RATE002";
 
+    // ==================== 幂等性错误 ====================
+    public static final String REQUEST_DUPLICATE = "IDEM001";
+    public static final String RATE_LIMIT_EXCEEDED = "RATE003";
+
     // ==================== 错误信息映射 ====================
     private static final Map<String, ErrorInfo> ERROR_MAP = new HashMap<>();
 
@@ -132,6 +136,10 @@ public final class ErrorCode {
         // 限流熔断
         register(RATE_LIMITED, TOO_MANY_REQUESTS_STATUS, "Rate Limited", "请求过于频繁，请稍后重试");
         register(RETRY_EXHAUSTED, SERVICE_UNAVAILABLE_STATUS, "Retry Exhausted", "重试次数已用尽");
+        register(RATE_LIMIT_EXCEEDED, TOO_MANY_REQUESTS_STATUS, "Rate Limit Exceeded", "请求过于频繁，请稍后再试");
+
+        // 幂等性错误
+        register(REQUEST_DUPLICATE, TOO_MANY_REQUESTS_STATUS, "Duplicate Request", "请求处理中，请勿重复提交");
     }
 
     private static void register(String code, int status, String title, String message) {

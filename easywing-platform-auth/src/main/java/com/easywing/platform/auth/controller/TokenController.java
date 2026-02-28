@@ -22,6 +22,8 @@ import com.easywing.platform.auth.dto.TokenResponse;
 import com.easywing.platform.auth.service.TokenService;
 import com.easywing.platform.auth.service.UserDetailsService;
 import com.easywing.platform.core.constant.HttpHeaders;
+import com.easywing.platform.web.ratelimit.RateLimit;
+import com.easywing.platform.web.version.ApiVersion;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -38,17 +40,18 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>
  * 提供以下端点：
  * <ul>
- *     <li>POST /token/login - 用户名密码登录，签发令牌对</li>
- *     <li>POST /token/refresh - 使用刷新令牌换取新的令牌对</li>
- *     <li>POST /token/logout - 注销当前令牌</li>
+ *     <li>POST /api/v1/token/login - 用户名密码登录，签发令牌对</li>
+ *     <li>POST /api/v1/token/refresh - 使用刷新令牌换取新的令牌对</li>
+ *     <li>POST /api/v1/token/logout - 注销当前令牌</li>
  * </ul>
  *
  * @author EasyWing Team
  * @since 1.0.0
  */
 @RestController
-@RequestMapping("/token")
-@Tag(name = "Token", description = "JWT令牌管理接口")
+@RequestMapping("/api/v1/token")
+@ApiVersion("v1")
+@Tag(name = "Token", description = "JWT令牌管理接口（v1）")
 public class TokenController {
 
     private final TokenService tokenService;
@@ -61,6 +64,7 @@ public class TokenController {
 
     @PostMapping("/login")
     @Operation(summary = "用户登录", description = "验证用户名密码，成功后签发访问令牌和刷新令牌")
+    @RateLimit(key = "#request.username", rate = 5, capacity = 5, message = "登录尝试过于频繁，请5分钟后再试")
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthUser user = userDetailsService.loadByUsername(request.getUsername());
         if (!user.isEnabled()) {

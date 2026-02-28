@@ -46,8 +46,8 @@ public class AuthSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/token/login",
-                                "/token/refresh",
+                                "/api/v1/token/login",
+                                "/api/v1/token/refresh",
                                 "/.well-known/jwks.json",
                                 "/actuator/**",
                                 "/swagger-ui/**",
