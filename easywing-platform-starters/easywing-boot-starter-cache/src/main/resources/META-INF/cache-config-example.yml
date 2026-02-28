@@ -1,0 +1,81 @@
+# EasyWing Cache Configuration Example
+# 多级缓存配置示例
+
+spring:
+  cache:
+    type: redis
+    redis:
+      time-to-live: 600000  # 默认10分钟（毫秒）
+      cache-null-values: false
+      use-key-prefix: true
+      key-prefix: "cache:"
+
+easywing:
+  cache:
+    # 是否启用缓存
+    enabled: true
+    
+    # 缓存类型: redis, caffeine, multi
+    type: multi
+    
+    # 默认缓存过期时间
+    default-ttl: 30m
+    
+    # 缓存键前缀
+    key-prefix: "easywing:"
+    
+    # 是否缓存null值（防止缓存穿透）
+    cache-null-values: false
+    
+    # 是否启用统计信息
+    stats-enabled: true
+    
+    # 是否启用缓存预热
+    warmup-enabled: true
+    
+    # Caffeine 本地缓存配置
+    caffeine:
+      initial-capacity: 100
+      maximum-size: 10000
+      expire-after-write: 1m
+      # expire-after-access: 30s
+      record-stats: true
+    
+    # Redis 分布式缓存配置
+    redis:
+      default-ttl: 10m
+      batch-size: 100
+      use-key-prefix: true
+      cache-topic: "cache:evict"  # 集群间缓存同步主题
+    
+    # 自定义缓存配置（按缓存名称）
+    caches:
+      # 用户缓存
+      user:
+        local-expire: 60
+        redis-expire: 300
+        cache-null: false
+      
+      # 用户名缓存
+      user:username:
+        local-expire: 60
+        redis-expire: 300
+        cache-null: false
+      
+      # 角色权限缓存
+      role:
+        local-expire: 120
+        redis-expire: 600
+        cache-null: false
+      
+      # 字典数据缓存
+      dict:
+        local-expire: 300
+        redis-expire: 1800
+        cache-null: true
+      
+      # 菜单缓存
+      menu:
+        local-expire: 120
+        redis-expire: 600
+        cache-null: false

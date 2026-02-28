@@ -31,7 +31,7 @@
         
         <!-- Caffeine -->
         <dependency>
-            <groupId>com.github.ben-manes.caffeine</groupId>
+            <groupId>com.github.benmanes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
         </dependency>
         
@@ -39,6 +39,18 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+        
+        <!-- Spring Boot AOP -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+        
+        <!-- Spring Boot Data Redis -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
     </dependencies>
 </project>
