@@ -1,0 +1,93 @@
+/*
+ * Copyright 2024-2026 EasyWing Platform Team.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.easywing.platform.cache.properties;
+
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import java.time.Duration;
+
+/**
+ * 缓存配置属性
+ *
+ * @author EasyWing Team
+ * @since 1.0.0
+ */
+@Data
+@ConfigurationProperties(prefix = "easywing.cache")
+public class CacheProperties {
+
+    /**
+     * 是否启用缓存
+     */
+    private boolean enabled = true;
+
+    /**
+     * 缓存类型: redis, caffeine, multi
+     */
+    private String type = "multi";
+
+    /**
+     * 默认缓存过期时间
+     */
+    private Duration defaultTtl = Duration.ofMinutes(30);
+
+    /**
+     * 缓存键前缀
+     */
+    private String keyPrefix = "easywing:";
+
+    /**
+     * Caffeine 本地缓存配置
+     */
+    private CaffeineConfig caffeine = new CaffeineConfig();
+
+    /**
+     * Redis 分布式缓存配置
+     */
+    private RedisConfig redis = new RedisConfig();
+
+    @Data
+    public static class CaffeineConfig {
+        /**
+         * 初始容量
+         */
+        private int initialCapacity = 100;
+
+        /**
+         * 最大容量
+         */
+        private int maximumSize = 1000;
+
+        /**
+         * 过期时间
+         */
+        private Duration expireAfterWrite = Duration.ofMinutes(10);
+    }
+
+    @Data
+    public static class RedisConfig {
+        /**
+         * 默认过期时间
+         */
+        private Duration defaultTtl = Duration.ofMinutes(30);
+
+        /**
+         * 批量操作大小
+         */
+        private int batchSize = 100;
+    }
+}
