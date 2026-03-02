@@ -18,6 +18,9 @@ package com.easywing.platform.system.util;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
+import com.easywing.platform.system.domain.vo.LoginUser;
+import com.easywing.platform.system.enums.DataScope;
+
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
@@ -409,5 +412,159 @@ class SecurityUtilsTest {
 
         // Then
         assertThat(result).isNull();
+    }
+
+    @Test
+    @DisplayName("获取登录用户信息-成功")
+    void getLoginUser_Success() {
+        // Given
+        Jwt jwt = mock(Jwt.class);
+        when(jwt.getSubject()).thenReturn("123");
+        when(jwt.getClaimAsString("preferred_username")).thenReturn("testuser");
+        when(jwt.getClaim("dept_id")).thenReturn(100L);
+        when(jwt.getClaim("tenant_id")).thenReturn(1L);
+        when(jwt.getClaimAsStringList("roles")).thenReturn(List.of("ROLE_USER"));
+        when(jwt.getClaim("data_scope")).thenReturn(1);
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getPrincipal()).thenReturn(jwt);
+        when(auth.getAuthorities()).thenReturn(
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+
+        SecurityContext context = mock(SecurityContext.class);
+        when(context.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(context);
+
+        // When
+        LoginUser result = SecurityUtils.getLoginUser();
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getUserId()).isEqualTo(123L);
+        assertThat(result.getUsername()).isEqualTo("testuser");
+        assertThat(result.getDeptId()).isEqualTo(100L);
+        assertThat(result.getTenantId()).isEqualTo(1L);
+        assertThat(result.getRoles()).containsExactly("ROLE_USER");
+        assertThat(result.getDataScope()).isEqualTo(DataScope.ALL);
+        assertThat(result.isAdmin()).isFalse();
+    }
+
+    @Test
+    @DisplayName("获取登录用户信息-超级管理员")
+    void getLoginUser_Admin() {
+        // Given
+        Jwt jwt = mock(Jwt.class);
+        when(jwt.getSubject()).thenReturn("1");
+        when(jwt.getClaimAsString("preferred_username")).thenReturn("admin");
+        when(jwt.getClaim("dept_id")).thenReturn(100L);
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getPrincipal()).thenReturn(jwt);
+        when(auth.getAuthorities()).thenReturn(
+                List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
+        );
+
+        SecurityContext context = mock(SecurityContext.class);
+        when(context.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(context);
+
+        // When
+        LoginUser result = SecurityUtils.getLoginUser();
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.isAdmin()).isTrue();
+    }
+
+    @Test
+    @DisplayName("获取登录用户信息-无JWT")
+    void getLoginUser_NoJwt() {
+        // Given - no authentication
+
+        // When
+        LoginUser result = SecurityUtils.getLoginUser();
+
+        // Then
+        assertThat(result).isNull();
+    }
+
+    @Test
+    @DisplayName("获取登录用户信息-无效用户ID")
+    void getLoginUser_InvalidUserId() {
+        // Given
+        Jwt jwt = mock(Jwt.class);
+        when(jwt.getSubject()).thenReturn("invalid");
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getPrincipal()).thenReturn(jwt);
+
+        SecurityContext context = mock(SecurityContext.class);
+        when(context.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(context);
+
+        // When
+        LoginUser result = SecurityUtils.getLoginUser();
+
+        // Then
+        assertThat(result).isNull();
+    }
+
+    @Test
+    @DisplayName("获取数据权限范围-已登录用户")
+    void getDataScope_Authenticated() {
+        // Given
+        Jwt jwt = mock(Jwt.class);
+        when(jwt.getSubject()).thenReturn("123");
+        when(jwt.getClaim("dept_id")).thenReturn(100L);
+        when(jwt.getClaim("data_scope")).thenReturn(1);
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getPrincipal()).thenReturn(jwt);
+
+        SecurityContext context = mock(SecurityContext.class);
+        when(context.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(context);
+
+        // When
+        DataScope result = SecurityUtils.getDataScope();
+
+        // Then
+        assertThat(result).isEqualTo(DataScope.ALL);
+    }
+
+    @Test
+    @DisplayName("获取数据权限范围-未登录用户返回SELF_ONLY")
+    void getDataScope_NotAuthenticated() {
+        // Given - no authentication
+
+        // When
+        DataScope result = SecurityUtils.getDataScope();
+
+        // Then
+        assertThat(result).isEqualTo(DataScope.SELF_ONLY);
+    }
+
+    @Test
+    @DisplayName("获取数据权限范围-无数据权限信息返回SELF_ONLY")
+    void getDataScope_NoDataScope() {
+        // Given
+        Jwt jwt = mock(Jwt.class);
+        when(jwt.getSubject()).thenReturn("123");
+        when(jwt.getClaim("dept_id")).thenReturn(100L);
+        // 不设置data_scope
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getPrincipal()).thenReturn(jwt);
+
+        SecurityContext context = mock(SecurityContext.class);
+        when(context.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(context);
+
+        // When
+        DataScope result = SecurityUtils.getDataScope();
+
+        // Then
+        assertThat(result).isEqualTo(DataScope.SELF_ONLY);
     }
 }

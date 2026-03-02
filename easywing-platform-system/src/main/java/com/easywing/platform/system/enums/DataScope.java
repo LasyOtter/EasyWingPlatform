@@ -3,6 +3,8 @@ package com.easywing.platform.system.enums;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.Arrays;
+
 @Getter
 @AllArgsConstructor
 public enum DataScope {
@@ -14,4 +16,17 @@ public enum DataScope {
 
     private final int code;
     private final String description;
+
+    /**
+     * 根据code获取枚举
+     *
+     * @param code 数据权限编码
+     * @return 数据权限枚举
+     */
+    public static DataScope of(int code) {
+        return Arrays.stream(values())
+                .filter(dataScope -> dataScope.getCode() == code)
+                .findFirst()
+                .orElse(SELF_ONLY);
+    }
 }
