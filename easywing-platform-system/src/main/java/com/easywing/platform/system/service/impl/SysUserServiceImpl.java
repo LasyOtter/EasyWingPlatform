@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.easywing.platform.cache.annotation.CacheEvict;
-import com.easywing.platform.cache.annotation.CachePut;
 import com.easywing.platform.cache.annotation.MultiLevelCache;
 import com.easywing.platform.core.exception.BizException;
 import com.easywing.platform.core.exception.ErrorCode;
@@ -14,6 +13,9 @@ import com.easywing.platform.system.domain.dto.SysUserDTO;
 import com.easywing.platform.system.domain.entity.SysUser;
 import com.easywing.platform.system.domain.query.SysUserQuery;
 import com.easywing.platform.system.domain.vo.SysUserVO;
+import com.easywing.platform.system.enums.DataScope;
+import com.easywing.platform.system.event.UserDeletedEvent;
+import com.easywing.platform.system.mapper.SysDeptMapper;
 import com.easywing.platform.system.mapper.SysUserMapper;
 import com.easywing.platform.system.metrics.UserMetrics;
 import com.easywing.platform.system.service.PasswordHistoryService;
@@ -23,23 +25,32 @@ import com.easywing.platform.system.util.PasswordValidator;
 import com.easywing.platform.system.util.SecurityUtils;
 import com.easywing.platform.system.mapper.struct.UserMapper;
 import com.easywing.platform.system.util.PageUtil;
+import com.google.common.collect.Lists;
 import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.io.OutputStream;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> implements SysUserService {
 
+    private static final int MAX_BATCH_DELETE_SIZE = 1000;
+    private static final int DELETE_BATCH_SIZE = 100;
+
     private final SysUserMapper userMapper;
+    private final SysDeptMapper deptMapper;
     private final PasswordEncoder passwordEncoder;
     private final PasswordHistoryService passwordHistoryService;
     private final PasswordValidator passwordValidator;
@@ -47,6 +58,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     private final UserMapper userMapperStruct;
     private final UserMetrics userMetrics;
     private final PageHelper pageHelper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public Page<SysUserVO> selectUserPage(long current, long size, SysUserQuery query) {
@@ -214,14 +226,154 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     /**
      * 批量删除用户
      * <p>
-     * 清理所有用户缓存
+     * 1. 参数基础校验
+     * 2. 去除重复ID
+     * 3. 数量限制，防止内存溢出和性能问题
+     * 4. 查询受保护用户（超级管理员、系统内置用户）
+     * 5. 过滤出可删除的用户ID
+     * 6. 检查数据权限（只能删除本部门及子部门用户）
+     * 7. 分批处理，减少数据库锁竞争
+     * 8. 记录审计日志
+     * 9. 发布删除事件（异步清理关联数据）
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(value = "user", allEntries = true)
     public int deleteUserByIds(List<Long> userIds) {
-        if (CollectionUtils.isEmpty(userIds)) return 0;
-        return userMapper.deleteBatchIds(userIds);
+        // 1. 参数基础校验
+        if (CollectionUtils.isEmpty(userIds)) {
+            log.warn("Delete userIds is empty");
+            return 0;
+        }
+
+        // 2. 去除重复ID
+        List<Long> uniqueIds = userIds.stream()
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 3. 数量限制，防止内存溢出和性能问题
+        if (uniqueIds.size() > MAX_BATCH_DELETE_SIZE) {
+            log.error("Batch delete size exceeded limit: {}/{}, operator={}",
+                    uniqueIds.size(), MAX_BATCH_DELETE_SIZE, SecurityUtils.getCurrentUsername());
+            throw new BizException(ErrorCode.BATCH_SIZE_EXCEEDED,
+                    "单次删除用户数量不能超过" + MAX_BATCH_DELETE_SIZE);
+        }
+
+        // 4. 查询受保护用户（超级管理员、系统内置用户）
+        List<Long> protectedUserIds = userMapper.selectProtectedUserIds();
+
+        // 5. 过滤出可删除的用户ID
+        List<Long> deletableIds = uniqueIds.stream()
+                .filter(id -> !protectedUserIds.contains(id))
+                .collect(Collectors.toList());
+
+        List<Long> protectedIds = uniqueIds.stream()
+                .filter(protectedUserIds::contains)
+                .collect(Collectors.toList());
+
+        if (!protectedIds.isEmpty()) {
+            log.warn("Protected users cannot be deleted: userIds={}, operator={}",
+                    protectedIds, SecurityUtils.getCurrentUsername());
+        }
+
+        if (deletableIds.isEmpty()) {
+            log.warn("No deletable users after filtering protected users");
+            throw new BizException(ErrorCode.PROTECTED_USER_CANNOT_DELETE,
+                    "选中的用户包含受保护用户，无法删除");
+        }
+
+        // 6. 检查数据权限（只能删除本部门及子部门用户）
+        validateDataScope(deletableIds);
+
+        // 7. 分批处理，减少数据库锁竞争
+        int totalDeleted = 0;
+        List<List<Long>> batches = Lists.partition(deletableIds, DELETE_BATCH_SIZE);
+
+        for (int i = 0; i < batches.size(); i++) {
+            List<Long> batch = batches.get(i);
+            int deleted = userMapper.deleteBatchIds(batch);
+            totalDeleted += deleted;
+
+            log.debug("Batch delete progress: {}/{}, batchSize={}, deleted={}, operator={}",
+                    i + 1, batches.size(), batch.size(), deleted, SecurityUtils.getCurrentUsername());
+
+            // 每批处理后短暂释放CPU，避免长时间占用连接
+            if (i < batches.size() - 1) {
+                Thread.yield();
+            }
+        }
+
+        // 8. 记录审计日志
+        log.info("Users deleted: totalDeleted={}, protectedSkipped={}, requestedCount={}, " +
+                        "operator={}, deletedIds={}",
+                totalDeleted, protectedIds.size(), userIds.size(),
+                SecurityUtils.getCurrentUsername(), deletableIds);
+
+        // 9. 发布删除事件（异步清理关联数据）
+        eventPublisher.publishEvent(new UserDeletedEvent(deletableIds,
+                SecurityUtils.getCurrentUsername()));
+
+        return totalDeleted;
+    }
+
+    /**
+     * 验证数据权限
+     */
+    private void validateDataScope(List<Long> userIds) {
+        // 获取当前用户的数据权限范围
+        DataScope dataScope = SecurityUtils.getDataScope();
+
+        if (dataScope == DataScope.ALL) {
+            return; // 全部数据权限，无需检查
+        }
+
+        // 查询待删除用户的部门ID
+        List<SysUser> users = userMapper.selectBatchIdsWithDept(userIds);
+        Set<Long> userDeptIds = users.stream()
+                .map(SysUser::getDeptId)
+                .collect(Collectors.toSet());
+
+        // 检查是否有权限删除这些用户
+        Set<Long> accessibleDeptIds = getAccessibleDeptIds(dataScope);
+
+        List<Long> unauthorizedUsers = users.stream()
+                .filter(user -> !accessibleDeptIds.contains(user.getDeptId()))
+                .map(SysUser::getId)
+                .collect(Collectors.toList());
+
+        if (!unauthorizedUsers.isEmpty()) {
+            log.warn("User {} attempted to delete unauthorized users: {}",
+                    SecurityUtils.getCurrentUsername(), unauthorizedUsers);
+            throw new BizException(ErrorCode.ACCESS_DENIED,
+                    "无权删除部门外的用户，未授权用户ID：" + unauthorizedUsers);
+        }
+    }
+
+    /**
+     * 获取可访问的部门ID集合
+     */
+    private Set<Long> getAccessibleDeptIds(DataScope dataScope) {
+        Long currentDeptId = SecurityUtils.getCurrentDeptId();
+        Set<Long> accessibleDeptIds = new HashSet<>();
+
+        switch (dataScope) {
+            case DEPT_ONLY:
+                accessibleDeptIds.add(currentDeptId);
+                break;
+            case DEPT_AND_CHILD:
+                accessibleDeptIds.add(currentDeptId);
+                accessibleDeptIds.addAll(
+                        deptMapper.selectChildDeptIds(currentDeptId)
+                );
+                break;
+            case SELF_ONLY:
+                // 只能删除自己创建的用户
+                return new HashSet<>(); // 特殊处理，需要检查create_by
+            default:
+                break;
+        }
+
+        return accessibleDeptIds;
     }
 
     /**
