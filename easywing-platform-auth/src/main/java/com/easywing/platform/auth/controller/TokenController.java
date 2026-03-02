@@ -43,6 +43,8 @@ import org.springframework.web.bind.annotation.RestController;
  *     <li>POST /api/v1/token/login - 用户名密码登录，签发令牌对</li>
  *     <li>POST /api/v1/token/refresh - 使用刷新令牌换取新的令牌对</li>
  *     <li>POST /api/v1/token/logout - 注销当前令牌</li>
+ *     <li>POST /api/v1/token/revoke - 撤销当前令牌</li>
+ *     <li>POST /api/v1/token/revoke-all - 撤销用户所有令牌</li>
  * </ul>
  *
  * @author EasyWing Team
@@ -91,6 +93,27 @@ public class TokenController {
         if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             tokenService.revokeToken(token);
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/revoke")
+    @Operation(summary = "撤销当前Token", description = "将当前令牌加入黑名单使其立即失效（与logout等价）")
+    public ResponseEntity<Void> revoke(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader) {
+        if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            tokenService.revokeToken(token);
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/revoke-all")
+    @Operation(summary = "撤销所有Token", description = "撤销当前用户的所有令牌，包括所有设备登录的令牌")
+    public ResponseEntity<Void> revokeAll(
+            @RequestHeader(value = HttpHeaders.X_USER_ID, required = false) String userId) {
+        if (StringUtils.hasText(userId)) {
+            tokenService.revokeAllTokens(userId);
         }
         return ResponseEntity.noContent().build();
     }
