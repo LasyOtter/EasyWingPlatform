@@ -29,4 +29,5 @@ public class SysUser extends BaseEntity {
     private Integer failedAttempts;
     private LocalDateTime lockedUntil;
     private String remark;
+    private Integer isProtected;
 }

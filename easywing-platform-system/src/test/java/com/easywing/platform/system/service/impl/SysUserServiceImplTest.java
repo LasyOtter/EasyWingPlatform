@@ -29,6 +29,7 @@ import com.easywing.platform.system.domain.dto.SysUserDTO;
 import com.easywing.platform.system.domain.entity.SysUser;
 import com.easywing.platform.system.domain.query.SysUserQuery;
 import com.easywing.platform.system.domain.vo.SysUserVO;
+import com.easywing.platform.system.mapper.SysDeptMapper;
 import com.easywing.platform.system.mapper.SysUserMapper;
 import com.easywing.platform.system.mapper.struct.UserMapper;
 import com.easywing.platform.system.metrics.UserMetrics;
@@ -46,6 +47,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -61,6 +63,9 @@ class SysUserServiceImplTest {
 
     @Mock
     private SysUserMapper userMapper;
+
+    @Mock
+    private SysDeptMapper deptMapper;
 
     @Mock
     private UserMapper userMapperStruct;
@@ -82,6 +87,9 @@ class SysUserServiceImplTest {
 
     @Mock
     private PageHelper pageHelper;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @Mock
     private MeterRegistry meterRegistry;

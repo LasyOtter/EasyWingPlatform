@@ -89,6 +89,8 @@ public final class ErrorCode {
     public static final String USERNAME_EXISTS = "BIZ006";
     public static final String PAGE_TOO_DEEP = "BIZ007";
     public static final String EXPORT_SIZE_EXCEEDED = "BIZ008";
+    public static final String BATCH_SIZE_EXCEEDED = "BIZ009";
+    public static final String PROTECTED_USER_CANNOT_DELETE = "BIZ010";
 
     // ==================== 限流熔断错误 ====================
     public static final String RATE_LIMITED = "RATE001";
@@ -138,6 +140,8 @@ public final class ErrorCode {
         register(USERNAME_EXISTS, CONFLICT_STATUS, "Username Exists", "用户名已存在");
         register(PAGE_TOO_DEEP, BAD_REQUEST_STATUS, "Page Too Deep", "页码过大，请添加筛选条件");
         register(EXPORT_SIZE_EXCEEDED, BAD_REQUEST_STATUS, "Export Size Exceeded", "导出数据量过大，请添加筛选条件");
+        register(BATCH_SIZE_EXCEEDED, BAD_REQUEST_STATUS, "Batch Size Exceeded", "单次操作数量超过限制");
+        register(PROTECTED_USER_CANNOT_DELETE, FORBIDDEN_STATUS, "Protected User Cannot Delete", "受保护用户不能被删除");
 
         // 限流熔断
         register(RATE_LIMITED, TOO_MANY_REQUESTS_STATUS, "Rate Limited", "请求过于频繁，请稍后重试");
