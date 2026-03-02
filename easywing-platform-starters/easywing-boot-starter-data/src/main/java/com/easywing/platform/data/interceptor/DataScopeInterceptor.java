@@ -20,30 +20,14 @@ import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
 import com.easywing.platform.data.datascope.DataScopeContext;
 import com.easywing.platform.data.properties.DataProperties;
 import lombok.extern.slf4j.Slf4j;
-import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.LongValue;
-import net.sf.jsqlparser.expression.StringValue;
-import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
-import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
-import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
-import net.sf.jsqlparser.expression.operators.relational.InExpression;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
-import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.statement.Statement;
-import net.sf.jsqlparser.statement.delete.Delete;
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.Select;
-import net.sf.jsqlparser.statement.update.Update;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * 数据权限拦截器
@@ -62,204 +46,63 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DataScopeInterceptor implements InnerInterceptor {
 
-    private final DataProperties dataProperties;
     private final DataScopeHandler dataScopeHandler;
+    private final DataScopeSqlParser dataScopeSqlParser;
 
     public DataScopeInterceptor(DataProperties dataProperties, DataScopeHandler dataScopeHandler) {
-        this.dataProperties = dataProperties;
         this.dataScopeHandler = dataScopeHandler;
+        this.dataScopeSqlParser = new DataScopeSqlParser(dataProperties);
     }
 
     @Override
     public void beforeQuery(Executor executor, MappedStatement ms, Object parameter,
                            RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
+        applyDataScope(ms, boundSql);
+    }
 
-        // 检查是否忽略数据权限
+    @Override
+    public void beforeUpdate(Executor executor, MappedStatement ms, Object parameter) {
+        BoundSql boundSql = ms.getBoundSql(parameter);
+        applyDataScope(ms, boundSql);
+    }
+
+    private void applyDataScope(MappedStatement ms, BoundSql boundSql) {
         if (DataScopeContext.isIgnoreDataScope()) {
             log.debug("Data scope check is ignored for this request");
             return;
         }
 
-        // 检查是否通过MP注解忽略
         if (InterceptorIgnoreHelper.ignoreDataScope(ms.getId())) {
             return;
         }
 
-        // 获取当前用户数据权限信息
         DataScopeInfo dataScopeInfo = dataScopeHandler.getDataScopeInfo();
         if (dataScopeInfo == null) {
             log.debug("No data scope info available, skipping data scope filter");
             return;
         }
 
-        // 超级管理员跳过数据权限
         if (dataScopeInfo.isAdmin()) {
             log.debug("Admin user, skipping data scope filter");
             return;
         }
 
-        // 全部数据权限，不需要过滤
         if (dataScopeInfo.getDataScope() == DataScopeType.ALL) {
             return;
         }
 
-        // 构建数据权限过滤条件
-        Expression dataScopeFilter = buildDataScopeFilter(dataScopeInfo);
-        if (dataScopeFilter == null) {
-            return;
-        }
-
-        // 修改原始SQL，添加权限过滤
         try {
-            String originalSql = boundSql.getSql();
-            Statement statement = CCJSqlParserUtil.parse(originalSql);
-
-            if (statement instanceof Select) {
-                addDataScopeToSelect((Select) statement, dataScopeFilter);
-            } else if (statement instanceof Update) {
-                addDataScopeToUpdate((Update) statement, dataScopeFilter);
-            } else if (statement instanceof Delete) {
-                addDataScopeToDelete((Delete) statement, dataScopeFilter);
+            boolean applied = dataScopeSqlParser.applyDataScope(boundSql, ms, dataScopeInfo);
+            if (applied) {
+                log.debug("Data scope filter applied: userId={}, scope={}, sql={}",
+                        dataScopeInfo.getUserId(), dataScopeInfo.getDataScope(), boundSql.getSql());
             }
-
-            // 替换SQL
-            String newSql = statement.toString();
-            replaceSql(boundSql, newSql);
-
-            log.debug("Data scope filter applied: userId={}, scope={}, sql={}",
-                    dataScopeInfo.getUserId(), dataScopeInfo.getDataScope(), newSql);
-        } catch (Exception e) {
-            log.error("Failed to apply data scope filter", e);
-            throw new RuntimeException("数据权限过滤失败", e);
-        }
-    }
-
-    /**
-     * 构建数据权限过滤表达式
-     *
-     * @param dataScopeInfo 数据权限信息
-     * @return SQL过滤表达式
-     */
-    private Expression buildDataScopeFilter(DataScopeInfo dataScopeInfo) {
-        switch (dataScopeInfo.getDataScope()) {
-            case DEPT_ONLY:
-                // dept_id = 当前部门
-                return new EqualsTo(
-                        new Column(dataProperties.getDeptIdColumn()),
-                        new LongValue(dataScopeInfo.getDeptId())
-                );
-
-            case DEPT_AND_CHILD:
-                // dept_id IN (当前部门及所有子部门)
-                Set<Long> childDeptIds = dataScopeInfo.getChildDeptIds();
-                if (childDeptIds == null || childDeptIds.isEmpty()) {
-                    childDeptIds = Set.of(dataScopeInfo.getDeptId());
-                }
-
-                ExpressionList expressionList = new ExpressionList();
-                expressionList.setExpressions(
-                        childDeptIds.stream()
-                                .map(LongValue::new)
-                                .collect(Collectors.toList())
-                );
-                return new InExpression(new Column(dataProperties.getDeptIdColumn()), expressionList);
-
-            case SELF_ONLY:
-                // create_by = 当前用户ID
-                return new EqualsTo(
-                        new Column(dataProperties.getCreateByColumn()),
-                        new StringValue(dataScopeInfo.getUserId().toString())
-                );
-
-            case CUSTOM:
-                // dept_id IN (角色指定的部门列表)
-                List<Long> customDeptIds = dataScopeInfo.getCustomDeptIds();
-                if (customDeptIds == null || customDeptIds.isEmpty()) {
-                    // 没有指定部门，只能看自己的
-                    return new EqualsTo(
-                            new Column(dataProperties.getCreateByColumn()),
-                            new StringValue(dataScopeInfo.getUserId().toString())
-                    );
-                }
-                ExpressionList customList = new ExpressionList();
-                customList.setExpressions(
-                        customDeptIds.stream()
-                                .map(LongValue::new)
-                                .collect(Collectors.toList())
-                );
-                return new InExpression(new Column(dataProperties.getDeptIdColumn()), customList);
-
-            default:
-                return null;
-        }
-    }
-
-    /**
-     * 为SELECT语句添加数据权限过滤
-     *
-     * @param select 查询语句
-     * @param filter 过滤条件
-     */
-    private void addDataScopeToSelect(Select select, Expression filter) {
-        PlainSelect plainSelect = (PlainSelect) select.getSelectBody();
-        Expression where = plainSelect.getWhere();
-
-        if (where == null) {
-            plainSelect.setWhere(filter);
-        } else {
-            AndExpression andExpression = new AndExpression(where, filter);
-            plainSelect.setWhere(andExpression);
-        }
-    }
-
-    /**
-     * 为UPDATE语句添加数据权限过滤
-     *
-     * @param update 更新语句
-     * @param filter 过滤条件
-     */
-    private void addDataScopeToUpdate(Update update, Expression filter) {
-        Expression where = update.getWhere();
-
-        if (where == null) {
-            update.setWhere(filter);
-        } else {
-            AndExpression andExpression = new AndExpression(where, filter);
-            update.setWhere(andExpression);
-        }
-    }
-
-    /**
-     * 为DELETE语句添加数据权限过滤
-     *
-     * @param delete 删除语句
-     * @param filter 过滤条件
-     */
-    private void addDataScopeToDelete(Delete delete, Expression filter) {
-        Expression where = delete.getWhere();
-
-        if (where == null) {
-            delete.setWhere(filter);
-        } else {
-            AndExpression andExpression = new AndExpression(where, filter);
-            delete.setWhere(andExpression);
-        }
-    }
-
-    /**
-     * 替换SQL
-     *
-     * @param boundSql 原BoundSql
-     * @param newSql   新SQL
-     */
-    private void replaceSql(BoundSql boundSql, String newSql) {
-        try {
-            Field field = boundSql.getClass().getDeclaredField("sql");
-            field.setAccessible(true);
-            field.set(boundSql, newSql);
-        } catch (Exception e) {
-            log.error("Failed to replace SQL", e);
-            throw new RuntimeException("SQL替换失败", e);
+        } catch (DataScopeSqlException ex) {
+            log.error("Failed to apply data scope filter", ex);
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Failed to apply data scope filter", ex);
+            throw new DataScopeSqlException("数据权限过滤失败", ex);
         }
     }
 
