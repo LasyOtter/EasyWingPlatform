@@ -65,4 +65,23 @@ class DataScopeTest {
         assertThat(DataScope.values()[3]).isEqualTo(DataScope.DEPT_AND_CHILD);
         assertThat(DataScope.values()[4]).isEqualTo(DataScope.SELF_ONLY);
     }
+
+    @Test
+    @DisplayName("使用of方法根据code获取枚举")
+    void of_WithValidCodes() {
+        assertThat(DataScope.of(1)).isEqualTo(DataScope.ALL);
+        assertThat(DataScope.of(2)).isEqualTo(DataScope.CUSTOM);
+        assertThat(DataScope.of(3)).isEqualTo(DataScope.DEPT_ONLY);
+        assertThat(DataScope.of(4)).isEqualTo(DataScope.DEPT_AND_CHILD);
+        assertThat(DataScope.of(5)).isEqualTo(DataScope.SELF_ONLY);
+    }
+
+    @Test
+    @DisplayName("使用of方法无效code返回SELF_ONLY")
+    void of_WithInvalidCode_ReturnsSelfOnly() {
+        assertThat(DataScope.of(0)).isEqualTo(DataScope.SELF_ONLY);
+        assertThat(DataScope.of(6)).isEqualTo(DataScope.SELF_ONLY);
+        assertThat(DataScope.of(-1)).isEqualTo(DataScope.SELF_ONLY);
+        assertThat(DataScope.of(999)).isEqualTo(DataScope.SELF_ONLY);
+    }
 }

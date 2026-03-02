@@ -98,6 +98,64 @@ public class DataProperties {
     }
 
     /**
+     * 数据权限配置
+     */
+    @Data
+    public static class DataScope {
+        /**
+         * 是否启用数据权限
+         */
+        private boolean enabled = true;
+
+        /**
+         * 部门ID字段名
+         */
+        private String deptIdColumn = "dept_id";
+
+        /**
+         * 创建人字段名
+         */
+        private String createByColumn = "create_by";
+
+        /**
+         * 数据权限忽略表列表
+         */
+        private List<String> ignoreTables = new ArrayList<>();
+    }
+
+    /**
+     * 数据权限配置
+     */
+    private DataScope dataScope = new DataScope();
+
+    /**
+     * 获取部门ID字段名
+     *
+     * @return 部门ID字段名
+     */
+    public String getDeptIdColumn() {
+        return dataScope.getDeptIdColumn();
+    }
+
+    /**
+     * 获取创建人字段名
+     *
+     * @return 创建人字段名
+     */
+    public String getCreateByColumn() {
+        return dataScope.getCreateByColumn();
+    }
+
+    /**
+     * 是否启用数据权限
+     *
+     * @return true表示启用
+     */
+    public boolean isDataScopeEnabled() {
+        return dataScope.isEnabled();
+    }
+
+    /**
      * 分页配置
      */
     @Data

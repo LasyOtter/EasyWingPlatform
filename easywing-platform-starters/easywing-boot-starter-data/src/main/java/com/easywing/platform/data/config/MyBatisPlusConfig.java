@@ -20,10 +20,12 @@ import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import com.easywing.platform.data.interceptor.DataScopeInterceptor;
 import com.easywing.platform.data.interceptor.TenantLineInnerInterceptor;
 import com.easywing.platform.data.properties.DataProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -55,7 +57,8 @@ public class MyBatisPlusConfig {
      * MyBatis-Plus 插件配置
      */
     @Bean
-    public MybatisPlusInterceptor mybatisPlusInterceptor() {
+    public MybatisPlusInterceptor mybatisPlusInterceptor(
+            ObjectProvider<DataScopeInterceptor.DataScopeHandler> dataScopeHandlerProvider) {
         log.info("Initializing MyBatis-Plus interceptor");
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
 
@@ -82,6 +85,22 @@ public class MyBatisPlusConfig {
                     dataProperties.getTenantIgnoreTables());
         } else {
             log.info("MyBatis-Plus tenant plugin is disabled");
+        }
+
+        // 数据权限插件
+        if (dataProperties.isDataScopeEnabled()) {
+            DataScopeInterceptor.DataScopeHandler dataScopeHandler = dataScopeHandlerProvider.getIfAvailable();
+            if (dataScopeHandler != null) {
+                DataScopeInterceptor dataScopeInterceptor = new DataScopeInterceptor(dataProperties, dataScopeHandler);
+                interceptor.addInnerInterceptor(dataScopeInterceptor);
+                log.info("MyBatis-Plus data scope plugin configured: deptIdColumn={}, createByColumn={}",
+                        dataProperties.getDeptIdColumn(),
+                        dataProperties.getCreateByColumn());
+            } else {
+                log.info("MyBatis-Plus data scope handler not available, data scope plugin will not be enabled");
+            }
+        } else {
+            log.info("MyBatis-Plus data scope plugin is disabled");
         }
 
         return interceptor;

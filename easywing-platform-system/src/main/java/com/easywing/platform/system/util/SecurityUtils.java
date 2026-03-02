@@ -1,8 +1,12 @@
 package com.easywing.platform.system.util;
 
+import com.easywing.platform.system.domain.vo.LoginUser;
+import com.easywing.platform.system.enums.DataScope;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
+
+import java.util.List;
 
 public final class SecurityUtils {
 
@@ -74,5 +78,59 @@ public final class SecurityUtils {
         Jwt jwt = getJwt();
         if (jwt == null) return null;
         return jwt.getClaim(claimName);
+    }
+
+    /**
+     * 获取当前登录用户详细信息
+     *
+     * @return 登录用户信息
+     */
+    public static LoginUser getLoginUser() {
+        Jwt jwt = getJwt();
+        if (jwt == null) {
+            return null;
+        }
+
+        LoginUser loginUser = new LoginUser();
+        String userId = jwt.getSubject();
+        if (userId != null) {
+            try {
+                loginUser.setUserId(Long.parseLong(userId));
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        loginUser.setUsername(jwt.getClaimAsString("preferred_username"));
+        loginUser.setDeptId(getCurrentDeptId());
+        loginUser.setTenantId(getCurrentTenantId());
+        loginUser.setAdmin(isAdmin());
+
+        // 从JWT中提取角色信息
+        List<String> roles = jwt.getClaimAsStringList("roles");
+        if (roles != null) {
+            loginUser.setRoles(roles);
+        }
+
+        // 从JWT中提取数据权限范围
+        Integer dataScopeCode = jwt.getClaim("data_scope");
+        if (dataScopeCode != null) {
+            loginUser.setDataScope(DataScope.of(dataScopeCode));
+        }
+
+        return loginUser;
+    }
+
+    /**
+     * 获取当前用户的数据权限范围
+     *
+     * @return 数据权限范围，如果未登录返回仅本人权限
+     */
+    public static DataScope getDataScope() {
+        LoginUser loginUser = getLoginUser();
+        if (loginUser == null) {
+            return DataScope.SELF_ONLY;
+        }
+        DataScope dataScope = loginUser.getDataScope();
+        return dataScope != null ? dataScope : DataScope.SELF_ONLY;
     }
 }
