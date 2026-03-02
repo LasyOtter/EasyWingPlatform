@@ -34,6 +34,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Date;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -54,6 +55,7 @@ public class TokenService {
 
     private static final Logger log = LoggerFactory.getLogger(TokenService.class);
     private static final String BLACKLIST_PREFIX = "auth:blacklist:";
+    private static final String USER_TOKEN_PREFIX = "auth:user:tokens:";
     private static final String TOKEN_TYPE_ACCESS = "access";
     private static final String TOKEN_TYPE_REFRESH = "refresh";
 
@@ -79,6 +81,9 @@ public class TokenService {
         try {
             String accessToken = buildToken(user, TOKEN_TYPE_ACCESS, properties.getJwt().getAccessTokenTtl().getSeconds());
             String refreshToken = buildToken(user, TOKEN_TYPE_REFRESH, properties.getJwt().getRefreshTokenTtl().getSeconds());
+
+            addTokenToUserSet(user.getUserId(), accessToken);
+            addTokenToUserSet(user.getUserId(), refreshToken);
 
             authMetrics.recordTokenIssuance(sample, "PAIR");
             authMetrics.recordLoginSuccess(user.getUsername(), "PASSWORD");
@@ -112,9 +117,12 @@ public class TokenService {
     public void revokeToken(String rawToken) {
         SignedJWT jwt = parseAndValidate(rawToken);
         try {
+            String userId = jwt.getJWTClaimsSet().getSubject();
+            String jti = jwt.getJWTClaimsSet().getJWTID();
             Instant expiresAt = jwt.getJWTClaimsSet().getExpirationTime().toInstant();
             blacklist(rawToken, expiresAt);
-            log.debug("Token revoked: jti={}", jwt.getJWTClaimsSet().getJWTID());
+            removeTokenFromUserSet(userId, rawToken);
+            log.debug("Token revoked: jti={}, userId={}", jti, userId);
         } catch (Exception e) {
             throw new IllegalArgumentException("Failed to revoke token: " + e.getMessage(), e);
         }
@@ -122,6 +130,51 @@ public class TokenService {
 
     public boolean isBlacklisted(String rawToken) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(BLACKLIST_PREFIX + rawToken));
+    }
+
+    /**
+     * 撤销指定用户的所有的令牌
+     * <p>
+     * 将用户所有当前有效的令牌加入黑名单
+     *
+     * @param userId 用户ID
+     */
+    public void revokeAllTokens(String userId) {
+        String userTokenKey = USER_TOKEN_PREFIX + userId;
+        Set<String> tokens = redisTemplate.opsForSet().members(userTokenKey);
+        if (tokens != null && !tokens.isEmpty()) {
+            for (String token : tokens) {
+                try {
+                    SignedJWT jwt = SignedJWT.parse(token);
+                    Instant expiresAt = jwt.getJWTClaimsSet().getExpirationTime().toInstant();
+                    blacklist(token, expiresAt);
+                } catch (Exception e) {
+                    log.warn("Failed to blacklist token for user {}: {}", userId, e.getMessage());
+                }
+            }
+            redisTemplate.delete(userTokenKey);
+        }
+        log.info("All tokens revoked for user: {}", userId);
+    }
+
+    /**
+     * 将令牌加入用户令牌集合（用于 revokeAll 时批量处理）
+     *
+     * @param userId 用户ID
+     * @param token  令牌
+     */
+    public void addTokenToUserSet(String userId, String token) {
+        redisTemplate.opsForSet().add(USER_TOKEN_PREFIX + userId, token);
+    }
+
+    /**
+     * 从用户令牌集合移除令牌
+     *
+     * @param userId 用户ID
+     * @param token  令牌
+     */
+    public void removeTokenFromUserSet(String userId, String token) {
+        redisTemplate.opsForSet().remove(USER_TOKEN_PREFIX + userId, token);
     }
 
     private String buildToken(AuthUser user, String tokenType, long ttlSeconds) {

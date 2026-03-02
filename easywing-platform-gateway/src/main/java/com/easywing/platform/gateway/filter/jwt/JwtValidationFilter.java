@@ -16,6 +16,7 @@
 package com.easywing.platform.gateway.filter.jwt;
 
 import com.easywing.platform.core.constant.HttpHeaders;
+import com.easywing.platform.core.exception.TokenBlacklistedException;
 import com.easywing.platform.gateway.properties.GatewayProperties;
 import com.easywing.platform.gateway.properties.JwtProperties;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -38,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.util.AntPathMatcher;
@@ -81,16 +83,21 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
     private static final Logger log = LoggerFactory.getLogger(JwtValidationFilter.class);
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String JWT_CLAIMS_ATTR = "jwtClaims";
+    private static final String BLACKLIST_PREFIX = "auth:blacklist:";
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     private final JwtProperties properties;
     private final Cache<String, JwtClaims> jwtCache;
     private final Cache<String, JWK> jwkCache;
+    private final Cache<String, Boolean> blacklistCache;
+    private final ReactiveStringRedisTemplate redisTemplate;
     private final Map<String, JWKSet> jwkSetCache = new ConcurrentHashMap<>();
     private volatile long lastJwkRefreshTime = 0;
 
-    public JwtValidationFilter(GatewayProperties gatewayProperties) {
+    public JwtValidationFilter(GatewayProperties gatewayProperties,
+                                ReactiveStringRedisTemplate redisTemplate) {
         this.properties = gatewayProperties.getJwt();
+        this.redisTemplate = redisTemplate;
         this.jwtCache = Caffeine.newBuilder()
                 .maximumSize(properties.getCacheMaxSize())
                 .expireAfterWrite(properties.getCacheTtl())
@@ -99,6 +106,10 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
         this.jwkCache = Caffeine.newBuilder()
                 .maximumSize(100)
                 .expireAfterWrite(Duration.ofHours(1))
+                .build();
+        this.blacklistCache = Caffeine.newBuilder()
+                .maximumSize(10000)
+                .expireAfterWrite(Duration.ofMinutes(5))
                 .build();
         
         initJwkSet();
@@ -124,7 +135,8 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
 
         String token = authHeader.substring(BEARER_PREFIX.length());
         
-        return Mono.fromCallable(() -> validateAndParseToken(token))
+        return checkBlacklist(token)
+                .then(Mono.fromCallable(() -> validateAndParseToken(token)))
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(claims -> {
                     if (claims.isExpired()) {
@@ -155,6 +167,10 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
                 .onErrorResume(MalformedJwtException.class, e -> {
                     log.warn("Malformed JWT token: {}", e.getMessage());
                     return unauthorized(exchange, "Token格式错误");
+                })
+                .onErrorResume(TokenBlacklistedException.class, e -> {
+                    log.warn("Token is blacklisted: jti={}", e.getJti());
+                    return unauthorized(exchange, "Token已注销");
                 })
                 .onErrorResume(Exception.class, e -> {
                     log.error("Unexpected JWT validation error", e);
@@ -196,6 +212,32 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
         
         jwtCache.put(token, claims);
         return claims;
+    }
+
+    private Mono<Void> checkBlacklist(String token) {
+        if (redisTemplate == null) {
+            return Mono.empty();
+        }
+
+        return Mono.fromCallable(() -> {
+                    Boolean cached = blacklistCache.getIfPresent(token);
+                    if (cached != null && cached) {
+                        throw new TokenBlacklistedException(token);
+                    }
+                    return null;
+                })
+                .then(redisTemplate.hasKey(BLACKLIST_PREFIX + token)
+                        .flatMap(isBlacklisted -> {
+                            if (Boolean.TRUE.equals(isBlacklisted)) {
+                                blacklistCache.put(token, true);
+                                return Mono.error(new TokenBlacklistedException(token));
+                            }
+                            blacklistCache.put(token, false);
+                            return Mono.empty();
+                        })
+                )
+                .onErrorResume(TokenBlacklistedException.class, e -> Mono.error(e))
+                .then();
     }
 
     private JWK getJwk(String keyId) {

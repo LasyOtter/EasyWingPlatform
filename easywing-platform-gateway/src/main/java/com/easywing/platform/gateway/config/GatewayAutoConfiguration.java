@@ -42,8 +42,9 @@ public class GatewayAutoConfiguration {
 
     @Bean
     @ConditionalOnProperty(prefix = "easywing.gateway.jwt", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public JwtValidationFilter jwtValidationFilter(GatewayProperties properties) {
-        return new JwtValidationFilter(properties);
+    public JwtValidationFilter jwtValidationFilter(GatewayProperties properties,
+                                                   ReactiveStringRedisTemplate redisTemplate) {
+        return new JwtValidationFilter(properties, redisTemplate);
     }
 
     @Bean

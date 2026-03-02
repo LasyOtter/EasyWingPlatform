@@ -24,6 +24,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -38,6 +39,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -52,6 +54,9 @@ class JwtValidationFilterTest {
     @Mock
     private GatewayFilterChain chain;
 
+    @Mock
+    private ReactiveStringRedisTemplate redisTemplate;
+
     private JwtValidationFilter filter;
     private GatewayProperties properties;
 
@@ -64,14 +69,14 @@ class JwtValidationFilterTest {
         jwtProperties.setCacheTtl(Duration.ofMinutes(5));
         jwtProperties.setCacheMaxSize(10000);
         
-        filter = new JwtValidationFilter(properties);
+        filter = new JwtValidationFilter(properties, redisTemplate);
     }
 
     @Test
     @DisplayName("JWT disabled - should pass through")
     void testJwtDisabled() {
         properties.getJwt().setEnabled(false);
-        JwtValidationFilter disabledFilter = new JwtValidationFilter(properties);
+        JwtValidationFilter disabledFilter = new JwtValidationFilter(properties, redisTemplate);
         
         MockServerHttpRequest request = MockServerHttpRequest
                 .get("/api/users")
@@ -174,5 +179,44 @@ class JwtValidationFilterTest {
         );
         
         assertTrue(claims.isExpired());
+    }
+
+    @Test
+    @DisplayName("Blacklisted token - should return 401")
+    void testBlacklistedToken() {
+        when(redisTemplate.hasKey(anyString())).thenReturn(Mono.just(true));
+
+        MockServerHttpRequest request = MockServerHttpRequest
+                .get("/api/users")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer some-token")
+                .build();
+
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        StepVerifier.create(filter.filter(exchange, chain))
+                .verifyComplete();
+
+        assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
+        assertEquals("Token已注销", exchange.getResponse().getHeaders().getFirst("X-Error-Message"));
+    }
+
+    @Test
+    @DisplayName("Non-blacklisted token - should pass through")
+    void testNonBlacklistedToken() {
+        when(redisTemplate.hasKey(anyString())).thenReturn(Mono.just(false));
+
+        MockServerHttpRequest request = MockServerHttpRequest
+                .get("/api/users")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer some-token")
+                .build();
+
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        when(chain.filter(any())).thenReturn(Mono.empty());
+
+        StepVerifier.create(filter.filter(exchange, chain))
+                .verifyComplete();
+
+        verify(chain).filter(any());
     }
 }
