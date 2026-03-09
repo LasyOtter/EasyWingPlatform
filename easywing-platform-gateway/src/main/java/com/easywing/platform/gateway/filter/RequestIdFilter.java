@@ -48,13 +48,17 @@ public class RequestIdFilter implements GlobalFilter, Ordered {
             traceId = requestId;
         }
 
+        final String finalRequestId = requestId;
+        final String finalTraceId = traceId;
+        
         ServerWebExchange mutatedExchange = exchange.mutate()
                 .request(builder -> builder
-                        .header(HttpHeaders.X_REQUEST_ID, requestId)
-                        .header(HttpHeaders.X_TRACE_ID, traceId))
-                .response(builder -> builder.header(HttpHeaders.X_REQUEST_ID, requestId)
-                        .header(HttpHeaders.X_TRACE_ID, traceId))
+                        .header(HttpHeaders.X_REQUEST_ID, finalRequestId)
+                        .header(HttpHeaders.X_TRACE_ID, finalTraceId))
                 .build();
+        
+        mutatedExchange.getResponse().getHeaders().add(HttpHeaders.X_REQUEST_ID, finalRequestId);
+        mutatedExchange.getResponse().getHeaders().add(HttpHeaders.X_TRACE_ID, finalTraceId);
 
         return chain.filter(mutatedExchange);
     }

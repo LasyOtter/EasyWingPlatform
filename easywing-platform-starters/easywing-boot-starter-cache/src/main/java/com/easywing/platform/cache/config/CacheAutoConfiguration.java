@@ -103,7 +103,7 @@ public class CacheAutoConfiguration {
                 .initialCapacity(properties.getCaffeine().getInitialCapacity())
                 .maximumSize(properties.getCaffeine().getMaximumSize())
                 .expireAfterWrite(properties.getCaffeine().getExpireAfterWrite().toMillis(), TimeUnit.MILLISECONDS)
-                .recordStats(properties.isStatsEnabled()));
+                .recordStats());
         return cacheManager;
     }
 

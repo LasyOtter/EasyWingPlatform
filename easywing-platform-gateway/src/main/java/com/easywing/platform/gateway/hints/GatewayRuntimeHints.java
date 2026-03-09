@@ -35,7 +35,7 @@ import org.springframework.core.io.ClassPathResource;
 /**
  * GraalVM Native Image运行时提示配置
  * <p>
- * 为反射、资源和代理提供必要的配置，确保Native Image正常运行
+ * 为反射、资源和代理提供必要的配置,确保Native Image正常运行
  *
  * @author EasyWing Team
  * @since 1.0.0
@@ -66,16 +66,17 @@ public class GatewayRuntimeHints implements RuntimeHintsRegistrar {
     }
 
     private void registerResourceHints(RuntimeHints hints) {
-        hints.resources()
-            .registerResource(new ClassPathResource("application.yml"))
-            .registerResource(new ClassPathResource("application.yaml"))
-            .registerResource(new ClassPathResource("log4j2-spring.xml"))
-            .registerResource(new ClassPathResource("META-INF/spring.factories"))
-            .registerResource(new ClassPathResource("META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports"))
-            .registerPattern("*.yml")
-            .registerPattern("*.yaml")
-            .registerPattern("*.json")
-            .registerPattern("*.xml");
+        var resources = hints.resources();
+        resources.registerResource(new ClassPathResource("application.yml"));
+        resources.registerResource(new ClassPathResource("application.yaml"));
+        resources.registerResource(new ClassPathResource("log4j2-spring.xml"));
+        resources.registerResource(new ClassPathResource("META-INF/spring.factories"));
+        resources.registerResource(new ClassPathResource("META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports"));
+        
+        resources.registerPattern("*.yml");
+        resources.registerPattern("*.yaml");
+        resources.registerPattern("*.json");
+        resources.registerPattern("*.xml");
     }
 
     private void registerProxyHints(RuntimeHints hints) {

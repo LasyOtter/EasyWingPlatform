@@ -26,7 +26,7 @@ public final class HttpHeaders {
     private HttpHeaders() {
     }
 
-    // ==================== 标准HTTP头 ====================
+    // ==================== 标准 HTTP 头 ====================
     public static final String CONTENT_TYPE = "Content-Type";
     public static final String ACCEPT = "Accept";
     public static final String AUTHORIZATION = "Authorization";
@@ -35,6 +35,7 @@ public final class HttpHeaders {
     public static final String USER_AGENT = "User-Agent";
     public static final String LOCATION = "Location";
     public static final String WWW_AUTHENTICATE = "WWW-Authenticate";
+    public static final String RETRY_AFTER = "Retry-After";
 
     // ==================== 自定义HTTP头 ====================
     public static final String X_REQUEST_ID = "X-Request-Id";

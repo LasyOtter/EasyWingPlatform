@@ -12,10 +12,14 @@
     </parent>
     
     <artifactId>easywing-observability</artifactId>
-    
+        
     <name>EasyWing Observability</name>
-    <description>可观测性模块，集成OpenTelemetry实现分布式追踪、指标、日志</description>
-    
+    <description>可观测性模块，集成 OpenTelemetry 实现分布式追踪、指标、日志</description>
+        
+    <properties>
+        <opentelemetry-instrumentation.version>2.25.0</opentelemetry-instrumentation.version>
+    </properties>
+        
     <dependencies>
         <!-- EasyWing Core -->
         <dependency>
@@ -48,6 +52,7 @@
         <dependency>
             <groupId>io.opentelemetry.instrumentation</groupId>
             <artifactId>opentelemetry-spring-boot-starter</artifactId>
+            <version>${opentelemetry-instrumentation.version}</version>
         </dependency>
         
         <!-- Micrometer Tracing -->

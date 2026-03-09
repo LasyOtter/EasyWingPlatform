@@ -23,6 +23,12 @@
             <artifactId>easywing-core</artifactId>
         </dependency>
         
+        <!-- Spring Boot AutoConfigure -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+        
         <!-- Seata -->
         <dependency>
             <groupId>io.seata</groupId>

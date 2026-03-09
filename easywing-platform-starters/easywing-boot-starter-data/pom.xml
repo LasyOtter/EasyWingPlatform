@@ -29,12 +29,6 @@
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
         </dependency>
 
-        <!-- JSQLParser (for multi-tenant) -->
-        <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-jsqlparser</artifactId>
-        </dependency>
-
         <!-- Druid -->
         <dependency>
             <groupId>com.alibaba</groupId>

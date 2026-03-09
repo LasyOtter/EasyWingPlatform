@@ -498,8 +498,10 @@ public class GlobalExceptionHandler {
             ErrorResponseException ex, HttpServletRequest request) {
         log.warn("Error response: {}", ex.getMessage());
 
-        Rfc9457ProblemDetail problem = Rfc9457ProblemDetail.fromErrorResponse(ex);
-        problem.traceId = getTraceId();
+        Rfc9457ProblemDetail problem = Rfc9457ProblemDetail.fromErrorResponse(ex)
+                .toBuilder()
+                .traceId(getTraceId())
+                .build();
 
         return ResponseEntity
                 .status(ex.getStatusCode())

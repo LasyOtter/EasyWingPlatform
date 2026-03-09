@@ -27,7 +27,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.cloud.openfeign.FeignAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 
 import java.util.concurrent.TimeUnit;
@@ -47,7 +46,7 @@ import java.util.concurrent.TimeUnit;
  * @since 1.0.0
  */
 @Slf4j
-@AutoConfiguration(before = FeignAutoConfiguration.class)
+@AutoConfiguration(before = org.springframework.cloud.openfeign.FeignAutoConfiguration.class)
 @ConditionalOnClass(name = "org.springframework.cloud.openfeign.FeignClient")
 @EnableConfigurationProperties(FeignProperties.class)
 @ConditionalOnProperty(prefix = "easywing.feign", name = "enabled", havingValue = "true", matchIfMissing = true)

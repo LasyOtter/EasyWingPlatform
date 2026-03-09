@@ -29,5 +29,6 @@
         <module>easywing-boot-starter-seata</module>
         <module>easywing-boot-starter-gray</module>
         <module>easywing-boot-starter-virtual-thread</module>
+        <module>easywing-boot-starter-ai</module>
     </modules>
 </project>

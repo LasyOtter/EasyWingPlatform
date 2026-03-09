@@ -1,0 +1,49 @@
+#
+# EasyWing AI Starter Configuration
+#
+
+easywing:
+  ai:
+    enabled: true
+    
+    # Chat Model Configuration
+    chat-model:
+      provider: openai  # openai, ollama, huggingface
+      
+      openai:
+        api-key: ${OPENAI_API_KEY:}
+        model-name: gpt-4o-mini
+        base-url: https://api.openai.com/v1
+        temperature: 0.7
+        max-tokens: 4000
+        timeout: 60
+      
+      ollama:
+        base-url: http://localhost:11434
+        model-name: llama3
+        temperature: 0.7
+      
+      huggingface:
+        model-name: microsoft/Phi-3-mini-4k-instruct
+        api-key: ${HF_API_KEY:}
+        max-new-tokens: 512
+        temperature: 0.7
+    
+    # Embedding Model Configuration
+    embedding-model:
+      provider: openai  # openai, huggingface
+      
+      openai:
+        api-key: ${OPENAI_API_KEY:}
+        model-name: text-embedding-3-small
+        base-url: https://api.openai.com/v1
+        dimensions: 1536
+      
+      huggingface:
+        model-name: sentence-transformers/all-MiniLM-L6-v2
+        api-key: ${HF_API_KEY:}
+    
+    # Memory Store Configuration
+    memory-store:
+      type: in-memory  # in-memory, persist
+      persist-directory: ./data/chat-memory

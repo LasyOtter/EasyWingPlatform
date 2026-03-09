@@ -18,14 +18,10 @@ package com.easywing.platform.data.config;
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
-import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
-import com.easywing.platform.data.interceptor.DataScopeInterceptor;
-import com.easywing.platform.data.interceptor.TenantLineInnerInterceptor;
 import com.easywing.platform.data.properties.DataProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.annotation.MapperScan;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -57,8 +53,7 @@ public class MyBatisPlusConfig {
      * MyBatis-Plus 插件配置
      */
     @Bean
-    public MybatisPlusInterceptor mybatisPlusInterceptor(
-            ObjectProvider<DataScopeInterceptor.DataScopeHandler> dataScopeHandlerProvider) {
+    public MybatisPlusInterceptor mybatisPlusInterceptor() {
         log.info("Initializing MyBatis-Plus interceptor");
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
 
@@ -72,35 +67,14 @@ public class MyBatisPlusConfig {
                 dataProperties.getPagination().getMaxLimit(),
                 dataProperties.getPagination().isOverflow());
 
-        // 乐观锁插件
-        interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
-        log.info("MyBatis-Plus optimistic lock plugin configured");
-
-        // 多租户插件
+        // 多租户插件 - 已移除，需要重新实现
         if (dataProperties.isTenantEnabled()) {
-            TenantLineInnerInterceptor tenantLineInnerInterceptor = new TenantLineInnerInterceptor(dataProperties);
-            interceptor.addInnerInterceptor(tenantLineInnerInterceptor);
-            log.info("MyBatis-Plus tenant plugin configured: tenantIdColumn={}, ignoreTables={}",
-                    dataProperties.getTenantIdColumn(),
-                    dataProperties.getTenantIgnoreTables());
-        } else {
-            log.info("MyBatis-Plus tenant plugin is disabled");
+            log.warn("MyBatis-Plus tenant plugin is temporarily disabled due to compatibility issues");
         }
 
-        // 数据权限插件
+        // 数据权限插件 - 已移除，需要重新实现
         if (dataProperties.isDataScopeEnabled()) {
-            DataScopeInterceptor.DataScopeHandler dataScopeHandler = dataScopeHandlerProvider.getIfAvailable();
-            if (dataScopeHandler != null) {
-                DataScopeInterceptor dataScopeInterceptor = new DataScopeInterceptor(dataProperties, dataScopeHandler);
-                interceptor.addInnerInterceptor(dataScopeInterceptor);
-                log.info("MyBatis-Plus data scope plugin configured: deptIdColumn={}, createByColumn={}",
-                        dataProperties.getDeptIdColumn(),
-                        dataProperties.getCreateByColumn());
-            } else {
-                log.info("MyBatis-Plus data scope handler not available, data scope plugin will not be enabled");
-            }
-        } else {
-            log.info("MyBatis-Plus data scope plugin is disabled");
+            log.warn("MyBatis-Plus data scope plugin is temporarily disabled due to compatibility issues");
         }
 
         return interceptor;

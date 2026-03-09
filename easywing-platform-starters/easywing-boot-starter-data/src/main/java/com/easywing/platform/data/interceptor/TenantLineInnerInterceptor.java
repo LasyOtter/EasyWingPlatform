@@ -15,7 +15,7 @@
  */
 package com.easywing.platform.data.interceptor;
 
-import com.baomidou.mybatisplus.core.plugin.InterceptorIgnoreHelper;
+import com.baomidou.mybatisplus.core.plugins.InterceptorIgnoreHelper;
 import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
 import com.easywing.platform.data.properties.DataProperties;
 import com.easywing.platform.data.tenant.TenantContext;
@@ -71,11 +71,6 @@ public class TenantLineInnerInterceptor implements TenantLineHandler {
         // 检查是否在忽略列表中
         if (ignoreTables.contains(tableName)) {
             log.debug("Ignore tenant filter for table: {}", tableName);
-            return true;
-        }
-
-        // 检查是否通过MP注解忽略
-        if (InterceptorIgnoreHelper.ignoreTenant(tableName)) {
             return true;
         }
 

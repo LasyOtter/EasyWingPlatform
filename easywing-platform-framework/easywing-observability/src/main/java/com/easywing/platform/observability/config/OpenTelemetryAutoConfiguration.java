@@ -95,8 +95,6 @@ public class OpenTelemetryAutoConfiguration {
     public TextMapPropagator otelTextMapPropagator() {
         return TextMapPropagator.composite(
                 io.opentelemetry.context.propagation.TextMapPropagator.composite(
-                        io.opentelemetry.api.trace.propagation.TraceContextPropagator.getInstance(),
-                        io.opentelemetry.api.baggage.propagation.BaggagePropagator.getInstance(),
                         JaegerPropagator.getInstance()
                 )
         );

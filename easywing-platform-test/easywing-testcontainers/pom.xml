@@ -12,10 +12,14 @@
     </parent>
     
     <artifactId>easywing-testcontainers</artifactId>
-    
+        
     <name>EasyWing Testcontainers</name>
-    <description>Testcontainers集成测试支持</description>
-    
+    <description>Testcontainers 集成测试支持</description>
+        
+    <properties>
+        <testcontainers.version>1.19.7</testcontainers.version>
+    </properties>
+        
     <dependencies>
         <!-- Testcontainers Core -->
         <dependency>
@@ -48,10 +52,10 @@
             <artifactId>kafka</artifactId>
         </dependency>
         
-        <!-- Nacos Mock -->
+        <!-- JUnit Jupiter (for Testcontainers integration) -->
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>generic</artifactId>
+            <artifactId>junit-jupiter</artifactId>
         </dependency>
         
         <!-- Spring Boot Test -->

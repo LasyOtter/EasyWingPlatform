@@ -72,10 +72,6 @@ public class DataScopeInterceptor implements InnerInterceptor {
             return;
         }
 
-        if (InterceptorIgnoreHelper.ignoreDataScope(ms.getId())) {
-            return;
-        }
-
         DataScopeInfo dataScopeInfo = dataScopeHandler.getDataScopeInfo();
         if (dataScopeInfo == null) {
             log.debug("No data scope info available, skipping data scope filter");

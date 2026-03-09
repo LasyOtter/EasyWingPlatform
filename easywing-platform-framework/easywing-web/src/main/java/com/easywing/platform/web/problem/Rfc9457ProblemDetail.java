@@ -164,7 +164,7 @@ public class Rfc9457ProblemDetail {
     }
 
     /**
-     * 从ErrorResponse创建ProblemDetail
+     * 从 ErrorResponse 创建 ProblemDetail
      */
     public static Rfc9457ProblemDetail fromErrorResponse(ErrorResponse errorResponse) {
         return builder()
@@ -174,6 +174,23 @@ public class Rfc9457ProblemDetail {
                 .type(errorResponse.getBody().getType())
                 .instance(errorResponse.getBody().getInstance())
                 .build();
+    }
+    
+    /**
+     * 转换为 Builder 以支持修改
+     */
+    public Builder toBuilder() {
+        return builder()
+                .status(HttpStatus.valueOf(getStatus()))
+                .title(getTitle())
+                .detail(getDetail())
+                .type(getType())
+                .instance(getInstance())
+                .errorCode(getErrorCode())
+                .timestamp(getTimestamp())
+                .traceId(getTraceId())
+                .errors(getErrors())
+                .properties(getProperties());
     }
 
     /**

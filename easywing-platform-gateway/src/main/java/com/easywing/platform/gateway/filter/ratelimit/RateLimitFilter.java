@@ -168,10 +168,12 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
         return redisTemplate.execute(
                         rateLimitScript,
                         Collections.singletonList(key),
-                        String.valueOf(rate),
-                        String.valueOf(capacity),
-                        String.valueOf(now),
-                        String.valueOf(requested)
+                        java.util.Arrays.asList(
+                                String.valueOf(rate),
+                                String.valueOf(capacity),
+                                String.valueOf(now),
+                                String.valueOf(requested)
+                        )
                 )
                 .next()
                 .map(result -> result != null && result >= 0)

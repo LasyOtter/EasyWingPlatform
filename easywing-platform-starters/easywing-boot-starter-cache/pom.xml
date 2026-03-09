@@ -12,10 +12,14 @@
     </parent>
     
     <artifactId>easywing-boot-starter-cache</artifactId>
-    
+        
     <name>EasyWing Boot Starter Cache</name>
-    <description>缓存启动器，集成Redisson、Caffeine、多级缓存</description>
-    
+    <description>缓存启动器，集成 Redisson、Caffeine、多级缓存</description>
+        
+    <properties>
+        <caffeine.version>3.1.8</caffeine.version>
+    </properties>
+        
     <dependencies>
         <!-- EasyWing Core -->
         <dependency>
@@ -31,8 +35,9 @@
         
         <!-- Caffeine -->
         <dependency>
-            <groupId>com.github.benmanes.caffeine</groupId>
+            <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
+            <version>${caffeine.version}</version>
         </dependency>
         
         <!-- Spring Boot Cache -->
@@ -51,6 +56,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        
+        <!-- Spring Boot Web -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 </project>

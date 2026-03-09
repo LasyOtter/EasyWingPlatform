@@ -67,9 +67,6 @@ public class PageUtils {
      */
     public static <T, R> Page<R> convert(Page<T> source, Function<T, R> converter) {
         Page<R> target = new Page<>(source.getCurrent(), source.getSize(), source.getTotal());
-        target.setOrders(source.getOrders());
-        target.setSearchCount(source.isSearchCount());
-        target.setOptimistic(source.isOptimistic());
         if (source.getRecords() != null) {
             target.setRecords(source.getRecords().stream()
                     .map(converter)
@@ -89,8 +86,6 @@ public class PageUtils {
      */
     public static <T, R> IPage<R> convert(IPage<T> source, Function<T, R> converter) {
         Page<R> target = new Page<>(source.getCurrent(), source.getSize(), source.getTotal());
-        target.setOrders(source.getOrders());
-        target.setSearchCount(source.isSearchCount());
         if (source.getRecords() != null) {
             target.setRecords(source.getRecords().stream()
                     .map(converter)
