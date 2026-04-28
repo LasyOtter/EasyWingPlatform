@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: easywing-platform-ai-test
+
+easywing:
+  ai:
+    enabled: true
+
+    providers:
+      openai:
+        enabled: false
+
+    memory:
+      enabled: false
+
+    session:
+      enabled: false
+
+    compression:
+      enabled: false
+
+    skill:
+      enabled: false

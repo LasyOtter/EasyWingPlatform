@@ -98,6 +98,32 @@ export const asyncRoutes: RouteRecordRaw[] = [
         meta: { title: '个人中心', noTagsView: true }
       }
     ]
+  },
+  {
+    path: '/ai',
+    component: Layout,
+    redirect: '/ai/chat',
+    meta: { title: 'AI 管理', icon: 'chat' },
+    children: [
+      {
+        path: 'chat',
+        name: 'AiChat',
+        component: () => import('@/views/ai/chat/index.vue'),
+        meta: { title: 'AI 对话', icon: 'chat' }
+      },
+      {
+        path: 'agent',
+        name: 'AiAgent',
+        component: () => import('@/views/ai/agent/index.vue'),
+        meta: { title: '智能体', icon: 'magic-stick' }
+      },
+      {
+        path: 'model',
+        name: 'AiModel',
+        component: () => import('@/views/ai/model/index.vue'),
+        meta: { title: '模型管理', icon: 'model' }
+      }
+    ]
   }
 ]
 

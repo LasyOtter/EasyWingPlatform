@@ -1,0 +1,104 @@
+spring.application.name=easywing-platform-ai
+
+# AI Configuration
+easywing:
+  ai:
+    enabled: true
+
+    # Provider Configuration
+    providers:
+      openai:
+        enabled: true
+        type: openai
+        apiKey: ${OPENAI_API_KEY:}
+        baseUrl: https://api.openai.com/v1
+        model: gpt-4o
+        temperature: 0.7
+        maxTokens: 4096
+
+      anthropic:
+        enabled: false
+        type: anthropic
+        apiKey: ${ANTHROPIC_API_KEY:}
+        baseUrl: https://api.anthropic.com/v1
+        model: claude-3-5-sonnet-20241022
+        temperature: 0.7
+        maxTokens: 4096
+
+      google:
+        enabled: false
+        type: google
+        apiKey: ${GOOGLE_API_KEY:}
+        baseUrl: https://generativelanguage.googleapis.com/v1beta/models
+        model: gemini-2.0-flash-exp
+        temperature: 0.7
+        maxTokens: 2048
+
+    # Memory Configuration
+    memory:
+      enabled: true
+      type: redis
+      maxMessages: 100
+      ttlHours: 24
+      summaryThreshold: 20
+
+    # Session Configuration
+    session:
+      enabled: true
+      storageType: redis
+      defaultTtlSeconds: 86400
+      maxConversationsPerUser: 100
+
+    # Compression Configuration
+    compression:
+      enabled: true
+      strategy: smart
+      targetTokens: 8000
+      compressionRatio: 0.5
+
+    # Gateway Configuration
+    gateway:
+      enabled: true
+      port: 8082
+      apiPrefix: /api/v1/ai
+
+    # Knowledge Base Configuration
+    knowledgeBase:
+      enabled: false
+      vectorStore: milvus
+      collectionName: easywing_knowledge
+      topK: 5
+      similarityThreshold: 0.7
+
+    # Agent Configuration
+    agent:
+      maxIterations: 10
+      maxToolCallsPerIteration: 5
+      toolCallTimeoutMs: 30000
+      streamingEnabled: true
+
+    # Skill Configuration
+    skill:
+      enabled: true
+      scanPackage: com.easywing.platform.ai.skill
+
+# Server Configuration
+server:
+  port: ${AI_SERVER_PORT:8082}
+  servlet:
+    context-path: /
+
+# Springdoc OpenAPI
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+# Logging
+logging:
+  level:
+    com.easywing.platform.ai: DEBUG
+    com.easywing.platform.ai.provider: DEBUG
+    com.easywing.platform.ai.agent: DEBUG
