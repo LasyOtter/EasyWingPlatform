@@ -213,13 +213,16 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
             this.lastRefillTime = System.currentTimeMillis();
         }
 
-        synchronized boolean tryConsume() {
+        boolean tryConsume() {
             refill();
-            if (tokens.get() > 0) {
-                tokens.decrementAndGet();
-                return true;
-            }
-            return false;
+            long current;
+            do {
+                current = tokens.get();
+                if (current <= 0) {
+                    return false;
+                }
+            } while (!tokens.compareAndSet(current, current - 1));
+            return true;
         }
 
         private void refill() {
@@ -228,8 +231,11 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
             if (elapsed > 0) {
                 long newTokens = elapsed * rate / 1000;
                 if (newTokens > 0) {
-                    tokens.set(Math.min(capacity, tokens.get() + newTokens));
-                    lastRefillTime = now;
+                    tokens.updateAndGet(current -> {
+                        long next = Math.min(capacity, current + newTokens);
+                        lastRefillTime = now;
+                        return next;
+                    });
                 }
             }
         }
