@@ -17,6 +17,7 @@ package com.easywing.platform.gateway.filter.jwt;
 
 import com.easywing.platform.core.constant.HttpHeaders;
 import com.easywing.platform.core.exception.TokenBlacklistedException;
+import com.easywing.platform.gateway.constants.CacheConstants;
 import com.easywing.platform.gateway.properties.GatewayProperties;
 import com.easywing.platform.gateway.properties.JwtProperties;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -55,6 +56,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 
 /**
  * JWT校验全局过滤器
@@ -93,6 +99,7 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
     private final ReactiveStringRedisTemplate redisTemplate;
     private final Map<String, JWKSet> jwkSetCache = new ConcurrentHashMap<>();
     private volatile long lastJwkRefreshTime = 0;
+    private ScheduledExecutorService jwkRefreshScheduler;
 
     public JwtValidationFilter(GatewayProperties gatewayProperties,
                                 ReactiveStringRedisTemplate redisTemplate) {
@@ -104,16 +111,56 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
                 .recordStats()
                 .build();
         this.jwkCache = Caffeine.newBuilder()
-                .maximumSize(100)
-                .expireAfterWrite(Duration.ofHours(1))
+                .maximumSize(CacheConstants.Jwt.JWK_CACHE_SIZE)
+                .expireAfterWrite(CacheConstants.Jwt.JWK_CACHE_TTL)
                 .build();
         this.blacklistCache = Caffeine.newBuilder()
-                .maximumSize(10000)
-                .expireAfterWrite(Duration.ofMinutes(5))
+                .maximumSize(CacheConstants.Jwt.BLACKLIST_CACHE_SIZE)
+                .expireAfterWrite(CacheConstants.Jwt.BLACKLIST_CACHE_TTL)
                 .build();
-        
+
         initJwkSet();
+    }
+
+    @PostConstruct
+    public void init() {
         scheduleJwkRefresh();
+        log.info("JwtValidationFilter initialized with JWK refresh interval: {}",
+                properties.getJwkRefreshInterval());
+    }
+
+    @PreDestroy
+    public void destroy() {
+        if (jwkRefreshScheduler != null) {
+            log.info("Shutting down JWK refresh scheduler...");
+            jwkRefreshScheduler.shutdown();
+            try {
+                if (!jwkRefreshScheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                    log.warn("JWK refresh scheduler did not terminate in time, forcing shutdown");
+                    jwkRefreshScheduler.shutdownNow();
+                    if (!jwkRefreshScheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                        log.error("JWK refresh scheduler did not terminate");
+                    }
+                }
+                log.info("JWK refresh scheduler shut down successfully");
+            } catch (InterruptedException e) {
+                log.error("Interrupted while waiting for JWK refresh scheduler shutdown", e);
+                jwkRefreshScheduler.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        // 清理缓存
+        if (jwtCache != null) {
+            jwtCache.invalidateAll();
+        }
+        if (jwkCache != null) {
+            jwkCache.invalidateAll();
+        }
+        if (blacklistCache != null) {
+            blacklistCache.invalidateAll();
+        }
+        log.info("JwtValidationFilter resources cleaned up");
     }
 
     @Override
@@ -310,21 +357,20 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
     }
 
     private void scheduleJwkRefresh() {
-        Thread refreshThread = new Thread(() -> {
-            while (true) {
-                try {
-                    Thread.sleep(properties.getJwkRefreshInterval().toMillis());
-                    refreshJwkSet();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                } catch (Exception e) {
-                    log.warn("JWK Set refresh failed: {}", e.getMessage());
-                }
-            }
-        }, "jwk-refresh");
-        refreshThread.setDaemon(true);
-        refreshThread.start();
+        jwkRefreshScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "jwk-refresh");
+            t.setDaemon(true);
+            return t;
+        });
+
+        jwkRefreshScheduler.scheduleWithFixedDelay(
+                this::refreshJwkSet,
+                properties.getJwkRefreshInterval().toMillis(),
+                properties.getJwkRefreshInterval().toMillis(),
+                TimeUnit.MILLISECONDS
+        );
+
+        log.info("JWK refresh scheduled with interval: {}", properties.getJwkRefreshInterval());
     }
 
     private void refreshJwkSet() {

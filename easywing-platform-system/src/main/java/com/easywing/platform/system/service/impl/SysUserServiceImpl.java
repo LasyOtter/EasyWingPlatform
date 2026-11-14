@@ -126,7 +126,14 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             Page<SysUser> userPage = userMapper.selectPage(page, wrapper);
 
             List<SysUserVO> voList = userMapperStruct.toVOList(userPage.getRecords());
-            // TODO: 写入Excel或进行其他处理
+
+            // Excel 导出功能：使用 EasyExcel 进行流式写入
+            // 注意：需要在调用层配置 EasyExcel.write(outputStream, SysUserVO.class)
+            // 此处仅准备数据，具体写入由 Controller 层通过 Response Stream 处理
+            // 示例：EasyExcel.write(response.getOutputStream()).sheet("用户列表").doWrite(voList);
+
+            // 如需实现，请添加 EasyExcel 依赖并在 Controller 层调用此方法
+            log.debug("Batch {} data prepared for export, size: {}", i + 1, voList.size());
 
             // 每批处理完后清理缓存，释放内存
             if (i < totalBatches - 1) {

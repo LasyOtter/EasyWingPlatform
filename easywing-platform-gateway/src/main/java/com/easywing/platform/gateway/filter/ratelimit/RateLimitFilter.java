@@ -31,6 +31,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
+import jakarta.annotation.PreDestroy;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -200,6 +201,19 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
         return Ordered.HIGHEST_PRECEDENCE + 20;
     }
 
+    /**
+     * 清理资源
+     */
+    @PreDestroy
+    public void destroy() {
+        if (localBuckets != null) {
+            log.info("Cleaning up rate limit cache, size: {}", localBuckets.estimatedSize());
+            localBuckets.invalidateAll();
+            localBuckets.cleanUp();
+        }
+        log.info("RateLimitFilter resources cleaned up successfully");
+    }
+
     private static class LocalTokenBucket {
         private final int capacity;
         private final int rate;
@@ -227,15 +241,16 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
 
         private void refill() {
             long now = System.currentTimeMillis();
-            long elapsed = now - lastRefillTime;
+            long lastRefill = lastRefillTime;
+            long elapsed = now - lastRefill;
+
             if (elapsed > 0) {
                 long newTokens = elapsed * rate / 1000;
                 if (newTokens > 0) {
-                    tokens.updateAndGet(current -> {
-                        long next = Math.min(capacity, current + newTokens);
-                        lastRefillTime = now;
-                        return next;
-                    });
+                    // 先原子更新 tokens
+                    tokens.updateAndGet(current -> Math.min(capacity, current + newTokens));
+                    // 然后更新时间戳（volatile 写入保证可见性）
+                    lastRefillTime = now;
                 }
             }
         }

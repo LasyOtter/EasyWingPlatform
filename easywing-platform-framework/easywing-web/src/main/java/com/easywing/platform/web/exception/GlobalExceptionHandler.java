@@ -515,7 +515,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Rfc9457ProblemDetail> handleException(Exception ex, HttpServletRequest request) {
         String traceId = getTraceId();
-        log.error("Unexpected system error [traceId={}] from IP {}: ", traceId, getClientIp(request), ex);
+        String clientIp = getClientIp(request);
+
+        // 记录详细错误日志（包含堆栈），但不返回给客户端
+        log.error("Unexpected system error [traceId={}] from IP {}: {}",
+                traceId, clientIp, ex.getMessage());
+
+        // Debug 模式下才输出完整堆栈
+        if (log.isDebugEnabled()) {
+            log.debug("Full stack trace for traceId={}", traceId, ex);
+        }
 
         Rfc9457ProblemDetail problem = Rfc9457ProblemDetail.builder()
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)

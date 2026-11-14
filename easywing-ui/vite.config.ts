@@ -63,19 +63,31 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
       }
     },
     build: {
-      target: 'es2015',
+      target: 'es2020',
       outDir: 'dist',
       assetsDir: 'assets',
-      sourcemap: false,
-      chunkSizeWarningLimit: 1500,
+      sourcemap: mode === 'production' ? false : true,
+      chunkSizeWarningLimit: 800,
+      assetsInlineLimit: 4096,
+      minify: 'terser',
+      terserOptions: {
+        compress: {
+          drop_console: mode === 'production',
+          drop_debugger: true,
+          pure_funcs: mode === 'production' ? ['console.log', 'console.info'] : []
+        }
+      },
       rollupOptions: {
         output: {
-          chunkFilenameNames: 'assets/js/[name]-[hash].js',
+          chunkFileNames: 'assets/js/[name]-[hash].js',
           entryFileNames: 'assets/js/[name]-[hash].js',
           assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
           manualChunks: {
             'element-plus': ['element-plus'],
-            'vue-core': ['vue', 'vue-router', 'pinia']
+            '@element-plus/icons': ['@element-plus/icons-vue'],
+            'vue-core': ['vue', 'vue-router', 'pinia'],
+            'lodash': ['lodash-es'],
+            'utils': ['axios', 'nprogress', 'js-cookie']
           }
         }
       }
@@ -93,7 +105,11 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
       __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false
     },
     esbuild: {
-      drop: mode === 'production' ? ['console', 'debugger'] : []
+      drop: []  // 已在 terserOptions 中配置
+    },
+    optimizeDeps: {
+      include: ['vue', 'vue-router', 'pinia', 'axios', 'element-plus'],
+      exclude: []
     }
   }
 })

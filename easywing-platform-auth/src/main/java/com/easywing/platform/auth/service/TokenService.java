@@ -110,7 +110,8 @@ public class TokenService {
             blacklist(rawRefreshToken, claims.getExpirationTime().toInstant());
             return issueTokenPair(user);
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid refresh token: " + e.getMessage(), e);
+            log.error("Refresh token validation failed", e);
+            throw new IllegalArgumentException("Invalid or expired refresh token");
         }
     }
 
@@ -124,7 +125,8 @@ public class TokenService {
             removeTokenFromUserSet(userId, rawToken);
             log.debug("Token revoked: jti={}, userId={}", jti, userId);
         } catch (Exception e) {
-            throw new IllegalArgumentException("Failed to revoke token: " + e.getMessage(), e);
+            log.error("Failed to revoke token", e);
+            throw new IllegalArgumentException("Failed to revoke token");
         }
     }
 
@@ -218,7 +220,8 @@ public class TokenService {
             }
             return jwt;
         } catch (Exception e) {
-            throw new IllegalArgumentException("Token validation failed: " + e.getMessage(), e);
+            log.error("Token validation failed", e);
+            throw new IllegalArgumentException("Invalid token");
         }
     }
 

@@ -16,6 +16,7 @@
 package com.easywing.platform.gateway.filter.gray;
 
 import com.easywing.platform.core.constant.HttpHeaders;
+import com.easywing.platform.gateway.constants.CacheConstants;
 import com.easywing.platform.gateway.properties.GatewayProperties;
 import com.easywing.platform.gateway.properties.GrayProperties;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -77,10 +78,10 @@ public class GrayReleaseFilter implements GlobalFilter, Ordered {
     public GrayReleaseFilter(GatewayProperties gatewayProperties) {
         this.properties = gatewayProperties.getGray();
         this.userVersionCache = Caffeine.newBuilder()
-                .maximumSize(10000)
-                .expireAfterWrite(Duration.ofHours(1))
+                .maximumSize(CacheConstants.Gray.USER_VERSION_CACHE_SIZE)
+                .expireAfterWrite(CacheConstants.Gray.USER_VERSION_CACHE_TTL)
                 .build();
-        
+
         initSelectors();
     }
 

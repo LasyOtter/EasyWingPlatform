@@ -77,13 +77,44 @@ public class AuditMetaObjectHandler implements MetaObjectHandler {
     /**
      * 获取当前用户ID
      * <p>
-     * 默认返回"system"，实际项目中应从安全上下文或JWT中获取
+     * 从安全上下文中获取当前用户ID
+     * 支持从 Spring Security 或 HTTP Header (X-User-Id) 获取
      *
-     * @return 当前用户ID
+     * @return 当前用户ID，未认证时返回 "system"
      */
     protected String getCurrentUserId() {
-        // TODO: 从安全上下文获取当前用户ID
-        // 可以通过SecurityContextHolder或JWT token获取
+        try {
+            // 方式1: 尝试从 Spring Security 上下文获取
+            org.springframework.security.core.Authentication authentication =
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+
+            if (authentication != null && authentication.isAuthenticated()
+                    && !(authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
+                // 优先从 Principal 获取用户ID
+                Object principal = authentication.getPrincipal();
+                if (principal instanceof org.springframework.security.core.userdetails.UserDetails userDetails) {
+                    return userDetails.getUsername();
+                } else if (principal instanceof String) {
+                    return (String) principal;
+                }
+            }
+
+            // 方式2: 从 RequestContextHolder 获取（网关传递的 Header）
+            org.springframework.web.context.request.RequestAttributes requestAttributes =
+                    org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+
+            if (requestAttributes instanceof org.springframework.web.context.request.ServletRequestAttributes servletRequestAttributes) {
+                jakarta.servlet.http.HttpServletRequest request = servletRequestAttributes.getRequest();
+                String userId = request.getHeader("X-User-Id");
+                if (userId != null && !userId.isEmpty()) {
+                    return userId;
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Failed to get current user id from context: {}", e.getMessage());
+        }
+
+        // 默认返回系统用户
         return "system";
     }
 }
