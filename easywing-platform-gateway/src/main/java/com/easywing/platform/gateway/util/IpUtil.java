@@ -126,7 +126,7 @@ public final class IpUtil {
                 bytes[i] = (byte) Integer.parseInt(parts[i]);
             }
             return bytes;
-        } catch (Exception e) {
+        } catch (NumberFormatException e) {
             return null;
         }
     }

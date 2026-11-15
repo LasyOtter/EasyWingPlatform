@@ -112,11 +112,9 @@ EasyWingPlatform/
 │   ├── easywing-core/              # Core utilities
 │   ├── easywing-web/               # Web enhancements
 │   ├── easywing-observability/     # Observability
-│   ├── easywing-security/          # Security
-│   └── easywing-cloud/             # Cloud features
+│   └── easywing-security/          # Security
 ├── easywing-platform-starters/      # Auto-configuration starters
 ├── easywing-platform-gateway/       # API Gateway
-├── easywing-platform-test/          # Test utilities
 ├── easywing-platform-samples/       # Sample applications
 └── docs/                            # Documentation
 ```
@@ -220,7 +218,7 @@ mvn test jacoco:report
 # Run integration tests
 mvn verify -Pintegration-test
 
-# Run with Testcontainers
+# Run with the integration profile
 mvn test -Dspring.profiles.active=integration
 ```
 

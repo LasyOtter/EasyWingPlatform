@@ -15,6 +15,7 @@
  */
 package com.easywing.platform.auth.config;
 
+import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.RSAKey;
 import org.springframework.util.StringUtils;
 import org.slf4j.Logger;
@@ -22,14 +23,17 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPrivateKey;
@@ -64,7 +68,7 @@ public class RsaKeyConfig {
                     RSAKey loaded = loadFromPem(path, keyId);
                     log.info("Loaded RSA key pair from {} with kid={}", path, keyId);
                     return loaded;
-                } catch (Exception e) {
+                } catch (IOException | GeneralSecurityException | JOSEException e) {
                     throw new IllegalStateException("Failed to load RSA key from " + path, e);
                 }
             }
@@ -95,11 +99,11 @@ public class RsaKeyConfig {
                     StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
             try {
                 Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-------"));
-            } catch (Exception ignored) {
+            } catch (IOException | UnsupportedOperationException ignored) {
                 // 非 POSIX 文件系统（如 Windows）不支持该操作
             }
             log.info("Generated and persisted RSA key pair to {}", path);
-        } catch (Exception e) {
+        } catch (IOException | JOSEException e) {
             throw new IllegalStateException("Failed to persist RSA key pair to " + path, e);
         }
         return key;
@@ -116,12 +120,13 @@ public class RsaKeyConfig {
                     .privateKey(privateKey)
                     .keyID(keyId)
                     .build();
-        } catch (Exception e) {
+        } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("Failed to generate RSA key pair", e);
         }
     }
 
-    private RSAKey loadFromPem(Path path, String keyId) throws Exception {
+    private RSAKey loadFromPem(Path path, String keyId)
+            throws IOException, GeneralSecurityException, JOSEException {
         String pem = Files.readString(path, StandardCharsets.UTF_8);
         byte[] privateBytes = decodePemBlock(pem, "PRIVATE KEY");
         byte[] publicBytes = decodePemBlock(pem, "PUBLIC KEY");
@@ -136,7 +141,7 @@ public class RsaKeyConfig {
                 .build();
     }
 
-    private String toPem(RSAKey key) throws Exception {
+    private String toPem(RSAKey key) throws JOSEException {
         String privateKeyBlock = "-----BEGIN PRIVATE KEY-----\n"
                 + Base64.getMimeEncoder(64, "\n".getBytes(StandardCharsets.UTF_8))
                         .encodeToString(key.toRSAPrivateKey().getEncoded())

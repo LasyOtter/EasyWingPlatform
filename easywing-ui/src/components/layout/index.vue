@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import Sidebar from './Sidebar.vue'
 import Header from './Header.vue'
 import TagsView from './TagsView.vue'
 import { usePermissionStore } from '@/store/modules/permission'
 
-const router = useRouter()
 const route = useRoute()
 const permissionStore = usePermissionStore()
 
@@ -23,11 +22,6 @@ const cachedViews = computed(() => {
     .filter((item) => item.meta?.isKeepAlive)
     .map((item) => String(item.name))
 })
-
-// 关闭当前标签
-const closeCurrentTag = (view: any) => {
-  router.push('/dashboard')
-}
 
 onMounted(() => {
   // 初始化

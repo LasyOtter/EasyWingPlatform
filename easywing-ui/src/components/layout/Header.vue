@@ -37,6 +37,15 @@ const handleLogout = async () => {
 const goProfile = () => {
   router.push('/profile/index')
 }
+
+// 下拉菜单命令
+const handleCommand = (command: string) => {
+  if (command === 'profile') {
+    goProfile()
+  } else if (command === 'logout') {
+    handleLogout()
+  }
+}
 </script>
 
 <template>

@@ -1,0 +1,12 @@
+---
+# 生产环境：关闭 API 文档暴露
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+logging:
+  level:
+    root: INFO
+    com.easywing.platform.ai: INFO

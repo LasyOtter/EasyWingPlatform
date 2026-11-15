@@ -124,9 +124,10 @@ service.interceptors.response.use(
 export function request<T = any>(config: AxiosRequestConfig): Promise<T> {
   return new Promise((resolve, reject) => {
     service
-      .request<any, T>(config)
+      .request<T>(config)
       .then((res) => {
-        resolve(res)
+        // 响应拦截器已将响应体解包，此处仅做类型适配
+        resolve(res as unknown as T)
       })
       .catch((error) => {
         reject(error)

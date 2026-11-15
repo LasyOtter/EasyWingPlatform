@@ -4,7 +4,7 @@ export interface RouteRecordRaw {
   name?: string | symbol
   component?: any
   components?: any
-  redirect?: string | Location | Function
+  redirect?: string | Location | ((to: any) => string)
   meta?: RouteMeta
   children?: RouteRecordRaw[]
 }

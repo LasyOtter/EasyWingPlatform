@@ -42,7 +42,6 @@ easywing-platform/
 │   ├── easywing-web/               # RFC 9457/全局异常
 │   ├── easywing-security/          # OAuth2/JWT
 │   ├── easywing-observability/     # OpenTelemetry
-│   └── easywing-cloud/             # 云原生配置
 ├── easywing-platform-starters/     # 自动配置启动器 ⚠️
 │   ├── easywing-boot-starter-data/     ✅ 已实现
 │   ├── easywing-boot-starter-virtual-thread/ ✅ 已实现
@@ -58,7 +57,6 @@ easywing-platform/
 ├── easywing-platform-gateway/      # API 网关 ✅
 ├── easywing-platform-auth/         # 认证服务 ✅
 ├── easywing-platform-system/       # 系统管理服务 ⚠️
-├── easywing-platform-test/         # 测试工具 ✅
 └── easywing-platform-samples/      # 示例项目 ✅
 ```
 

@@ -55,7 +55,7 @@ onMounted(() => {
             <p>今天是美好的一天，让我们开始工作吧！</p>
           </div>
           <div class="welcome-illustration">
-            <img src="@/assets/images/welcome.png" alt="welcome" />
+            <img src="@/assets/images/logo.svg" alt="welcome" />
           </div>
         </div>
       </el-col>

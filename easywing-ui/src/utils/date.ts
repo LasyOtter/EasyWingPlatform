@@ -55,7 +55,7 @@ export function formatRelativeTime(date: Date | string | number): string {
 export function getDateRange(type: 'today' | 'week' | 'month' | 'year'): [Date, Date] {
   const now = new Date()
   const end = new Date()
-  let start = new Date()
+  const start = new Date()
 
   switch (type) {
     case 'today':

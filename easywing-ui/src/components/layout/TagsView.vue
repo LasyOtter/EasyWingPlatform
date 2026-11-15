@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { usePermissionStore } from '@/store/modules/permission'
 
@@ -31,19 +31,6 @@ const closeView = (view: any) => {
       router.push(nextView?.path || '/dashboard')
     }
   }
-}
-
-// 刷新标签
-const refreshView = (view: any) => {
-  router.replace({
-    path: '/redirect' + view.path,
-    query: { t: Date.now() }
-  })
-}
-
-// 跳转到标签
-const toView = (view: any) => {
-  router.push(view.path)
 }
 
 // 是否是当前标签
@@ -81,7 +68,6 @@ initTags()
         v-for="tag in visitedViews"
         :key="tag.path"
         :to="{ path: tag.path }"
-        tag="span"
         class="tags-view-item"
         :class="{ active: isActive(tag) }"
       >

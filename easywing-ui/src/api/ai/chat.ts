@@ -1,4 +1,4 @@
-import request from '@/api/core/request'
+import { request } from '@/api/core/request'
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system' | 'tool'

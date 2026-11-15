@@ -1,0 +1,18 @@
+---
+# 生产环境：收敛敏感端点与 API 文档暴露
+management:
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+logging:
+  level:
+    root: INFO
+    com.easywing: INFO

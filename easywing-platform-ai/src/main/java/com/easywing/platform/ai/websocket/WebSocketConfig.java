@@ -1,5 +1,6 @@
 package com.easywing.platform.ai.websocket;
 
+import com.easywing.platform.ai.config.AiProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
@@ -13,14 +14,17 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final AgentWebSocketHandler agentWebSocketHandler;
+    private final AiProperties properties;
 
-    public WebSocketConfig(AgentWebSocketHandler agentWebSocketHandler) {
+    public WebSocketConfig(AgentWebSocketHandler agentWebSocketHandler, AiProperties properties) {
         this.agentWebSocketHandler = agentWebSocketHandler;
+        this.properties = properties;
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(agentWebSocketHandler, "/ws/agent")
-                .setAllowedOrigins("*");  // 生产环境应该限制来源
+                .setAllowedOrigins(properties.getWebsocket().getAllowedOrigins()
+                        .toArray(new String[0]));
     }
 }

@@ -30,8 +30,15 @@ const formatNumber = (num: number) => {
   return num.toString()
 }
 
-const getCapabilityTags = (model: ModelInfo) => {
-  const tags = []
+type CapabilityTagType = 'success' | 'warning' | 'info' | 'danger'
+
+interface CapabilityTag {
+  text: string
+  type: CapabilityTagType
+}
+
+const getCapabilityTags = (model: ModelInfo): CapabilityTag[] => {
+  const tags: CapabilityTag[] = []
   if (model.supportsStreaming) tags.push({ text: '流式输出', type: 'success' })
   if (model.supportsTools) tags.push({ text: '工具调用', type: 'warning' })
   if (model.supportsVision) tags.push({ text: '视觉理解', type: 'info' })
@@ -200,7 +207,7 @@ onMounted(() => {
           <template #default="{ row }">
             <el-space wrap>
               <el-tag
-                v-for="tag in getCapabilityTags(row)"
+                v-for="tag in getCapabilityTags(row as ModelInfo)"
                 :key="tag.text"
                 :type="tag.type"
                 size="small"

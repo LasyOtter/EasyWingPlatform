@@ -1,5 +1,7 @@
-import request from '@/api/core/request'
+import { request } from '@/api/core/request'
 import type { ChatMessage, ModelInfo } from './chat'
+
+export type { ChatMessage, ModelInfo } from './chat'
 
 export interface AgentConfig {
   maxIterations: number

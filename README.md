@@ -62,7 +62,6 @@
 - 消息驱动 (RocketMQ/Kafka)
 - gRPC支持
 - SpringDoc OpenAPI 3.1
-- Testcontainers测试支持
 - Maven Archetype脚手架
 - 完整示例项目
 - Docker Compose开发环境
@@ -141,7 +140,6 @@ EasyWingPlatform/
 │   ├── easywing-web/                      # Web模块(RFC 9457)
 │   ├── easywing-observability/            # 可观测性模块
 │   ├── easywing-security/                 # 安全模块
-│   └── easywing-cloud/                    # 云原生模块
 ├── easywing-platform-starters/            # 场景启动器
 │   ├── easywing-boot-starter-web/         # Web启动器
 │   ├── easywing-boot-starter-otel/        # OpenTelemetry启动器
@@ -158,8 +156,6 @@ EasyWingPlatform/
 ├── easywing-platform-ai/                  # AI服务(Agent/RAG/MCP)
 ├── easywing-platform-system/              # 系统管理服务(用户/角色/权限/字典)
 ├── easywing-platform-gateway/             # API网关
-├── easywing-platform-test/                # 测试支持
-│   └── easywing-testcontainers/           # Testcontainers
 ├── easywing-platform-samples/             # 示例项目
 │   ├── sample-user-service/               # 用户服务示例
 │   ├── sample-order-service/              # 订单服务示例

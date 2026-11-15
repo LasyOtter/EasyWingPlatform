@@ -13,7 +13,6 @@ import 'nprogress/nprogress.css'
 import App from './App.vue'
 import router from './router'
 import { setupPermissions } from './directives/permission'
-import { setupGlobComponents } from './components'
 
 import { setToken } from '@/utils/auth'
 import { useUserStore } from '@/store/modules/user'
@@ -36,15 +35,13 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 const axiosCanceler = new AxiosCanceler()
 
 // HTTP 响应拦截器 - 处理 Token 过期
-app.config.errorHandler = (err, instance, info) => {
+app.config.errorHandler = (err, _instance, info) => {
   console.error('Global error:', err)
   console.error('Error info:', info)
 }
 
 // 全局属性配置
-app.config.globalProperties = {
-  $httpCanceler: axiosCanceler
-}
+app.config.globalProperties.$httpCanceler = axiosCanceler
 
 // 使用插件
 app.use(pinia)

@@ -206,7 +206,7 @@ export class PerformanceTimer {
 /**
  * 性能装饰器（用于 Vue 组件方法）
  */
-export function measurePerformance(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+export function measurePerformance(_target: any, propertyKey: string, descriptor: PropertyDescriptor) {
   const originalMethod = descriptor.value
 
   descriptor.value = async function (...args: any[]) {

@@ -270,6 +270,29 @@ easywing:
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## 异常处理
+
+服务通过 `AiGlobalExceptionHandler` 将异常统一转换为 RFC 9457 Problem Details
+（`Content-Type: application/problem+json`），扩展字段与平台其他服务保持一致：
+`errorCode`、`timestamp`、`traceId`、`errors`。
+
+覆盖 `BizException`、`SystemException`、`ValidationException`、`@Valid` 参数校验、
+参数缺失 / 类型不匹配、请求体不可读、404、Resilience4j 限流熔断以及兜底异常。
+AI 服务不依赖 `easywing-web`，避免引入 Spring Security、Resilience4j 限流等
+与本服务无关的可选依赖；`traceId` 优先取请求头 `X-Trace-Id`。
+
+## 实验性功能
+
+以下能力已注册为 Spring Bean 或提供 API，但尚未接入主执行链路，属于实验性质，生产使用需自行验证：
+
+- 高级 Agent：`PlanningAgent`、`SelfReflectionAgent`、`TaskDecompositionAgent`、`EnhancedFunctionCallingAgent`
+- 成本 / 优化：`CostOptimizationEngine`、`BatchOptimizationEngine`、`PromptOptimizer`、`ToolRecommender`
+- 记忆 / 会话：`LongTermMemoryManager`、`RedisMemoryManager`、`RedisSessionManager`、`ContextCompressor`
+- 多模态 / 沙箱：`MultiModalService`、`CodeExecutionSandbox`（ProcessBuilder 实现，非容器隔离）
+- 其他：`MonitoringDashboard`、`ErrorRecoveryService`、`AgentTemplateLibrary`、`ABTestingFramework`、`McpClient` / `McpServer`、`AgentCommunicationBus`
+
+其中部分实现为简化 / 模拟版本（如 `EmbeddingService`、多模态处理器），接入生产前需替换为真实实现。
+
 ## License
 
 MIT

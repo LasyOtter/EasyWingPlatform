@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, nextTick, computed } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ChatDotRound,
@@ -7,10 +7,9 @@ import {
   Delete,
   Refresh,
   MagicStick,
-  Tool,
+  Tools,
   Collection,
-  Memory,
-  ArrowRight,
+  Memo,
   Loading
 } from '@element-plus/icons-vue'
 import {
@@ -21,7 +20,7 @@ import {
   deleteSession,
   getMemory,
   saveMemory,
-  addMemoryMessage,
+  deleteMemory,
   type ModelInfo,
   type ToolDefinition,
   type AgentSkill,
@@ -30,7 +29,6 @@ import {
   type ChatMessage
 } from '@/api/ai/agent'
 
-const loading = ref(false)
 const sending = ref(false)
 const configLoading = ref(false)
 const sessionsLoading = ref(false)
@@ -76,16 +74,6 @@ const agentSettings = reactive({
 const activeTab = ref('config')
 const showSessionDialog = ref(false)
 const newSessionName = ref('')
-
-const filteredTools = computed(() => {
-  if (!agentSettings.enabledTools.length) return agentConfig.value.availableTools
-  return agentConfig.value.availableTools.filter(t => agentSettings.enabledTools.includes(t.name))
-})
-
-const filteredSkills = computed(() => {
-  if (!agentSettings.enabledSkills.length) return agentConfig.value.availableSkills
-  return agentConfig.value.availableSkills.filter(s => agentSettings.enabledSkills.includes(s.name))
-})
 
 const getAgentConfigData = async () => {
   try {
@@ -218,7 +206,6 @@ const sendMessage = async () => {
     )
 
     const res = await executeAgent({
-      model: agentSettings.model,
       sessionId: currentSessionId.value || undefined,
       prompt: userInput,
       messages: chatMessages,
@@ -623,7 +610,7 @@ onMounted(() => {
           name="tools"
         >
           <div class="config-section">
-            <h4><el-icon><Tool /></el-icon> 可用工具</h4>
+            <h4><el-icon><Tools /></el-icon> 可用工具</h4>
             <el-checkbox-group
               v-model="agentSettings.enabledTools"
               class="tool-list"
@@ -700,7 +687,7 @@ onMounted(() => {
           name="memory"
         >
           <div class="config-section">
-            <h4><el-icon><Memory /></el-icon> 记忆管理</h4>
+            <h4><el-icon><Memo /></el-icon> 记忆管理</h4>
             <el-form
               label-width="100px"
               label-position="left"

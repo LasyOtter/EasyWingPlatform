@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 
 @Data
 @ConfigurationProperties(prefix = "easywing.ai")
@@ -28,6 +29,8 @@ public class AiProperties {
     private AgentConfig agent = new AgentConfig();
 
     private SkillConfig skill = new SkillConfig();
+
+    private WebSocket websocket = new WebSocket();
 
     @Data
     public static class ProviderConfig {
@@ -110,5 +113,13 @@ public class AiProperties {
     public static class SkillConfig {
         private boolean enabled = true;
         private String scanPackage = "com.easywing.platform.ai.skill";
+    }
+
+    @Data
+    public static class WebSocket {
+        /**
+         * 允许的跨域来源，生产环境应配置为实际前端域名。
+         */
+        private List<String> allowedOrigins = List.of("http://localhost:8080");
     }
 }

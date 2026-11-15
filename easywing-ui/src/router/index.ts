@@ -4,6 +4,9 @@ import { useUserStore } from '@/store/modules/user'
 // 静态路由
 import Layout from '@/components/layout/index.vue'
 
+// 免登录白名单
+const whiteList = ['/login', '/404', '/500']
+
 export const constantRoutes: RouteRecordRaw[] = [
   {
     path: '/login',
@@ -136,7 +139,6 @@ const router: Router = createRouter({
 
 // 重置路由
 export function resetRouter() {
-  const whiteList = ['/login', '/404', '/500']
   router.getRoutes().forEach((route) => {
     const { name } = route
     if (name && !whiteList.includes(String(name))) {
@@ -146,7 +148,7 @@ export function resetRouter() {
 }
 
 // 路由守卫
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const userStore = useUserStore()
   const hasToken = userStore.token
 

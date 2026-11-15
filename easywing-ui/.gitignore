@@ -1,4 +1,4 @@
-.node_modules
+node_modules
 .DS_Store
 dist
 dist-ssr
@@ -13,6 +13,9 @@ pnpm-debug.log*
 lerna-debug.log*
 coverage
 *.tsbuildinfo
+.eslintrc-auto-import.json
+src/types/auto-imports.d.ts
+src/types/components.d.ts
 .vscode/*
 !.vscode/extensions.json
 .idea

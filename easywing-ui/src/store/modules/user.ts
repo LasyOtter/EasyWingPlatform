@@ -20,38 +20,30 @@ export const useUserStore = defineStore('user', {
   actions: {
     // 登录
     async login(loginForm: LoginForm) {
-      try {
-        const res: any = await loginApi(loginForm)
-        this.token = res.access_token
-        setToken(res.access_token)
-        return res
-      } catch (error) {
-        throw error
-      }
+      const res: any = await loginApi(loginForm)
+      this.token = res.access_token
+      setToken(res.access_token)
+      return res
     },
 
     // 获取用户信息
     async getUserInfo() {
-      try {
-        const res: any = await getUserInfoApi()
-        this.userInfo = {
-          userId: res.id,
-          userName: res.username,
-          nickName: res.nickname,
-          email: res.email,
-          phonenumber: res.phone,
-          deptId: res.deptId,
-          deptName: res.deptName,
-          avatar: res.avatar,
-          roles: res.roles || []
-        } as UserInfo
-        this.permissions = ((res.roles || []) as any[])
-          .map((role) => role.roleKey)
-          .filter(Boolean)
-        return res
-      } catch (error) {
-        throw error
-      }
+      const res: any = await getUserInfoApi()
+      this.userInfo = {
+        userId: res.id,
+        userName: res.username,
+        nickName: res.nickname,
+        email: res.email,
+        phonenumber: res.phone,
+        deptId: res.deptId,
+        deptName: res.deptName,
+        avatar: res.avatar,
+        roles: res.roles || []
+      } as UserInfo
+      this.permissions = ((res.roles || []) as any[])
+        .map((role) => role.roleKey)
+        .filter(Boolean)
+      return res
     },
 
     // 登出

@@ -1,5 +1,3 @@
-import type { RouteRecordRaw } from 'vue-router'
-
 /**
  * 格式化路由路径
  */

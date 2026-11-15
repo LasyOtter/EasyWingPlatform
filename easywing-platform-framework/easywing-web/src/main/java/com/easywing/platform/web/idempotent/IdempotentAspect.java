@@ -24,6 +24,7 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.expression.EvaluationContext;
@@ -137,7 +138,7 @@ public class IdempotentAspect {
             script.setScriptText(RELEASE_LOCK_SCRIPT);
             script.setResultType(Long.class);
             redisTemplate.execute(script, Collections.singletonList(key), lockValue);
-        } catch (Exception e) {
+        } catch (DataAccessException e) {
             log.warn("Failed to release idempotent lock: key={}, error={}", key, e.getMessage());
         }
     }

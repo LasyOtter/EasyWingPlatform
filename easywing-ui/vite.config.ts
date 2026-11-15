@@ -5,13 +5,13 @@ import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import { viteMockServe } from 'vite-plugin-mock'
-import SvgIcon from 'vite-plugin-svg-icons'
+import { createSvgIconsPlugin } from 'vite-plugin-svg-icons'
 import { resolve } from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
   const env = loadEnv(mode, process.cwd())
-  const { VITE_APP_TITLE, VITE_APP_BASE_API, VITE_APP_PORT } = env
+  const { VITE_APP_BASE_API, VITE_APP_PORT } = env
 
   return {
     base: '/',
@@ -32,10 +32,10 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
       }),
       viteMockServe({
         mockPath: 'src/mock',
-        enable: true,
+        enable: mode !== 'test',
         watchFiles: true
       }),
-      SvgIcon({
+      createSvgIconsPlugin({
         iconDirs: [resolve(__dirname, 'src/assets/icons')],
         symbolId: 'icon-[dir]-[name]'
       })

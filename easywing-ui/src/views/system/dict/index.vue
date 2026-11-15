@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-const loading = ref(false)
 const tableData = ref([
   { dictId: 1, dictName: '用户性别', dictType: 'sys_user_sex', status: '0', createTime: '2024-01-01' },
   { dictId: 2, dictName: '菜单状态', dictType: 'sys_show_hide', status: '0', createTime: '2024-01-02' }

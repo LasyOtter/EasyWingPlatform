@@ -1,4 +1,4 @@
-import request from '@/api/core/request'
+import { request } from '@/api/core/request'
 import type { PageQuery, PageResult } from '@/types'
 
 /** 认证服务令牌结果 */

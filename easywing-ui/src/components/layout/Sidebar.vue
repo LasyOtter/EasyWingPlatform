@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { usePermissionStore } from '@/store/modules/permission'
 import SidebarItem from './SidebarItem.vue'
-import variables from '@/assets/styles/variables.module.scss'
 
 defineProps<{
   collapse: boolean
 }>()
 
-const router = useRouter()
 const route = useRoute()
 const permissionStore = usePermissionStore()
 
@@ -40,19 +38,14 @@ const hasOneShowingChild = (children: any[], parent: any) => {
 
   return false
 }
-
-// 解决菜单点击空白问题
-const isActive = (path: string) => {
-  return route.path === path
-}
 </script>
 
 <template>
   <div class="sidebar">
     <!-- Logo 区域 -->
     <div class="sidebar-logo">
-      <img v-if="collapse" src="@/assets/images/logo-small.png" alt="logo" class="logo-small" />
-      <img v-else src="@/assets/images/logo.png" alt="logo" class="logo" />
+      <img v-if="collapse" src="@/assets/images/logo-small.svg" alt="logo" class="logo-small" />
+      <img v-else src="@/assets/images/logo.svg" alt="logo" class="logo" />
       <transition name="fade">
         <span v-if="!collapse" class="logo-title">EasyWing</span>
       </transition>
@@ -73,7 +66,7 @@ const isActive = (path: string) => {
         <template v-for="item in menuList" :key="item.path">
           <template v-if="!item.meta?.isHide">
             <SidebarItem
-              v-if="hasOneShowingChild(item.children, item)"
+              v-if="hasOneShowingChild(item.children ?? [], item)"
               :item="onlyOneChild"
               :base-path="item.path"
             />

@@ -124,14 +124,12 @@ export function initSentryTracking(app: App, router: Router) {
     dsn: ERROR_TRACKING_CONFIG.dsn,
     environment: ERROR_TRACKING_CONFIG.environment,
     release: ERROR_TRACKING_CONFIG.release,
+    tracePropagationTargets: ['localhost', /^\//],
 
     // 性能监控
     integrations: [
-      new Sentry.BrowserTracing({
-        routingInstrumentation: Sentry.vueRouterInstrumentation(router),
-        tracePropagationTargets: ['localhost', /^\//]
-      }),
-      new Sentry.Replay({
+      Sentry.browserTracingIntegration({ router }),
+      Sentry.replayIntegration({
         maskAllText: true,
         blockAllMedia: true
       })

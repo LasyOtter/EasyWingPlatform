@@ -22,7 +22,6 @@
         <module>easywing-web</module>
         <module>easywing-observability</module>
         <module>easywing-security</module>
-        <module>easywing-cloud</module>
     </modules>
     
     <dependencies>

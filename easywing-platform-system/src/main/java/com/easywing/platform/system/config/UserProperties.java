@@ -29,7 +29,7 @@ public class UserProperties {
     /**
      * 默认密码（生产环境必须通过环境变量或配置中心设置）
      */
-    private String defaultPassword = "ChangeMe@123";
+    private String defaultPassword = "";
 
     /**
      * 最小密码长度

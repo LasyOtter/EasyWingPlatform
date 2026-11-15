@@ -1,4 +1,4 @@
-import request from '@/api/core/request'
+import { request } from '@/api/core/request'
 import type { Menu, PageQuery, PageResult } from '@/types'
 
 /**

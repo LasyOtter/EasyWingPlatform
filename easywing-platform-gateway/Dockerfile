@@ -17,7 +17,6 @@ COPY easywing-platform-framework/easywing-core/pom.xml easywing-platform-framewo
 COPY easywing-platform-framework/easywing-web/pom.xml easywing-platform-framework/easywing-web/
 COPY easywing-platform-framework/easywing-security/pom.xml easywing-platform-framework/easywing-security/
 COPY easywing-platform-framework/easywing-observability/pom.xml easywing-platform-framework/easywing-observability/
-COPY easywing-platform-framework/easywing-cloud/pom.xml easywing-platform-framework/easywing-cloud/
 COPY easywing-platform-gateway/pom.xml easywing-platform-gateway/
 COPY easywing-platform-starters/pom.xml easywing-platform-starters/
 COPY easywing-platform-test/pom.xml easywing-platform-test/

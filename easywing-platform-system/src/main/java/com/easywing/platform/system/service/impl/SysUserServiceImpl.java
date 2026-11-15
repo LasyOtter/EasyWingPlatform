@@ -179,7 +179,12 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             try {
                 validateUser(userDTO);
                 SysUser user = userMapperStruct.toEntity(userDTO);
-                user.setPassword(passwordEncoder.encode(userProperties.getDefaultPassword()));
+                String defaultPassword = userProperties.getDefaultPassword();
+                if (!org.springframework.util.StringUtils.hasText(defaultPassword)) {
+                    throw new IllegalStateException(
+                            "easywing.user.default-password 未配置，拒绝创建用户");
+                }
+                user.setPassword(passwordEncoder.encode(defaultPassword));
                 user.setStatus(0);
                 userMapper.insert(user);
 

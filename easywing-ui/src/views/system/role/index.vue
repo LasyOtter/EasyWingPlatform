@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
 
-const loading = ref(false)
 const tableData = ref([
   { roleId: 1, roleName: '超级管理员', roleKey: 'admin', roleSort: 1, status: '0', createTime: '2024-01-01' },
   { roleId: 2, roleName: '普通用户', roleKey: 'user', roleSort: 2, status: '0', createTime: '2024-01-02' }

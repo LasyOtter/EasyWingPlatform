@@ -1,0 +1,12 @@
+---
+# 生产环境：收敛敏感端点暴露
+management:
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+
+logging:
+  level:
+    root: INFO
+    com.easywing: INFO

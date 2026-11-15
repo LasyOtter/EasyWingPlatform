@@ -52,6 +52,7 @@ easywing-ui/
 │   │   ├── error/       # 错误页面
 │   │   ├── login/       # 登录页
 │   │   ├── profile/     # 个人中心
+│   │   ├── ai/          # AI 对话 / 智能体 / 模型
 │   │   └── system/      # 系统管理
 │   ├── App.vue          # 根组件
 │   └── main.ts          # 入口文件
@@ -59,6 +60,7 @@ easywing-ui/
 ├── .env.production     # 生产环境配置
 ├── index.html          # HTML 入口
 ├── package.json        # 包管理
+├── vitest.config.ts    # 单元测试配置
 ├── tsconfig.json       # TypeScript 配置
 └── vite.config.ts     # Vite 配置
 ```
@@ -88,11 +90,28 @@ pnpm dev
 pnpm build
 ```
 
+### 代码检查
+
+```bash
+pnpm lint        # ESLint 检查
+pnpm lint:fix    # ESLint 自动修复
+pnpm type-check  # vue-tsc 类型检查
+```
+
+### 单元测试
+
+```bash
+pnpm test         # 运行一次
+pnpm test:watch   # 监听模式
+```
+
 ### 预览生产版本
 
 ```bash
 pnpm preview
 ```
+
+> 依赖版本由 `pnpm-lock.yaml` 锁定，提交依赖变更时请一并提交该文件。
 
 ## 接口配置
 

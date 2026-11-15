@@ -1,4 +1,4 @@
-import axios, { type AxiosRequestConfig } from 'axios'
+import type { AxiosRequestConfig } from 'axios'
 
 /**
  * Axios 取消请求管理

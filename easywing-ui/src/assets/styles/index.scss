@@ -1,7 +1,6 @@
 // 主样式文件
 
-// 导入变量
-@import './variables.module.scss';
+// 变量通过 vite.config.ts 的 additionalData 全局注入
 
 // 全局重置样式
 * {

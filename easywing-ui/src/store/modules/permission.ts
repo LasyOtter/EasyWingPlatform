@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { store } from '../index'
 import { resetRouter } from '@/router'
 import type { RouteRecordRaw } from 'vue-router'
-import { asyncRoutes } from '@/router'
 import { getRouters } from '@/api/system/menu'
 
 function filterAsyncRoutes(routes: any[], permissions: string[]) {
@@ -76,11 +75,6 @@ export const usePermissionStore = defineStore('permission', {
 })
 
 // 导入静态路由
-import Layout from '@/components/layout/index.vue'
-import dashboard from '@/router/modules/dashboard'
-import system from '@/router/modules/system'
-import profile from '@/router/modules/profile'
-
 export const constantRoutes = [
   {
     path: '/login',

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-const loading = ref(false)
 const tableData = ref([
   { menuId: 1, menuName: '系统管理', menuType: 'M', orderNum: 1, status: '0' },
   { menuId: 2, menuName: '用户管理', menuType: 'C', orderNum: 1, status: '0', perms: 'system:user:list' }

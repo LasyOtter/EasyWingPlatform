@@ -105,6 +105,45 @@ jobs:
         run: mvn clean install -Pnative -DskipTests -B --no-transfer-progress
         continue-on-error: true
 
+  build-ui:
+    name: Build UI
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+        working-directory: easywing-ui
+
+      - name: Lint
+        run: pnpm lint
+        working-directory: easywing-ui
+
+      - name: Type check
+        run: pnpm type-check
+        working-directory: easywing-ui
+
+      - name: Test
+        run: pnpm test
+        working-directory: easywing-ui
+
+      - name: Build
+        run: pnpm build
+        working-directory: easywing-ui
+
   dependency-review:
     name: Dependency Review
     runs-on: ubuntu-latest

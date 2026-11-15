@@ -249,6 +249,22 @@ class SysUserServiceImplTest {
     }
 
     @Test
+    @DisplayName("创建用户-默认密码未配置时拒绝")
+    void insertUser_DefaultPasswordMissing() {
+        // Given
+        SysUserDTO userDTO = TestDataFactory.createNewUserDTO("newuser");
+        when(userProperties.getDefaultPassword()).thenReturn("");
+        when(userMapper.checkPhoneUnique(any(), any())).thenReturn(0);
+        when(userMapper.checkEmailUnique(any(), any())).thenReturn(0);
+
+        // When & Then
+        assertThatThrownBy(() -> userService.insertUser(userDTO))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("default-password");
+        verify(userMapper, never()).insert(any());
+    }
+
+    @Test
     @DisplayName("创建用户-手机号已存在")
     void insertUser_PhoneExists() {
         // Given

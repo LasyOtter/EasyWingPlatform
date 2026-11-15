@@ -52,7 +52,7 @@ export const role: Directive = {
  * 用法：v-auth="['system:user:add']"
  */
 export const auth: Directive = {
-  mounted(el, binding, vnode) {
+  mounted(el, binding, _vnode) {
     const { value } = binding
     const userStore = useUserStore()
     const { permissions } = userStore.userInfo || {}

@@ -75,9 +75,6 @@
         <!-- System Service -->
         <module>easywing-platform-system</module>
 
-        <!-- Test -->
-        <module>easywing-platform-test</module>
-        
         <!-- Samples -->
         <module>easywing-platform-samples</module>
     </modules>

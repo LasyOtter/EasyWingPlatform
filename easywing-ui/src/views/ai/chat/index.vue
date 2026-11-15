@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Chat, Refresh, Delete } from '@element-plus/icons-vue'
+import { ChatDotRound, Refresh, Delete } from '@element-plus/icons-vue'
 import { getModelList, chatCompletions, type ChatMessage, type ModelInfo } from '@/api/ai/chat'
 
 const loading = ref(false)
@@ -190,7 +190,7 @@ onMounted(() => {
       <template #header>
         <div class="card-header">
           <span class="title">
-            <el-icon><Chat /></el-icon>
+            <el-icon><ChatDotRound /></el-icon>
             AI 对话
           </span>
           <div class="actions">
@@ -223,7 +223,7 @@ onMounted(() => {
           class="empty-tip"
         >
           <el-icon size="48">
-            <Chat />
+            <ChatDotRound />
           </el-icon>
           <p>开始与 AI 对话吧</p>
           <p class="sub-tip">

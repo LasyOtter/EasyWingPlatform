@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
 import { usePermissionStore } from '@/store/modules/permission'
 
-const router = useRouter()
 const userStore = useUserStore()
 const permissionStore = usePermissionStore()
 

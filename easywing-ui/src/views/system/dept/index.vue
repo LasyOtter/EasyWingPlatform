@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-const loading = ref(false)
 const tableData = ref([
   { deptId: 1, deptName: '总公司', parentId: 0, leader: '管理员', status: '0' },
   { deptId: 2, deptName: '研发部', parentId: 1, leader: '张三', status: '0' },

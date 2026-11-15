@@ -84,6 +84,11 @@ easywing:
       enabled: true
       scanPackage: com.easywing.platform.ai.skill
 
+    # WebSocket Configuration
+    websocket:
+      allowed-origins:
+        - http://localhost:8080
+
 # Server Configuration
 server:
   port: ${AI_SERVER_PORT:8082}

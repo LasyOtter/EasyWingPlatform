@@ -13,7 +13,7 @@ const loading = ref(false)
 
 const loginForm = reactive({
   username: 'admin',
-  password: 'admin123'
+  password: ''
 })
 
 const rules: FormRules = {
@@ -42,10 +42,6 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
   })
 }
 
-// 重置表单
-const handleReset = () => {
-  loginFormRef.value?.resetFields()
-}
 </script>
 
 <template>

@@ -86,13 +86,6 @@ Security components:
 - Permission management
 - Security context
 
-### easywing-cloud
-Cloud-native features:
-- Service discovery
-- Distributed configuration
-- Load balancing
-- Gray deployment
-
 ## 🔗 Integration Points
 
 ### External Systems
