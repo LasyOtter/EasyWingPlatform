@@ -2,13 +2,12 @@ package com.easywing.platform.ai.debug;
 
 import com.easywing.platform.ai.agent.AgentIteration;
 import com.easywing.platform.ai.agent.AgentResponse;
+import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * Agent 执行追踪信息

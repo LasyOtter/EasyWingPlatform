@@ -1,12 +1,18 @@
 package com.easywing.platform.ai.model;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
+import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
-import java.util.Map;
 
 @Data
 @Builder
@@ -14,20 +20,33 @@ import java.util.Map;
 @AllArgsConstructor
 public class ChatCompletionRequest {
 
+    @NotBlank
     private String model;
 
+    @NotNull @NotEmpty
+    @Valid
     private List<ChatMessage> messages;
 
+    @DecimalMin("0.0")
+    @DecimalMax("2.0")
     private double temperature;
 
+    @DecimalMin("0.0")
+    @DecimalMax("1.0")
     private double topP;
 
+    @PositiveOrZero
     private int maxTokens;
 
+    @PositiveOrZero
     private int maxCompletionTokens;
 
+    @DecimalMin("-2.0")
+    @DecimalMax("2.0")
     private double presencePenalty;
 
+    @DecimalMin("-2.0")
+    @DecimalMax("2.0")
     private double frequencyPenalty;
 
     private List<String> stop;

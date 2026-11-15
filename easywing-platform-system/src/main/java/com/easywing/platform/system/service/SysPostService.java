@@ -9,11 +9,18 @@ import java.util.List;
 
 public interface SysPostService extends IService<SysPost> {
     Page<SysPostVO> selectPostPage(Page<SysPost> page, SysPostDTO postDTO);
+
     List<SysPostVO> selectPostAll();
+
     SysPostVO selectPostById(Long postId);
+
     List<SysPostVO> selectPostsByUserId(Long userId);
+
     Long insertPost(SysPostDTO postDTO);
+
     int updatePost(SysPostDTO postDTO);
+
     int deletePostByIds(List<Long> postIds);
+
     boolean checkPostCodeUnique(String postCode, Long postId);
 }

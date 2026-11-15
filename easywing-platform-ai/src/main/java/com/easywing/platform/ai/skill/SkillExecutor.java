@@ -1,8 +1,7 @@
 package com.easywing.platform.ai.skill;
 
-import reactor.core.publisher.Mono;
-
 import java.util.Map;
+import reactor.core.publisher.Mono;
 
 /**
  * 技能执行器接口 - 定义技能的执行行为

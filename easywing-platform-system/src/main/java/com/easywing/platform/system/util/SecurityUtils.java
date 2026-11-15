@@ -2,11 +2,10 @@ package com.easywing.platform.system.util;
 
 import com.easywing.platform.system.domain.vo.LoginUser;
 import com.easywing.platform.system.enums.DataScope;
+import java.util.List;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
-
-import java.util.List;
 
 public final class SecurityUtils {
 
@@ -45,7 +44,11 @@ public final class SecurityUtils {
         if (deptId == null) deptId = jwt.getClaim("deptId");
         if (deptId instanceof Number number) return number.longValue();
         if (deptId instanceof String str) {
-            try { return Long.parseLong(str); } catch (NumberFormatException e) { return null; }
+            try {
+                return Long.parseLong(str);
+            } catch (NumberFormatException e) {
+                return null;
+            }
         }
         return null;
     }
@@ -57,7 +60,11 @@ public final class SecurityUtils {
         if (tenantId == null) tenantId = jwt.getClaim("tenantId");
         if (tenantId instanceof Number number) return number.longValue();
         if (tenantId instanceof String str) {
-            try { return Long.parseLong(str); } catch (NumberFormatException e) { return 0L; }
+            try {
+                return Long.parseLong(str);
+            } catch (NumberFormatException e) {
+                return 0L;
+            }
         }
         return 0L;
     }

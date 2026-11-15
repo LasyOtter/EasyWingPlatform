@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.util.List;
 
 @Data
 @Builder
@@ -26,11 +25,7 @@ public class McpResponse {
     }
 
     public static McpResponse success(Object result, String id) {
-        return McpResponse.builder()
-                .jsonrpc("2.0")
-                .id(id)
-                .result(result)
-                .build();
+        return McpResponse.builder().jsonrpc("2.0").id(id).result(result).build();
     }
 
     public static McpResponse error(int code, String message, String id) {

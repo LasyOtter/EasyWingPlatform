@@ -24,14 +24,14 @@ package com.easywing.platform.messaging.core;
  * @since 1.0.0
  */
 public interface SendCallback {
-    
+
     /**
      * 发送成功时调用
      *
      * @param result 发送结果
      */
     void onSuccess(SendResult result);
-    
+
     /**
      * 发送失败时调用
      *

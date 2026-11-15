@@ -18,6 +18,7 @@ package com.easywing.platform.cache.service;
 import com.easywing.platform.cache.properties.CacheProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RTopic;
@@ -25,8 +26,6 @@ import org.redisson.api.RedissonClient;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.core.StringRedisTemplate;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * 多级缓存服务
@@ -57,7 +56,7 @@ public class MultiLevelCacheService {
      */
     public <T> T get(String cacheName, String key, Class<T> type) {
         String fullKey = buildFullKey(cacheName, key);
-        
+
         // 1. 先查本地缓存
         Cache localCache = localCacheManager.getCache(cacheName);
         if (localCache != null) {
@@ -69,7 +68,7 @@ public class MultiLevelCacheService {
                 return value;
             }
         }
-        
+
         // 2. 再查Redis
         String redisValue = redisTemplate.opsForValue().get(fullKey);
         if (redisValue != null) {
@@ -85,7 +84,7 @@ public class MultiLevelCacheService {
                 log.error("Failed to deserialize cache value: {}", fullKey, e);
             }
         }
-        
+
         log.debug("Cache miss: {}", fullKey);
         return null;
     }
@@ -103,16 +102,16 @@ public class MultiLevelCacheService {
         if (value == null && !properties.isCacheNullValues()) {
             return;
         }
-        
+
         String fullKey = buildFullKey(cacheName, key);
-        
+
         // 写入本地缓存
         Cache localCache = localCacheManager.getCache(cacheName);
         if (localCache != null) {
             localCache.put(key, value);
             log.debug("Local cache put: {}", fullKey);
         }
-        
+
         // 写入Redis
         try {
             String jsonValue = objectMapper.writeValueAsString(value);
@@ -132,18 +131,18 @@ public class MultiLevelCacheService {
      */
     public void evict(String cacheName, String key, boolean broadcast) {
         String fullKey = buildFullKey(cacheName, key);
-        
+
         // 清除本地缓存
         Cache localCache = localCacheManager.getCache(cacheName);
         if (localCache != null) {
             localCache.evict(key);
             log.debug("Local cache evict: {}", fullKey);
         }
-        
+
         // 清除Redis
         redisTemplate.delete(fullKey);
         log.debug("Redis cache evict: {}", fullKey);
-        
+
         // 广播通知其他节点
         if (broadcast) {
             broadcastEvict(cacheName, key);
@@ -170,7 +169,7 @@ public class MultiLevelCacheService {
             localCache.clear();
             log.debug("Local cache clear: {}", cacheName);
         }
-        
+
         // 清除Redis（使用模式匹配删除）
         String pattern = properties.getKeyPrefix() + cacheName + ":*";
         var keys = redisTemplate.keys(pattern);
@@ -178,7 +177,7 @@ public class MultiLevelCacheService {
             redisTemplate.delete(keys);
             log.debug("Redis cache clear: {}, deleted {} keys", cacheName, keys.size());
         }
-        
+
         // 广播通知其他节点
         if (broadcast) {
             broadcastEvict(cacheName, null);

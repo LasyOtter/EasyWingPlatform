@@ -15,14 +15,12 @@
  */
 package com.easywing.platform.cache.protector;
 
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.core.StringRedisTemplate;
-
-import java.time.Duration;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 /**
  * 缓存保护器
@@ -42,7 +40,7 @@ public class CacheProtector {
 
     private final RedissonClient redissonClient;
     private final StringRedisTemplate redisTemplate;
-    
+
     private static final String NULL_CACHE_VALUE = "NULL";
     private static final String LOCK_PREFIX = "cache:lock:";
     private static final String BLOOM_FILTER_PREFIX = "cache:bloom:";
@@ -63,17 +61,16 @@ public class CacheProtector {
      * @param <T>            返回类型
      * @return 数据
      */
-    public <T> T getWithBloomFilter(String cacheName, String key, Supplier<T> loader,
-                                    int redisExpire, int nullExpire) {
+    public <T> T getWithBloomFilter(String cacheName, String key, Supplier<T> loader, int redisExpire, int nullExpire) {
         String fullKey = "cache:" + cacheName + ":" + key;
         RBloomFilter<String> bloomFilter = redissonClient.getBloomFilter(BLOOM_FILTER_PREFIX + cacheName);
-        
+
         // 1. 布隆过滤器判断key是否存在
         if (bloomFilter.isExists() && !bloomFilter.contains(key)) {
             log.debug("Bloom filter rejected: {}", key);
             return null;
         }
-        
+
         // 2. 查询Redis
         String value = redisTemplate.opsForValue().get(fullKey);
         if (value != null) {
@@ -84,10 +81,10 @@ public class CacheProtector {
             log.debug("Redis cache hit: {}", key);
             return deserialize(value);
         }
-        
+
         // 3. 加载数据
         T result = loader.get();
-        
+
         // 4. 缓存结果（包括空值）
         if (result != null) {
             redisTemplate.opsForValue().set(fullKey, serialize(result), redisExpire, TimeUnit.SECONDS);
@@ -98,7 +95,7 @@ public class CacheProtector {
             redisTemplate.opsForValue().set(fullKey, NULL_CACHE_VALUE, nullExpire, TimeUnit.SECONDS);
             log.debug("Cached null value: {}", key);
         }
-        
+
         return result;
     }
 
@@ -113,11 +110,10 @@ public class CacheProtector {
      * @param <T>         返回类型
      * @return 数据
      */
-    public <T> T getWithLock(String cacheName, String key, Supplier<T> loader,
-                              int redisExpire, int waitTime) {
+    public <T> T getWithLock(String cacheName, String key, Supplier<T> loader, int redisExpire, int waitTime) {
         String fullKey = "cache:" + cacheName + ":" + key;
         String lockKey = LOCK_PREFIX + cacheName + ":" + key;
-        
+
         // 1. 查询Redis
         String value = redisTemplate.opsForValue().get(fullKey);
         if (value != null) {
@@ -126,12 +122,12 @@ public class CacheProtector {
             }
             return deserialize(value);
         }
-        
+
         // 2. 获取分布式锁
         try {
             var lock = redissonClient.getLock(lockKey);
             boolean locked = lock.tryLock(waitTime, TimeUnit.SECONDS);
-            
+
             if (locked) {
                 try {
                     // 双重检查
@@ -139,14 +135,14 @@ public class CacheProtector {
                     if (value != null) {
                         return NULL_CACHE_VALUE.equals(value) ? null : deserialize(value);
                     }
-                    
+
                     // 加载数据
                     T result = loader.get();
-                    
+
                     // 缓存结果
                     String cacheValue = result != null ? serialize(result) : NULL_CACHE_VALUE;
                     redisTemplate.opsForValue().set(fullKey, cacheValue, redisExpire, TimeUnit.SECONDS);
-                    
+
                     return result;
                 } finally {
                     lock.unlock();
@@ -186,8 +182,11 @@ public class CacheProtector {
         RBloomFilter<String> bloomFilter = redissonClient.getBloomFilter(BLOOM_FILTER_PREFIX + cacheName);
         if (!bloomFilter.isExists()) {
             bloomFilter.tryInit(expectedItems, falseProbability);
-            log.info("Bloom filter initialized: {} with {} expected items, {} false probability",
-                    cacheName, expectedItems, falseProbability);
+            log.info(
+                    "Bloom filter initialized: {} with {} expected items, {} false probability",
+                    cacheName,
+                    expectedItems,
+                    falseProbability);
         }
     }
 

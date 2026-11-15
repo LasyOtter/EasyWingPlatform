@@ -2,9 +2,9 @@ package com.easywing.platform.system.domain.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.easywing.platform.data.entity.BaseEntity;
+import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import java.time.LocalDateTime;
 
 @Data
 @EqualsAndHashCode(callSuper = true)

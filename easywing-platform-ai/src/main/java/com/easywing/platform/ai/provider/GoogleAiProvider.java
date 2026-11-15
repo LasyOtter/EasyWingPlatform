@@ -7,18 +7,17 @@ import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.model.ModelInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 public class GoogleAiProvider extends AbstractAiProvider {
@@ -29,10 +28,13 @@ public class GoogleAiProvider extends AbstractAiProvider {
     private static final String DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
     public GoogleAiProvider(WebClient webClient, AiProperties.GoogleConfig config) {
-        super(webClient, Map.of(
-                "apiKey", config.getApiKey(),
-                "baseUrl", config.getBaseUrl() != null ? config.getBaseUrl() : DEFAULT_BASE_URL
-        ));
+        super(
+                webClient,
+                Map.of(
+                        "apiKey",
+                        config.getApiKey(),
+                        "baseUrl",
+                        config.getBaseUrl() != null ? config.getBaseUrl() : DEFAULT_BASE_URL));
     }
 
     @Override
@@ -47,28 +49,22 @@ public class GoogleAiProvider extends AbstractAiProvider {
 
     @Override
     public List<ModelInfo> getSupportedModels() {
-        return List.of(
-                ModelInfo.builder()
-                        .id(GoogleModels.GEMINI_2_FLASH)
-                        .provider(PROVIDER_NAME)
-                        .name("Gemini 2.0 Flash")
-                        .contextWindow(1000000)
-                        .supportsStreaming(true)
-                        .supportsTools(true)
-                        .supportsVision(true)
-                        .inputCostPer1MTokens(0.0)
-                        .outputCostPer1MTokens(0.0)
-                        .build()
-        );
+        return List.of(ModelInfo.builder()
+                .id(GoogleModels.GEMINI_2_FLASH)
+                .provider(PROVIDER_NAME)
+                .name("Gemini 2.0 Flash")
+                .contextWindow(1000000)
+                .supportsStreaming(true)
+                .supportsTools(true)
+                .supportsVision(true)
+                .inputCostPer1MTokens(0.0)
+                .outputCostPer1MTokens(0.0)
+                .build());
     }
 
     @Override
     protected Set<String> getSupportedModelIds() {
-        return Set.of(
-                GoogleModels.GEMINI_2_FLASH,
-                GoogleModels.GEMINI_1_5_PRO,
-                GoogleModels.GEMINI_1_5_FLASH
-        );
+        return Set.of(GoogleModels.GEMINI_2_FLASH, GoogleModels.GEMINI_1_5_PRO, GoogleModels.GEMINI_1_5_FLASH);
     }
 
     @Override
@@ -90,13 +86,17 @@ public class GoogleAiProvider extends AbstractAiProvider {
         body.put("contents", convertMessagesToGeminiFormat(request.getMessages()));
 
         if (request.getTemperature() > 0) {
-            body.put("generationConfig", Map.of(
-                    "temperature", request.getTemperature(),
-                    "maxOutputTokens", request.getMaxTokens() > 0 ? request.getMaxTokens() : 2048
-            ));
+            body.put(
+                    "generationConfig",
+                    Map.of(
+                            "temperature",
+                            request.getTemperature(),
+                            "maxOutputTokens",
+                            request.getMaxTokens() > 0 ? request.getMaxTokens() : 2048));
         }
 
-        return webClient.post()
+        return webClient
+                .post()
                 .uri(url)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
@@ -133,7 +133,8 @@ public class GoogleAiProvider extends AbstractAiProvider {
         final AtomicInteger promptTokens = new AtomicInteger(0);
         final AtomicInteger completionTokens = new AtomicInteger(0);
 
-        return webClient.post()
+        return webClient
+                .post()
                 .uri(url)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(requestBody)
@@ -193,16 +194,14 @@ public class GoogleAiProvider extends AbstractAiProvider {
                     .object("chat.completion.chunk")
                     .created(Instant.now().getEpochSecond())
                     .model("gemini")
-                    .choices(List.of(
-                            ChatCompletionResponse.Choice.builder()
-                                    .index(0)
-                                    .delta(ChatMessage.builder()
-                                            .role("model")
-                                            .content(textBuilder.toString())
-                                            .build())
-                                    .finishReason(finishReason)
-                                    .build()
-                    ))
+                    .choices(List.of(ChatCompletionResponse.Choice.builder()
+                            .index(0)
+                            .delta(ChatMessage.builder()
+                                    .role("model")
+                                    .content(textBuilder.toString())
+                                    .build())
+                            .finishReason(finishReason)
+                            .build()))
                     .usage(ChatCompletionResponse.Usage.builder()
                             .promptTokens(0)
                             .completionTokens(textBuilder.length())
@@ -218,7 +217,8 @@ public class GoogleAiProvider extends AbstractAiProvider {
     @Override
     public Mono<Boolean> validateConnection() {
         String url = getApiBaseUrl() + "?key=" + getApiKey();
-        return webClient.get()
+        return webClient
+                .get()
                 .uri(url)
                 .retrieve()
                 .bodyToMono(String.class)
@@ -228,18 +228,20 @@ public class GoogleAiProvider extends AbstractAiProvider {
 
     private List<Map<String, Object>> convertMessagesToGeminiFormat(List<ChatMessage> messages) {
         if (messages == null) return List.of();
-        return messages.stream().map(msg -> {
-            Map<String, Object> content = new HashMap<>();
-            String role = "user".equals(msg.getRole()) ? "user" : "model";
-            content.put("role", role);
+        return messages.stream()
+                .map(msg -> {
+                    Map<String, Object> content = new HashMap<>();
+                    String role = "user".equals(msg.getRole()) ? "user" : "model";
+                    content.put("role", role);
 
-            List<Map<String, Object>> parts = new java.util.ArrayList<>();
-            if (msg.getContent() != null) {
-                parts.add(Map.of("text", msg.getContent()));
-            }
-            content.put("parts", parts);
-            return content;
-        }).toList();
+                    List<Map<String, Object>> parts = new java.util.ArrayList<>();
+                    if (msg.getContent() != null) {
+                        parts.add(Map.of("text", msg.getContent()));
+                    }
+                    content.put("parts", parts);
+                    return content;
+                })
+                .toList();
     }
 
     private ChatCompletionResponse parseResponse(String json) {
@@ -248,16 +250,14 @@ public class GoogleAiProvider extends AbstractAiProvider {
                 .object("chat.completion")
                 .created(Instant.now().getEpochSecond())
                 .model("gemini")
-                .choices(List.of(
-                        ChatCompletionResponse.Choice.builder()
-                                .index(0)
-                                .message(ChatMessage.builder()
-                                        .role("assistant")
-                                        .content("Response placeholder")
-                                        .build())
-                                .finishReason("stop")
-                                .build()
-                ))
+                .choices(List.of(ChatCompletionResponse.Choice.builder()
+                        .index(0)
+                        .message(ChatMessage.builder()
+                                .role("assistant")
+                                .content("Response placeholder")
+                                .build())
+                        .finishReason("stop")
+                        .build()))
                 .usage(ChatCompletionResponse.Usage.builder()
                         .promptTokens(0)
                         .completionTokens(0)

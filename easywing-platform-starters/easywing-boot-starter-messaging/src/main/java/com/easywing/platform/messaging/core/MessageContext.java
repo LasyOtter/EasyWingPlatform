@@ -91,11 +91,10 @@ public class MessageContext {
 
     @Override
     public String toString() {
-        return "MessageContext{" +
-                "destination='" + destination + '\'' +
-                ", headers=" + headers +
-                ", adapterType='" + adapterType + '\'' +
-                ", receivedTimestamp=" + receivedTimestamp +
-                '}';
+        return "MessageContext{" + "destination='"
+                + destination + '\'' + ", headers="
+                + headers + ", adapterType='"
+                + adapterType + '\'' + ", receivedTimestamp="
+                + receivedTimestamp + '}';
     }
 }

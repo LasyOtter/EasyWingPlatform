@@ -7,6 +7,8 @@ import com.easywing.platform.ai.tool.ToolDefinition;
 import com.easywing.platform.ai.tool.ToolExecutor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,9 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 规划 Agent - Plan & Execute 模式
@@ -52,39 +51,36 @@ public class PlanningAgent {
         long startTime = System.currentTimeMillis();
 
         // 第一步：制定计划
-        return createPlan(request)
-                .flatMap(plan -> {
-                    log.info("Plan created with {} steps", plan.getSteps().size());
+        return createPlan(request).flatMap(plan -> {
+            log.info("Plan created with {} steps", plan.getSteps().size());
 
-                    // 第二步：执行计划
-                    return executePlan(plan, request)
-                            .flatMap(results -> {
-                                // 第三步：验证结果
-                                return verifyResults(results, request.getPrompt())
-                                        .map(finalResult -> {
-                                            long totalTime = System.currentTimeMillis() - startTime;
+            // 第二步：执行计划
+            return executePlan(plan, request).flatMap(results -> {
+                // 第三步：验证结果
+                return verifyResults(results, request.getPrompt()).map(finalResult -> {
+                    long totalTime = System.currentTimeMillis() - startTime;
 
-                                            Map<String, Object> metadata = new HashMap<>();
-                                            metadata.put("plan", plan);
-                                            metadata.put("executionResults", results);
-                                            metadata.put("totalExecutionTime", totalTime);
-                                            metadata.put("mode", "planning");
+                    Map<String, Object> metadata = new HashMap<>();
+                    metadata.put("plan", plan);
+                    metadata.put("executionResults", results);
+                    metadata.put("totalExecutionTime", totalTime);
+                    metadata.put("mode", "planning");
 
-                                            return AgentResponse.builder()
-                                                    .id(UUID.randomUUID().toString())
-                                                    .agentId(request.getAgentId())
-                                                    .sessionId(request.getSessionId())
-                                                    .message(ChatMessage.builder()
-                                                            .role("assistant")
-                                                            .content(finalResult)
-                                                            .build())
-                                                    .completed(true)
-                                                    .finishReason("completed")
-                                                    .metadata(metadata)
-                                                    .build();
-                                        });
-                            });
+                    return AgentResponse.builder()
+                            .id(UUID.randomUUID().toString())
+                            .agentId(request.getAgentId())
+                            .sessionId(request.getSessionId())
+                            .message(ChatMessage.builder()
+                                    .role("assistant")
+                                    .content(finalResult)
+                                    .build())
+                            .completed(true)
+                            .finishReason("completed")
+                            .metadata(metadata)
+                            .build();
                 });
+            });
+        });
     }
 
     /**
@@ -105,16 +101,14 @@ public class PlanningAgent {
                         ChatMessage.builder()
                                 .role("user")
                                 .content(planningPrompt)
-                                .build()
-                ))
+                                .build()))
                 .temperature(0.3)
                 .build();
 
-        return providerRegistry.chat(completionRequest)
-                .map(response -> {
-                    String content = response.getChoices().get(0).getMessage().getContent();
-                    return parsePlan(content);
-                });
+        return providerRegistry.chat(completionRequest).map(response -> {
+            String content = response.getChoices().get(0).getMessage().getContent();
+            return parsePlan(content);
+        });
     }
 
     /**
@@ -125,7 +119,8 @@ public class PlanningAgent {
                 .map(t -> String.format("- %s: %s", t.getName(), t.getDescription()))
                 .collect(Collectors.joining("\n"));
 
-        return String.format("""
+        return String.format(
+                """
                 任务: %s
 
                 可用工具:
@@ -157,7 +152,8 @@ public class PlanningAgent {
                 2. 合理使用可用工具
                 3. 考虑步骤之间的依赖关系
                 4. 估算执行时间
-                """, task, toolList);
+                """,
+                task, toolList);
     }
 
     /**
@@ -188,8 +184,10 @@ public class PlanningAgent {
             return ExecutionPlan.builder()
                     .goal((String) data.get("goal"))
                     .steps(steps)
-                    .estimatedTime(data.containsKey("estimatedTime") ?
-                            Integer.parseInt(data.get("estimatedTime").toString()) : 60)
+                    .estimatedTime(
+                            data.containsKey("estimatedTime")
+                                    ? Integer.parseInt(data.get("estimatedTime").toString())
+                                    : 60)
                     .complexity((String) data.getOrDefault("complexity", "medium"))
                     .build();
 
@@ -205,13 +203,11 @@ public class PlanningAgent {
     private ExecutionPlan createFallbackPlan(String content) {
         return ExecutionPlan.builder()
                 .goal("执行任务")
-                .steps(List.of(
-                        PlanStep.builder()
-                                .stepNumber(1)
-                                .description("直接执行任务")
-                                .action("execute")
-                                .build()
-                ))
+                .steps(List.of(PlanStep.builder()
+                        .stepNumber(1)
+                        .description("直接执行任务")
+                        .action("execute")
+                        .build()))
                 .complexity("simple")
                 .build();
     }
@@ -232,10 +228,7 @@ public class PlanningAgent {
     /**
      * 执行单个步骤
      */
-    private Mono<StepResult> executeStep(
-            PlanStep step,
-            List<StepResult> previousResults,
-            AgentRequest request) {
+    private Mono<StepResult> executeStep(PlanStep step, List<StepResult> previousResults, AgentRequest request) {
 
         log.info("Executing step {}: {}", step.getStepNumber(), step.getDescription());
 
@@ -293,19 +286,18 @@ public class PlanningAgent {
                 .config(request.getConfig())
                 .build();
 
-        return agentExecutor.execute(stepRequest)
-                .map(response -> {
-                    long duration = System.currentTimeMillis() - startTime;
-                    StepResult stepResult = StepResult.builder()
-                            .stepNumber(step.getStepNumber())
-                            .description(step.getDescription())
-                            .result(response.getMessage().getContent())
-                            .success(response.isCompleted())
-                            .executionTime(duration)
-                            .build();
-                    previousResults.add(stepResult);
-                    return stepResult;
-                });
+        return agentExecutor.execute(stepRequest).map(response -> {
+            long duration = System.currentTimeMillis() - startTime;
+            StepResult stepResult = StepResult.builder()
+                    .stepNumber(step.getStepNumber())
+                    .description(step.getDescription())
+                    .result(response.getMessage().getContent())
+                    .success(response.isCompleted())
+                    .executionTime(duration)
+                    .build();
+            previousResults.add(stepResult);
+            return stepResult;
+        });
     }
 
     /**
@@ -315,7 +307,8 @@ public class PlanningAgent {
         // 简化的工具参数提取（实际应该更智能）
         Map<String, Object> arguments = new HashMap<>();
 
-        return toolExecutor.executeTool(step.getTool(), arguments)
+        return toolExecutor
+                .executeTool(step.getTool(), arguments)
                 .map(result -> {
                     try {
                         return objectMapper.writeValueAsString(result);
@@ -338,8 +331,7 @@ public class PlanningAgent {
         if (!previousResults.isEmpty()) {
             prompt.append("【前序步骤结果】\n");
             previousResults.forEach(result -> {
-                prompt.append(String.format("步骤 %d: %s\n",
-                        result.getStepNumber(), result.getResult()));
+                prompt.append(String.format("步骤 %d: %s\n", result.getStepNumber(), result.getResult()));
             });
             prompt.append("\n");
         }
@@ -356,18 +348,19 @@ public class PlanningAgent {
         // 汇总所有步骤的结果
         String summary = results.stream()
                 .filter(StepResult::isSuccess)
-                .map(r -> String.format("步骤 %d: %s",
-                        r.getStepNumber(), r.getResult()))
+                .map(r -> String.format("步骤 %d: %s", r.getStepNumber(), r.getResult()))
                 .collect(Collectors.joining("\n"));
 
-        String verificationPrompt = String.format("""
+        String verificationPrompt = String.format(
+                """
                 原始任务: %s
 
                 执行结果:
                 %s
 
                 请基于以上步骤结果，提供完整的最终答案。
-                """, originalTask, summary);
+                """,
+                originalTask, summary);
 
         ChatCompletionRequest request = ChatCompletionRequest.builder()
                 .model("gpt-4o")
@@ -378,7 +371,8 @@ public class PlanningAgent {
                 .temperature(0.5)
                 .build();
 
-        return providerRegistry.chat(request)
+        return providerRegistry
+                .chat(request)
                 .map(response -> response.getChoices().get(0).getMessage().getContent());
     }
 

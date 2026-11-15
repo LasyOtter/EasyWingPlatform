@@ -1,13 +1,12 @@
 package com.easywing.platform.ai.tool;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
-import java.util.Map;
 
 @Data
 @Builder
@@ -17,7 +16,7 @@ public class ToolDefinition {
     private String name;
     private String description;
     private String category;
-    private JsonNode parametersSchema;  // JSON Schema for parameters
+    private JsonNode parametersSchema; // JSON Schema for parameters
     private AiTool executor;
     private boolean async;
     private long timeoutMs;

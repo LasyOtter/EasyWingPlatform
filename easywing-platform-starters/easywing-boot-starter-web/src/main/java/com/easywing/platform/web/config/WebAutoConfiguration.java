@@ -16,10 +16,12 @@
 package com.easywing.platform.web.config;
 
 import com.easywing.platform.core.exception.BizException;
-import com.easywing.platform.core.exception.ErrorCode;
 import com.easywing.platform.core.exception.SystemException;
 import com.easywing.platform.core.exception.ValidationException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -35,10 +37,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
-
-import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Web 全局异常处理自动配置
@@ -104,9 +102,10 @@ public class WebAutoConfiguration {
                 MethodArgumentNotValidException ex, WebRequest request) {
             log.warn("Validation failed: {}", ex.getMessage());
             Map<String, String> errors = new HashMap<>();
-            ex.getBindingResult().getFieldErrors()
+            ex.getBindingResult()
+                    .getFieldErrors()
                     .forEach(error -> errors.put(error.getField(), error.getDefaultMessage()));
-            
+
             ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "参数校验失败");
             problem.setType(URI.create("https://easywing.io/errors/validation"));
             problem.setTitle("Validation Error");

@@ -1,11 +1,10 @@
 package com.easywing.platform.ai.skill;
 
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 技能执行服务 - 负责技能的执行和编排
@@ -85,37 +84,31 @@ public class SkillExecutionService {
     /**
      * 递归执行技能链
      */
-    private Mono<SkillResult> executeChainRecursively(
-            List<String> skillNames,
-            int index,
-            SkillContext context) {
+    private Mono<SkillResult> executeChainRecursively(List<String> skillNames, int index, SkillContext context) {
 
         if (index >= skillNames.size()) {
             // 所有技能执行完成
-            return Mono.just(SkillResult.success(
-                    context.getIntermediateResults(),
-                    "技能链执行完成"));
+            return Mono.just(SkillResult.success(context.getIntermediateResults(), "技能链执行完成"));
         }
 
         String currentSkill = skillNames.get(index);
-        return executeSkill(currentSkill, context)
-                .flatMap(result -> {
-                    if (!result.isSuccess()) {
-                        return Mono.just(result);
-                    }
+        return executeSkill(currentSkill, context).flatMap(result -> {
+            if (!result.isSuccess()) {
+                return Mono.just(result);
+            }
 
-                    // 保存中间结果
-                    context.getIntermediateResults().put(currentSkill, result.getData());
+            // 保存中间结果
+            context.getIntermediateResults().put(currentSkill, result.getData());
 
-                    // 更新技能链
-                    if (context.getSkillChain() == null) {
-                        context.setSkillChain(new ArrayList<>());
-                    }
-                    context.getSkillChain().add(currentSkill);
+            // 更新技能链
+            if (context.getSkillChain() == null) {
+                context.setSkillChain(new ArrayList<>());
+            }
+            context.getSkillChain().add(currentSkill);
 
-                    // 执行下一个技能
-                    return executeChainRecursively(skillNames, index + 1, context);
-                });
+            // 执行下一个技能
+            return executeChainRecursively(skillNames, index + 1, context);
+        });
     }
 
     /**
@@ -140,8 +133,7 @@ public class SkillExecutionService {
             for (int i = 0; i < results.length; i++) {
                 SkillResult result = (SkillResult) results[i];
                 if (!result.isSuccess()) {
-                    return SkillResult.failure(
-                            "技能执行失败: " + skillNames.get(i) + " - " + result.getError());
+                    return SkillResult.failure("技能执行失败: " + skillNames.get(i) + " - " + result.getError());
                 }
 
                 combinedResults.put(skillNames.get(i), result.getData());
@@ -220,9 +212,8 @@ public class SkillExecutionService {
      * 推荐技能 - 根据用户输入推荐合适的技能
      */
     public List<AgentSkill> recommendSkills(String input, int limit) {
-        List<AgentSkill> allSkills = skillRegistry.getAll().stream()
-                .filter(AgentSkill::isEnabled)
-                .collect(Collectors.toList());
+        List<AgentSkill> allSkills =
+                skillRegistry.getAll().stream().filter(AgentSkill::isEnabled).collect(Collectors.toList());
 
         // 简单的关键词匹配评分
         return allSkills.stream()
@@ -247,8 +238,8 @@ public class SkillExecutionService {
         }
 
         // 描述匹配
-        if (skill.getDescription() != null &&
-            lowerInput.contains(skill.getDescription().toLowerCase())) {
+        if (skill.getDescription() != null
+                && lowerInput.contains(skill.getDescription().toLowerCase())) {
             score += 5;
         }
 

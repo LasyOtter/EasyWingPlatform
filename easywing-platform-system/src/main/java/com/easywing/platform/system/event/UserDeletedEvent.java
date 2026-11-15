@@ -1,10 +1,9 @@
 package com.easywing.platform.system.event;
 
-import lombok.Getter;
-import org.springframework.context.ApplicationEvent;
-
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.Getter;
+import org.springframework.context.ApplicationEvent;
 
 @Getter
 public class UserDeletedEvent extends ApplicationEvent {

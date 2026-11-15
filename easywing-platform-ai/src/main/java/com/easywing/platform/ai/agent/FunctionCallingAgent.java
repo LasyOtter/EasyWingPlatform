@@ -7,11 +7,10 @@ import com.easywing.platform.ai.provider.AiProviderRegistry;
 import com.easywing.platform.ai.tool.ToolDefinition;
 import com.easywing.platform.ai.tool.ToolExecutor;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
-
-import java.util.*;
 
 /**
  * Function Calling Agent - 使用 OpenAI Function Calling API
@@ -27,9 +26,7 @@ public class FunctionCallingAgent {
     private final ObjectMapper objectMapper;
 
     public FunctionCallingAgent(
-            AiProviderRegistry providerRegistry,
-            ToolExecutor toolExecutor,
-            ObjectMapper objectMapper) {
+            AiProviderRegistry providerRegistry, ToolExecutor toolExecutor, ObjectMapper objectMapper) {
         this.providerRegistry = providerRegistry;
         this.toolExecutor = toolExecutor;
         this.objectMapper = objectMapper;
@@ -40,21 +37,22 @@ public class FunctionCallingAgent {
      * 执行 Function Calling Agent
      */
     public Mono<AgentResponse> execute(AgentRequest request) {
-        String sessionId = request.getSessionId() != null ?
-                request.getSessionId() : UUID.randomUUID().toString();
+        String sessionId = request.getSessionId() != null
+                ? request.getSessionId()
+                : UUID.randomUUID().toString();
 
-        AgentRequest.AgentConfig config = request.getConfig() != null ?
-                request.getConfig() : AgentRequest.AgentConfig.builder()
-                .maxIterations(10)
-                .maxToolCalls(20)
-                .timeoutMs(60000)
-                .model("gpt-4o")
-                .temperature(0.7)
-                .build();
+        AgentRequest.AgentConfig config = request.getConfig() != null
+                ? request.getConfig()
+                : AgentRequest.AgentConfig.builder()
+                        .maxIterations(10)
+                        .maxToolCalls(20)
+                        .timeoutMs(60000)
+                        .model("gpt-4o")
+                        .temperature(0.7)
+                        .build();
 
         List<AgentIteration> iterations = new ArrayList<>();
-        List<ChatMessage> messages = new ArrayList<>(request.getMessages() != null ?
-                request.getMessages() : List.of());
+        List<ChatMessage> messages = new ArrayList<>(request.getMessages() != null ? request.getMessages() : List.of());
 
         // 添加用户消息
         if (request.getPrompt() != null) {
@@ -143,33 +141,32 @@ public class FunctionCallingAgent {
 
         long iterationStartTime = System.currentTimeMillis();
 
-        return providerRegistry.chat(completionRequest)
-                .flatMap(response -> {
-                    long iterationTime = System.currentTimeMillis() - iterationStartTime;
+        return providerRegistry.chat(completionRequest).flatMap(response -> {
+            long iterationTime = System.currentTimeMillis() - iterationStartTime;
 
-                    ChatMessage assistantMessage = extractMessage(response);
-                    if (assistantMessage == null) {
-                        return Mono.just(messages);
-                    }
+            ChatMessage assistantMessage = extractMessage(response);
+            if (assistantMessage == null) {
+                return Mono.just(messages);
+            }
 
-                    messages.add(assistantMessage);
+            messages.add(assistantMessage);
 
-                    // 检查是否有 function_call (这里简化处理，实际需要检查 response 中的 tool_calls)
-                    // 由于当前简化实现，我们假设没有 tool_calls，直接返回
-                    // 完整实现需要根据 OpenAI API 的 tool_calls 格式来处理
+            // 检查是否有 function_call (这里简化处理，实际需要检查 response 中的 tool_calls)
+            // 由于当前简化实现，我们假设没有 tool_calls，直接返回
+            // 完整实现需要根据 OpenAI API 的 tool_calls 格式来处理
 
-                    AgentIteration iteration = AgentIteration.builder()
-                            .iterationNumber(currentIteration)
-                            .executionTimeMs(iterationTime)
-                            .thought("Function calling mode")
-                            .finalAnswer(true)
-                            .answer(assistantMessage.getContent())
-                            .build();
+            AgentIteration iteration = AgentIteration.builder()
+                    .iterationNumber(currentIteration)
+                    .executionTimeMs(iterationTime)
+                    .thought("Function calling mode")
+                    .finalAnswer(true)
+                    .answer(assistantMessage.getContent())
+                    .build();
 
-                    iterations.add(iteration);
+            iterations.add(iteration);
 
-                    return Mono.just(messages);
-                });
+            return Mono.just(messages);
+        });
     }
 
     private ChatMessage extractMessage(ChatCompletionResponse response) {

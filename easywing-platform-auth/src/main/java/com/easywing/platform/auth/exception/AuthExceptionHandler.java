@@ -15,6 +15,7 @@
  */
 package com.easywing.platform.auth.exception;
 
+import java.net.URI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -22,8 +23,6 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import java.net.URI;
 
 /**
  * 认证服务全局异常处理器
@@ -60,8 +59,8 @@ public class AuthExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleGeneric(Exception ex) {
         log.error("Unexpected error in auth service", ex);
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
-                HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
+        ProblemDetail problem =
+                ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
         problem.setType(URI.create("https://easywing.com/problems/internal-error"));
         problem.setTitle("Internal Server Error");
         return problem;

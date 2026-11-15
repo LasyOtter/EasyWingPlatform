@@ -4,11 +4,10 @@ import com.easywing.platform.ai.model.ChatCompletionRequest;
 import com.easywing.platform.ai.model.ChatCompletionResponse;
 import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.model.ModelInfo;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import java.util.List;
 import java.util.function.Function;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 public interface AiProvider {
 

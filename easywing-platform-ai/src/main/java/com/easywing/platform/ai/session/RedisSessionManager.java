@@ -2,17 +2,16 @@ package com.easywing.platform.ai.session;
 
 import com.easywing.platform.ai.config.AiProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.ReactiveRedisTemplate;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 @Component
@@ -26,9 +25,7 @@ public class RedisSessionManager implements SessionManager {
     private final AiProperties properties;
 
     public RedisSessionManager(
-            ReactiveRedisTemplate<String, String> redisTemplate,
-            ObjectMapper objectMapper,
-            AiProperties properties) {
+            ReactiveRedisTemplate<String, String> redisTemplate, ObjectMapper objectMapper, AiProperties properties) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
         this.properties = properties;
@@ -56,7 +53,9 @@ public class RedisSessionManager implements SessionManager {
     @Override
     public Mono<Optional<ConversationSession>> getSession(String sessionId) {
         String key = SESSION_KEY_PREFIX + sessionId;
-        return redisTemplate.opsForValue().get(key)
+        return redisTemplate
+                .opsForValue()
+                .get(key)
                 .flatMap(json -> {
                     try {
                         return Mono.just(Optional.of(objectMapper.readValue(json, ConversationSession.class)));
@@ -71,7 +70,9 @@ public class RedisSessionManager implements SessionManager {
     @Override
     public Mono<List<ConversationSession>> getUserSessions(String userId) {
         String userSessionsKey = USER_SESSIONS_KEY_PREFIX + userId;
-        return redisTemplate.opsForSet().members(userSessionsKey)
+        return redisTemplate
+                .opsForSet()
+                .members(userSessionsKey)
                 .flatMap(sessionId -> {
                     String key = SESSION_KEY_PREFIX + sessionId;
                     return redisTemplate.opsForValue().get(key);
@@ -99,7 +100,9 @@ public class RedisSessionManager implements SessionManager {
                     if (optional.isPresent()) {
                         ConversationSession session = optional.get();
                         String userSessionsKey = USER_SESSIONS_KEY_PREFIX + session.getUserId();
-                        return redisTemplate.opsForSet().remove(userSessionsKey, sessionId)
+                        return redisTemplate
+                                .opsForSet()
+                                .remove(userSessionsKey, sessionId)
                                 .then(redisTemplate.delete(SESSION_KEY_PREFIX + sessionId));
                     }
                     return Mono.empty();

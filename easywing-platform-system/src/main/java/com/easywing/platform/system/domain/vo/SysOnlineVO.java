@@ -1,14 +1,15 @@
 package com.easywing.platform.system.domain.vo;
 
-import lombok.Data;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import lombok.Data;
 
 @Data
 public class SysOnlineVO implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
+
     private String sessionId;
     private String userId;
     private String username;

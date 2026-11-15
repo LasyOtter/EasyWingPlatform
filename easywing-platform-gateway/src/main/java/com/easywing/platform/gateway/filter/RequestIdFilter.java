@@ -16,14 +16,13 @@
 package com.easywing.platform.gateway.filter;
 
 import com.easywing.platform.core.constant.HttpHeaders;
+import java.util.UUID;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
-
-import java.util.UUID;
 
 /**
  * 全局请求ID过滤器
@@ -50,13 +49,12 @@ public class RequestIdFilter implements GlobalFilter, Ordered {
 
         final String finalRequestId = requestId;
         final String finalTraceId = traceId;
-        
+
         ServerWebExchange mutatedExchange = exchange.mutate()
-                .request(builder -> builder
-                        .header(HttpHeaders.X_REQUEST_ID, finalRequestId)
+                .request(builder -> builder.header(HttpHeaders.X_REQUEST_ID, finalRequestId)
                         .header(HttpHeaders.X_TRACE_ID, finalTraceId))
                 .build();
-        
+
         mutatedExchange.getResponse().getHeaders().add(HttpHeaders.X_REQUEST_ID, finalRequestId);
         mutatedExchange.getResponse().getHeaders().add(HttpHeaders.X_TRACE_ID, finalTraceId);
 

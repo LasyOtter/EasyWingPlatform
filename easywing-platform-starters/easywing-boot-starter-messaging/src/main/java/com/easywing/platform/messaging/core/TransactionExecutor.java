@@ -25,7 +25,7 @@ package com.easywing.platform.messaging.core;
  */
 @FunctionalInterface
 public interface TransactionExecutor {
-    
+
     /**
      * 执行事务逻辑
      * <p>

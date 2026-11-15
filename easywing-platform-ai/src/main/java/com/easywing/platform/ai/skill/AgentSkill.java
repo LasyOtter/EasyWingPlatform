@@ -1,12 +1,12 @@
 package com.easywing.platform.ai.skill;
 
+import jakarta.validation.constraints.NotBlank;
+import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * Agent 技能定义
@@ -25,6 +25,7 @@ public class AgentSkill {
     /**
      * 技能名称
      */
+    @NotBlank
     private String name;
 
     /**

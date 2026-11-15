@@ -16,22 +16,20 @@
 package com.easywing.platform.resilience.config;
 
 import com.easywing.platform.resilience.properties.ResilienceProperties;
+import io.github.resilience4j.bulkhead.BulkheadConfig;
+import io.github.resilience4j.bulkhead.BulkheadRegistry;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.ratelimiter.RateLimiterConfig;
 import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
 import io.github.resilience4j.retry.RetryConfig;
 import io.github.resilience4j.retry.RetryRegistry;
-import io.github.resilience4j.bulkhead.BulkheadConfig;
-import io.github.resilience4j.bulkhead.BulkheadRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-
-import java.time.Duration;
 
 /**
  * Resilience4j 自动配置
@@ -52,7 +50,8 @@ public class ResilienceAutoConfiguration {
     public CircuitBreakerRegistry circuitBreakerRegistry(ResilienceProperties properties) {
         CircuitBreakerConfig config = CircuitBreakerConfig.custom()
                 .waitDurationInOpenState(properties.getCircuitBreaker().getWaitDurationInOpenState())
-                .permittedNumberOfCallsInHalfOpenState(properties.getCircuitBreaker().getPermittedNumberOfCallsInHalfOpenState())
+                .permittedNumberOfCallsInHalfOpenState(
+                        properties.getCircuitBreaker().getPermittedNumberOfCallsInHalfOpenState())
                 .slidingWindowSize(properties.getCircuitBreaker().getSlidingWindowSize())
                 .failureRateThreshold(properties.getCircuitBreaker().getFailureRateThreshold())
                 .minimumNumberOfCalls(properties.getCircuitBreaker().getMinimumNumberOfCalls())

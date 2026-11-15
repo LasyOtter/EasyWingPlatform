@@ -1,6 +1,10 @@
 package com.easywing.platform.ai.optimization;
 
 import com.easywing.platform.ai.tool.ToolExecutor;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,11 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 /**
  * 批处理优化引擎 - 自动合并和批量处理请求
@@ -37,9 +36,7 @@ public class BatchOptimizationEngine {
     /**
      * 批处理执行工具调用
      */
-    public Mono<Map<String, Object>> executeBatched(
-            String toolName,
-            Map<String, Object> arguments) {
+    public Mono<Map<String, Object>> executeBatched(String toolName, Map<String, Object> arguments) {
 
         return executeBatched(toolName, arguments, defaultConfig);
     }
@@ -48,9 +45,7 @@ public class BatchOptimizationEngine {
      * 批处理执行（带配置）
      */
     public Mono<Map<String, Object>> executeBatched(
-            String toolName,
-            Map<String, Object> arguments,
-            BatchConfig config) {
+            String toolName, Map<String, Object> arguments, BatchConfig config) {
 
         if (!config.isEnabled()) {
             // 批处理未启用，直接执行
@@ -58,8 +53,7 @@ public class BatchOptimizationEngine {
         }
 
         // 获取或创建缓冲区
-        BatchBuffer buffer = buffers.computeIfAbsent(toolName,
-                k -> new BatchBuffer(toolName, config));
+        BatchBuffer buffer = buffers.computeIfAbsent(toolName, k -> new BatchBuffer(toolName, config));
 
         // 创建批处理项
         BatchItem item = BatchItem.builder()
@@ -70,11 +64,10 @@ public class BatchOptimizationEngine {
                 .build();
 
         // 添加到缓冲区
-        return buffer.add(item)
-                .flatMap(batchId -> {
-                    // 等待批处理完成
-                    return waitForBatchResult(batchId, item.getId());
-                });
+        return buffer.add(item).flatMap(batchId -> {
+            // 等待批处理完成
+            return waitForBatchResult(batchId, item.getId());
+        });
     }
 
     /**
@@ -91,8 +84,7 @@ public class BatchOptimizationEngine {
      */
     public Mono<BatchAnalysis> analyzeBatchPotential(List<ToolCall> calls) {
         // 按工具名称分组
-        Map<String, List<ToolCall>> grouped = calls.stream()
-                .collect(Collectors.groupingBy(ToolCall::getToolName));
+        Map<String, List<ToolCall>> grouped = calls.stream().collect(Collectors.groupingBy(ToolCall::getToolName));
 
         List<BatchOpportunity> opportunities = new ArrayList<>();
 
@@ -137,8 +129,7 @@ public class BatchOptimizationEngine {
     /**
      * 自动批处理优化建议
      */
-    public Mono<List<OptimizationSuggestion>> suggestOptimizations(
-            List<ToolCall> historicalCalls) {
+    public Mono<List<OptimizationSuggestion>> suggestOptimizations(List<ToolCall> historicalCalls) {
 
         List<OptimizationSuggestion> suggestions = new ArrayList<>();
 
@@ -259,15 +250,15 @@ public class BatchOptimizationEngine {
             long startTime = System.currentTimeMillis();
 
             return Flux.fromIterable(batch)
-                    .flatMap(item -> toolExecutor.executeTool(item.getToolName(), item.getArguments())
+                    .flatMap(item -> toolExecutor
+                            .executeTool(item.getToolName(), item.getArguments())
                             .doOnSuccess(result -> {
                                 statistics.incrementSuccessCount();
                             })
                             .onErrorResume(e -> {
                                 statistics.incrementFailureCount();
                                 return Mono.empty();
-                            })
-                    )
+                            }))
                     .then()
                     .doOnSuccess(v -> {
                         long duration = System.currentTimeMillis() - startTime;
@@ -278,13 +269,12 @@ public class BatchOptimizationEngine {
 
         private void startFlushTimer() {
             // 定期刷新缓冲区
-            Flux.interval(Duration.ofMillis(config.getMaxWaitTimeMs()))
-                    .subscribe(tick -> {
-                        long timeSinceLastFlush = System.currentTimeMillis() - lastFlushTime;
-                        if (timeSinceLastFlush >= config.getMaxWaitTimeMs()) {
-                            flush().subscribe();
-                        }
-                    });
+            Flux.interval(Duration.ofMillis(config.getMaxWaitTimeMs())).subscribe(tick -> {
+                long timeSinceLastFlush = System.currentTimeMillis() - lastFlushTime;
+                if (timeSinceLastFlush >= config.getMaxWaitTimeMs()) {
+                    flush().subscribe();
+                }
+            });
         }
 
         public BatchConfig getConfig() {
@@ -305,8 +295,10 @@ public class BatchOptimizationEngine {
     public static class BatchConfig {
         @Builder.Default
         private int maxBatchSize = 10;
+
         @Builder.Default
         private long maxWaitTimeMs = 100;
+
         @Builder.Default
         private boolean enabled = true;
     }
@@ -400,10 +392,9 @@ public class BatchOptimizationEngine {
         }
 
         public double getAverageBatchSize() {
-            return batchSizes.isEmpty() ? 0 : batchSizes.stream()
-                    .mapToInt(Integer::intValue)
-                    .average()
-                    .orElse(0);
+            return batchSizes.isEmpty()
+                    ? 0
+                    : batchSizes.stream().mapToInt(Integer::intValue).average().orElse(0);
         }
 
         public double getSuccessRate() {

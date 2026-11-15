@@ -21,6 +21,7 @@ import feign.Logger;
 import feign.Request;
 import feign.RequestInterceptor;
 import feign.Retryer;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -28,8 +29,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * Feign 自动配置
@@ -59,17 +58,22 @@ public class FeignAutoConfiguration {
     @ConditionalOnMissingBean
     public Request.Options feignOptions(FeignProperties properties) {
         return new Request.Options(
-                properties.getConnectTimeout(), TimeUnit.MILLISECONDS,
-                properties.getReadTimeout(), TimeUnit.MILLISECONDS,
-                true
-        );
+                properties.getConnectTimeout(),
+                TimeUnit.MILLISECONDS,
+                properties.getReadTimeout(),
+                TimeUnit.MILLISECONDS,
+                true);
     }
 
     /**
      * 请求头传递拦截器
      */
     @Bean
-    @ConditionalOnProperty(prefix = "easywing.feign", name = "propagate-headers", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(
+            prefix = "easywing.feign",
+            name = "propagate-headers",
+            havingValue = "true",
+            matchIfMissing = true)
     public RequestInterceptor headerPropagationInterceptor(FeignProperties properties) {
         log.info("EasyWing Feign Header Propagation Interceptor initialized");
         return new HeaderPropagationInterceptor(properties.getPropagateHeaderNames());
@@ -79,7 +83,11 @@ public class FeignAutoConfiguration {
      * Feign 日志级别
      */
     @Bean
-    @ConditionalOnProperty(prefix = "easywing.feign", name = "logging-enabled", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(
+            prefix = "easywing.feign",
+            name = "logging-enabled",
+            havingValue = "true",
+            matchIfMissing = true)
     public Logger.Level feignLoggerLevel(FeignProperties properties) {
         return Logger.Level.valueOf(properties.getLogLevel().toUpperCase());
     }

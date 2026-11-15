@@ -16,17 +16,16 @@
 package com.easywing.platform.security.converter;
 
 import com.easywing.platform.security.config.EasyWingSecurityProperties;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * JWT认证转换器
@@ -47,11 +46,15 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
     @Override
     public AbstractAuthenticationToken convert(Jwt jwt) {
         Collection<GrantedAuthority> authorities = extractAuthorities(jwt);
-        return new JwtAuthenticationToken(jwt, authorities, jwt.getClaimAsString(properties.getOauth2().getJwt().getUsernameClaimName()));
+        return new JwtAuthenticationToken(
+                jwt,
+                authorities,
+                jwt.getClaimAsString(properties.getOauth2().getJwt().getUsernameClaimName()));
     }
 
     private Collection<GrantedAuthority> extractAuthorities(Jwt jwt) {
-        EasyWingSecurityProperties.OAuth2ResourceServer.JwtConfig jwtConfig = properties.getOauth2().getJwt();
+        EasyWingSecurityProperties.OAuth2ResourceServer.JwtConfig jwtConfig =
+                properties.getOauth2().getJwt();
         String claimName = jwtConfig.getAuthoritiesClaimName();
 
         List<String> roles = jwt.getClaimAsStringList(claimName);

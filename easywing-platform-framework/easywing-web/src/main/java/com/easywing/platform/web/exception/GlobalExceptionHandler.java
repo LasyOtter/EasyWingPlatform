@@ -27,6 +27,8 @@ import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -53,9 +55,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 全局异常处理器
@@ -88,8 +87,7 @@ public class GlobalExceptionHandler {
                 .instance(request.getRequestURI())
                 .build();
 
-        return ResponseEntity
-                .status(HttpStatus.valueOf(ex.getStatus()))
+        return ResponseEntity.status(HttpStatus.valueOf(ex.getStatus()))
                 .contentType(MediaType.parseMediaType(HttpHeaders.APPLICATION_PROBLEM_JSON))
                 .body(problem);
     }
@@ -110,8 +108,7 @@ public class GlobalExceptionHandler {
                 .instance(request.getRequestURI())
                 .build();
 
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .contentType(MediaType.parseMediaType(HttpHeaders.APPLICATION_PROBLEM_JSON))
                 .body(problem);
     }
@@ -120,7 +117,8 @@ public class GlobalExceptionHandler {
      * 处理验证异常
      */
     @ExceptionHandler(ValidationException.class)
-    public ResponseEntity<Rfc9457ProblemDetail> handleValidationException(ValidationException ex, HttpServletRequest request) {
+    public ResponseEntity<Rfc9457ProblemDetail> handleValidationException(
+            ValidationException ex, HttpServletRequest request) {
         log.warn("Validation exception: {}", ex.getMessage());
 
         List<ValidationError> errors = ex.getErrors().stream()
@@ -137,8 +135,7 @@ public class GlobalExceptionHandler {
                 .errors(errors)
                 .build();
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .contentType(MediaType.parseMediaType(HttpHeaders.APPLICATION_PROBLEM_JSON))
                 .body(problem);
     }
@@ -165,8 +162,7 @@ public class GlobalExceptionHandler {
                 .errors(errors)
                 .build();
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .contentType(MediaType.parseMediaType(HttpHeaders.APPLICATION_PROBLEM_JSON))
                 .body(problem);
     }
@@ -192,8 +188,7 @@ public class GlobalExceptionHandler {
                 .errors(errors)
                 .build();
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .contentType(MediaType.parseMediaType(HttpHeaders.APPLICATION_PROBLEM_JSON))
                 .body(problem);
     }
@@ -220,8 +215,7 @@ public class GlobalExceptionHandler {
                 .errors(errors)
                 .build();
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .contentType(MediaType.parseMediaType(HttpHeaders.APPLICATION_PROBLEM_JSON))
                 .body(problem);
     }
@@ -244,8 +238,7 @@ public class GlobalExceptionHandler {
                 .error(new ValidationError(ex.getParameterName(), "参数不能为空"))
                 .build();
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .contentType(MediaType.parseMediaType(HttpHeaders.APPLICATION_PROBLEM_JSON))
                 .body(problem);
     }
@@ -254,13 +247,10 @@ public class GlobalExceptionHandler {
      * 处理参数类型不匹配异常
      */
     @ExceptionHandler({MethodArgumentTypeMismatchException.class, TypeMismatchException.class})
-    public ResponseEntity<Rfc9457ProblemDetail> handleTypeMismatchException(
-            Exception ex, HttpServletRequest request) {
+    public ResponseEntity<Rfc9457ProblemDetail> handleTypeMismatchException(Exception ex, HttpServletRequest request) {
         log.warn("Type mismatch: {}", ex.getMessage());
 
-        String paramName = ex instanceof MethodArgumentTypeMismatchException mismatch
-                ? mismatch.getName()
-                : "unknown";
+        String paramName = ex instanceof MethodArgumentTypeMismatchException mismatch ? mismatch.getName() : "unknown";
 
         Rfc9457ProblemDetail problem = Rfc9457ProblemDetail.builder()
                 .status(HttpStatus.BAD_REQUEST)
@@ -271,8 +261,7 @@ public class GlobalExceptionHandler {
                 .instance(request.getRequestURI())
                 .build();
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .contentType(MediaType.parseMediaType(HttpHeaders.APPLICATION_PROBLEM_JSON))
                 .body(problem);
     }
@@ -294,8 +283,7 @@ public class GlobalExceptionHandler {
                 .instance(request.getRequestURI())
                 .build();
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .contentType(MediaType.parseMediaType(HttpHeaders.APPLICATION_PROBLEM_JSON))
                 .body(problem);
     }
@@ -317,8 +305,7 @@ public class GlobalExceptionHandler {
                 .instance(request.getRequestURI())
                 .build();
 
-        return ResponseEntity
-                .status(HttpStatus.METHOD_NOT_ALLOWED)
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
                 .contentType(MediaType.parseMediaType(HttpHeaders.APPLICATION_PROBLEM_JSON))
                 .body(problem);
     }
@@ -340,8 +327,7 @@ public class GlobalExceptionHandler {
                 .instance(request.getRequestURI())
                 .build();
 
-        return ResponseEntity
-                .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
                 .contentType(MediaType.parseMediaType(HttpHeaders.APPLICATION_PROBLEM_JSON))
                 .body(problem);
     }
@@ -363,8 +349,7 @@ public class GlobalExceptionHandler {
                 .instance(request.getRequestURI())
                 .build();
 
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .contentType(MediaType.parseMediaType(HttpHeaders.APPLICATION_PROBLEM_JSON))
                 .body(problem);
     }
@@ -406,8 +391,7 @@ public class GlobalExceptionHandler {
                 .instance(request.getRequestURI())
                 .build();
 
-        return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .contentType(MediaType.parseMediaType(HttpHeaders.APPLICATION_PROBLEM_JSON))
                 .header(HttpHeaders.WWW_AUTHENTICATE, "Bearer")
                 .body(problem);
@@ -424,8 +408,13 @@ public class GlobalExceptionHandler {
         String httpMethod = request.getMethod();
         String clientIp = getClientIp(request);
 
-        log.warn("Access denied for user {} to resource {} {} from IP {}: {}",
-                username, httpMethod, requestUri, clientIp, ex.getMessage());
+        log.warn(
+                "Access denied for user {} to resource {} {} from IP {}: {}",
+                username,
+                httpMethod,
+                requestUri,
+                clientIp,
+                ex.getMessage());
 
         Rfc9457ProblemDetail problem = Rfc9457ProblemDetail.builder()
                 .status(HttpStatus.FORBIDDEN)
@@ -436,8 +425,7 @@ public class GlobalExceptionHandler {
                 .instance(request.getRequestURI())
                 .build();
 
-        return ResponseEntity
-                .status(HttpStatus.FORBIDDEN)
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .contentType(MediaType.parseMediaType(HttpHeaders.APPLICATION_PROBLEM_JSON))
                 .body(problem);
     }
@@ -459,8 +447,7 @@ public class GlobalExceptionHandler {
                 .instance(request.getRequestURI())
                 .build();
 
-        return ResponseEntity
-                .status(HttpStatus.TOO_MANY_REQUESTS)
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .contentType(MediaType.parseMediaType(HttpHeaders.APPLICATION_PROBLEM_JSON))
                 .header(HttpHeaders.RETRY_AFTER, "60")
                 .body(problem);
@@ -483,8 +470,7 @@ public class GlobalExceptionHandler {
                 .instance(request.getRequestURI())
                 .build();
 
-        return ResponseEntity
-                .status(HttpStatus.SERVICE_UNAVAILABLE)
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .contentType(MediaType.parseMediaType(HttpHeaders.APPLICATION_PROBLEM_JSON))
                 .header(HttpHeaders.RETRY_AFTER, "30")
                 .body(problem);
@@ -498,13 +484,11 @@ public class GlobalExceptionHandler {
             ErrorResponseException ex, HttpServletRequest request) {
         log.warn("Error response: {}", ex.getMessage());
 
-        Rfc9457ProblemDetail problem = Rfc9457ProblemDetail.fromErrorResponse(ex)
-                .toBuilder()
+        Rfc9457ProblemDetail problem = Rfc9457ProblemDetail.fromErrorResponse(ex).toBuilder()
                 .traceId(getTraceId())
                 .build();
 
-        return ResponseEntity
-                .status(ex.getStatusCode())
+        return ResponseEntity.status(ex.getStatusCode())
                 .contentType(MediaType.parseMediaType(HttpHeaders.APPLICATION_PROBLEM_JSON))
                 .body(problem);
     }
@@ -518,8 +502,7 @@ public class GlobalExceptionHandler {
         String clientIp = getClientIp(request);
 
         // 记录详细错误日志（包含堆栈），但不返回给客户端
-        log.error("Unexpected system error [traceId={}] from IP {}: {}",
-                traceId, clientIp, ex.getMessage());
+        log.error("Unexpected system error [traceId={}] from IP {}: {}", traceId, clientIp, ex.getMessage());
 
         // Debug 模式下才输出完整堆栈
         if (log.isDebugEnabled()) {
@@ -535,8 +518,7 @@ public class GlobalExceptionHandler {
                 .instance(request.getRequestURI())
                 .build();
 
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .contentType(MediaType.parseMediaType(HttpHeaders.APPLICATION_PROBLEM_JSON))
                 .body(problem);
     }
@@ -546,21 +528,22 @@ public class GlobalExceptionHandler {
                 fieldError.getField(),
                 fieldError.getDefaultMessage(),
                 fieldError.getRejectedValue(),
-                fieldError.getCode()
-        );
+                fieldError.getCode());
     }
 
     private ValidationError toValidationError(ConstraintViolation<?> violation) {
         String propertyPath = violation.getPropertyPath().toString();
-        String fieldName = propertyPath.contains(".")
-                ? propertyPath.substring(propertyPath.lastIndexOf('.') + 1)
-                : propertyPath;
+        String fieldName =
+                propertyPath.contains(".") ? propertyPath.substring(propertyPath.lastIndexOf('.') + 1) : propertyPath;
         return new ValidationError(
                 fieldName,
                 violation.getMessage(),
                 violation.getInvalidValue(),
-                violation.getConstraintDescriptor().getAnnotation().annotationType().getSimpleName()
-        );
+                violation
+                        .getConstraintDescriptor()
+                        .getAnnotation()
+                        .annotationType()
+                        .getSimpleName());
     }
 
     private String getTraceId() {
@@ -587,7 +570,8 @@ public class GlobalExceptionHandler {
      */
     private String getCurrentUsername() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated()
+        if (authentication != null
+                && authentication.isAuthenticated()
                 && !(authentication instanceof AnonymousAuthenticationToken)) {
             return authentication.getName();
         }

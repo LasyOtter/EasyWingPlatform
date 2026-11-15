@@ -4,11 +4,10 @@ import com.easywing.platform.ai.skill.SkillContext;
 import com.easywing.platform.ai.skill.SkillExecutor;
 import com.easywing.platform.ai.skill.SkillResult;
 import com.easywing.platform.ai.tool.ToolExecutor;
+import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
-
-import java.util.*;
 
 /**
  * 数据分析技能 - 对数据进行统计分析
@@ -53,13 +52,11 @@ public class DataAnalysisSkill implements SkillExecutor {
             toolArgs.put("order", context.getParameters().get("order"));
         }
 
-        return toolExecutor.executeTool("data_analysis", toolArgs)
+        return toolExecutor
+                .executeTool("data_analysis", toolArgs)
                 .map(result -> {
                     if (Boolean.TRUE.equals(result.get("success"))) {
-                        return SkillResult.success(
-                                result.get("result"),
-                                "数据分析完成"
-                        );
+                        return SkillResult.success(result.get("result"), "数据分析完成");
                     } else {
                         return SkillResult.failure((String) result.get("error"));
                     }

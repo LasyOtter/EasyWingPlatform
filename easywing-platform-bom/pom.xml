@@ -79,6 +79,8 @@
         <!-- LangChain4j：全量 1.x，由 BOM 统一收敛；
              Qwen 通过 DashScope 的 OpenAI 兼容端点接入，无需 dashscope 模块 -->
         <langchain4j.version>1.23.0</langchain4j.version>
+        <!-- embeddings 单独发版，1.23.0-beta33 是该 artifact 在 Maven Central 的最新 release，
+             不存在 1.23.0 正式版，因此与 langchain4j.version 不同属正常现象 -->
         <langchain4j-embeddings.version>1.23.0-beta33</langchain4j-embeddings.version>
     </properties>
     

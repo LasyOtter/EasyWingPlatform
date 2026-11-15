@@ -23,7 +23,6 @@ import com.easywing.platform.messaging.core.MessageHeaders;
 import com.easywing.platform.messaging.core.MessageListener;
 import com.easywing.platform.messaging.core.MessagingException;
 import com.easywing.platform.messaging.interceptor.MessageInterceptor;
-
 import java.util.Comparator;
 import java.util.List;
 
@@ -34,9 +33,8 @@ public class MessageListenerAdapter {
     private final List<MessageInterceptor> interceptors;
     private final String adapterType;
 
-    public MessageListenerAdapter(MessagingAdapter adapter,
-                                   MessageConverter converter,
-                                   List<MessageInterceptor> interceptors) {
+    public MessageListenerAdapter(
+            MessagingAdapter adapter, MessageConverter converter, List<MessageInterceptor> interceptors) {
         this.adapter = adapter;
         this.converter = converter;
         this.interceptors = sortInterceptors(interceptors);
@@ -45,7 +43,7 @@ public class MessageListenerAdapter {
 
     public void handleMessage(byte[] rawMessage, String destination, MessageHeaders headers) {
         Message<?> message = new Message<>(rawMessage, headers);
-        
+
         message = applyPreReceiveInterceptors(message);
 
         MessageContext context = new MessageContext(destination, headers, adapterType);
@@ -53,13 +51,13 @@ public class MessageListenerAdapter {
         try {
             Object payload = converter.fromBytes(rawMessage, Object.class);
             Message<Object> convertedMessage = new Message<>(payload, headers);
-            
+
             @SuppressWarnings("unchecked")
             MessageListener<Object> listener = (MessageListener<Object>) getListener(destination);
             if (listener != null) {
                 listener.onMessage(payload, context);
             }
-            
+
             applyPostReceiveInterceptors(message, null);
         } catch (Exception e) {
             applyPostReceiveInterceptors(message, e);
@@ -76,8 +74,8 @@ public class MessageListenerAdapter {
             return List.of();
         }
         return interceptors.stream()
-            .sorted(Comparator.comparingInt(MessageInterceptor::getOrder))
-            .toList();
+                .sorted(Comparator.comparingInt(MessageInterceptor::getOrder))
+                .toList();
     }
 
     private Message<?> applyPreReceiveInterceptors(Message<?> message) {

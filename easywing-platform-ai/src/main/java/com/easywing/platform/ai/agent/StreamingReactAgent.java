@@ -7,14 +7,13 @@ import com.easywing.platform.ai.tool.ToolDefinition;
 import com.easywing.platform.ai.tool.ToolExecutor;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
-
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * 流式 ReAct Agent - 实时推送执行过程
@@ -27,15 +26,15 @@ public class StreamingReactAgent {
     private final ToolExecutor toolExecutor;
     private final ObjectMapper objectMapper;
 
-    private static final Pattern THOUGHT_PATTERN = Pattern.compile("思考[:：]\\s*(.+?)(?=行动[:：]|最终答案[:：]|$)", Pattern.DOTALL);
+    private static final Pattern THOUGHT_PATTERN =
+            Pattern.compile("思考[:：]\\s*(.+?)(?=行动[:：]|最终答案[:：]|$)", Pattern.DOTALL);
     private static final Pattern ACTION_PATTERN = Pattern.compile("行动[:：]\\s*([^\\n]+)");
-    private static final Pattern ACTION_INPUT_PATTERN = Pattern.compile("行动输入[:：]\\s*(.+?)(?=观察[:：]|思考[:：]|$)", Pattern.DOTALL);
+    private static final Pattern ACTION_INPUT_PATTERN =
+            Pattern.compile("行动输入[:：]\\s*(.+?)(?=观察[:：]|思考[:：]|$)", Pattern.DOTALL);
     private static final Pattern FINAL_ANSWER_PATTERN = Pattern.compile("最终答案[:：]\\s*(.+)", Pattern.DOTALL);
 
     public StreamingReactAgent(
-            AiProviderRegistry providerRegistry,
-            ToolExecutor toolExecutor,
-            ObjectMapper objectMapper) {
+            AiProviderRegistry providerRegistry, ToolExecutor toolExecutor, ObjectMapper objectMapper) {
         this.providerRegistry = providerRegistry;
         this.toolExecutor = toolExecutor;
         this.objectMapper = objectMapper;
@@ -47,21 +46,22 @@ public class StreamingReactAgent {
     public Flux<AgentStreamEvent> executeStream(AgentRequest request) {
         Sinks.Many<AgentStreamEvent> sink = Sinks.many().multicast().onBackpressureBuffer();
 
-        AgentRequest.AgentConfig config = request.getConfig() != null ?
-                request.getConfig() : AgentRequest.AgentConfig.builder()
-                .maxIterations(10)
-                .maxToolCalls(20)
-                .timeoutMs(60000)
-                .model("gpt-4o")
-                .temperature(0.7)
-                .build();
+        AgentRequest.AgentConfig config = request.getConfig() != null
+                ? request.getConfig()
+                : AgentRequest.AgentConfig.builder()
+                        .maxIterations(10)
+                        .maxToolCalls(20)
+                        .timeoutMs(60000)
+                        .model("gpt-4o")
+                        .temperature(0.7)
+                        .build();
 
         List<AgentIteration> iterations = new ArrayList<>();
-        List<ChatMessage> messages = new ArrayList<>(request.getMessages() != null ?
-                request.getMessages() : List.of());
+        List<ChatMessage> messages = new ArrayList<>(request.getMessages() != null ? request.getMessages() : List.of());
 
-        String sessionId = request.getSessionId() != null ?
-                request.getSessionId() : UUID.randomUUID().toString();
+        String sessionId = request.getSessionId() != null
+                ? request.getSessionId()
+                : UUID.randomUUID().toString();
 
         // 发送开始事件
         sink.tryEmitNext(AgentStreamEvent.start());
@@ -84,10 +84,7 @@ public class StreamingReactAgent {
                                     .messages(messages)
                                     .completed(true)
                                     .finishReason("completed")
-                                    .metadata(Map.of(
-                                            "iterations", iterations,
-                                            "iterationCount", iterations.size()
-                                    ))
+                                    .metadata(Map.of("iterations", iterations, "iterationCount", iterations.size()))
                                     .build();
 
                             // 发送完成事件
@@ -98,8 +95,7 @@ public class StreamingReactAgent {
                             log.error("Streaming execution failed", error);
                             sink.tryEmitNext(AgentStreamEvent.error(error.getMessage()));
                             sink.tryEmitComplete();
-                        }
-                );
+                        });
 
         return sink.asFlux();
     }
@@ -129,87 +125,84 @@ public class StreamingReactAgent {
 
         ChatCompletionRequest completionRequest = ChatCompletionRequest.builder()
                 .model(config.getModel())
-                .messages(List.of(ChatMessage.builder()
-                        .role("user")
-                        .content(prompt)
-                        .build()))
+                .messages(List.of(
+                        ChatMessage.builder().role("user").content(prompt).build()))
                 .temperature(config.getTemperature())
                 .build();
 
-        return providerRegistry.chat(completionRequest)
-                .flatMap(response -> {
-                    String llmResponse = extractContent(response);
+        return providerRegistry.chat(completionRequest).flatMap(response -> {
+            String llmResponse = extractContent(response);
 
-                    // 检查最终答案
-                    Matcher finalAnswerMatcher = FINAL_ANSWER_PATTERN.matcher(llmResponse);
-                    if (finalAnswerMatcher.find()) {
-                        String finalAnswer = finalAnswerMatcher.group(1).trim();
-                        return reactor.core.publisher.Mono.just(finalAnswer);
-                    }
+            // 检查最终答案
+            Matcher finalAnswerMatcher = FINAL_ANSWER_PATTERN.matcher(llmResponse);
+            if (finalAnswerMatcher.find()) {
+                String finalAnswer = finalAnswerMatcher.group(1).trim();
+                return reactor.core.publisher.Mono.just(finalAnswer);
+            }
 
-                    // 提取思考
-                    Matcher thoughtMatcher = THOUGHT_PATTERN.matcher(llmResponse);
-                    if (thoughtMatcher.find()) {
-                        String thought = thoughtMatcher.group(1).trim();
-                        sink.tryEmitNext(AgentStreamEvent.thinking(thought, currentIteration));
-                    }
+            // 提取思考
+            Matcher thoughtMatcher = THOUGHT_PATTERN.matcher(llmResponse);
+            if (thoughtMatcher.find()) {
+                String thought = thoughtMatcher.group(1).trim();
+                sink.tryEmitNext(AgentStreamEvent.thinking(thought, currentIteration));
+            }
 
-                    // 提取行动
-                    Matcher actionMatcher = ACTION_PATTERN.matcher(llmResponse);
-                    if (!actionMatcher.find()) {
-                        return reactor.core.publisher.Mono.just("无法理解如何执行该任务。");
-                    }
+            // 提取行动
+            Matcher actionMatcher = ACTION_PATTERN.matcher(llmResponse);
+            if (!actionMatcher.find()) {
+                return reactor.core.publisher.Mono.just("无法理解如何执行该任务。");
+            }
 
-                    String action = actionMatcher.group(1).trim();
+            String action = actionMatcher.group(1).trim();
 
-                    // 提取行动输入
-                    Matcher actionInputMatcher = ACTION_INPUT_PATTERN.matcher(llmResponse);
-                    Map<String, Object> actionInput = new HashMap<>();
-                    if (actionInputMatcher.find()) {
-                        String actionInputStr = actionInputMatcher.group(1).trim();
-                        try {
-                            actionInput = objectMapper.readValue(actionInputStr,
-                                    new TypeReference<Map<String, Object>>() {});
-                        } catch (Exception e) {
-                            actionInput.put("input", actionInputStr);
-                        }
-                    }
+            // 提取行动输入
+            Matcher actionInputMatcher = ACTION_INPUT_PATTERN.matcher(llmResponse);
+            Map<String, Object> actionInput = new HashMap<>();
+            if (actionInputMatcher.find()) {
+                String actionInputStr = actionInputMatcher.group(1).trim();
+                try {
+                    actionInput = objectMapper.readValue(actionInputStr, new TypeReference<Map<String, Object>>() {});
+                } catch (Exception e) {
+                    actionInput.put("input", actionInputStr);
+                }
+            }
 
-                    // 发送工具调用开始事件
-                    sink.tryEmitNext(AgentStreamEvent.toolCallStart(action, actionInput, currentIteration));
+            // 发送工具调用开始事件
+            sink.tryEmitNext(AgentStreamEvent.toolCallStart(action, actionInput, currentIteration));
 
-                    // 执行工具
-                    Map<String, Object> finalActionInput = actionInput;
-                    return toolExecutor.executeTool(action, actionInput)
-                            .flatMap(result -> {
-                                String observation = formatObservation(result);
+            // 执行工具
+            Map<String, Object> finalActionInput = actionInput;
+            return toolExecutor
+                    .executeTool(action, actionInput)
+                    .flatMap(result -> {
+                        String observation = formatObservation(result);
 
-                                // 发送工具调用结束事件
-                                sink.tryEmitNext(AgentStreamEvent.toolCallEnd(action, result, currentIteration));
+                        // 发送工具调用结束事件
+                        sink.tryEmitNext(AgentStreamEvent.toolCallEnd(action, result, currentIteration));
 
-                                // 发送观察事件
-                                sink.tryEmitNext(AgentStreamEvent.observation(observation, currentIteration));
+                        // 发送观察事件
+                        sink.tryEmitNext(AgentStreamEvent.observation(observation, currentIteration));
 
-                                AgentIteration iteration = AgentIteration.builder()
-                                        .iterationNumber(currentIteration)
-                                        .action(action)
-                                        .actionInput(finalActionInput)
-                                        .observation(observation)
-                                        .finalAnswer(false)
-                                        .build();
+                        AgentIteration iteration = AgentIteration.builder()
+                                .iterationNumber(currentIteration)
+                                .action(action)
+                                .actionInput(finalActionInput)
+                                .observation(observation)
+                                .finalAnswer(false)
+                                .build();
 
-                                iterations.add(iteration);
+                        iterations.add(iteration);
 
-                                // 继续下一次迭代
-                                return executeReactLoopStream(input, config, iterations,
-                                        conversationHistory, currentIteration + 1, sink);
-                            })
-                            .onErrorResume(e -> {
-                                String errorMsg = "工具执行失败: " + e.getMessage();
-                                sink.tryEmitNext(AgentStreamEvent.error(errorMsg));
-                                return reactor.core.publisher.Mono.just(errorMsg);
-                            });
-                });
+                        // 继续下一次迭代
+                        return executeReactLoopStream(
+                                input, config, iterations, conversationHistory, currentIteration + 1, sink);
+                    })
+                    .onErrorResume(e -> {
+                        String errorMsg = "工具执行失败: " + e.getMessage();
+                        sink.tryEmitNext(AgentStreamEvent.error(errorMsg));
+                        return reactor.core.publisher.Mono.just(errorMsg);
+                    });
+        });
     }
 
     private String buildReactPrompt(String input, List<AgentIteration> iterations) {
@@ -225,7 +218,8 @@ public class StreamingReactAgent {
                 .reduce((a, b) -> a + "\n" + b)
                 .orElse("");
 
-        String template = """
+        String template =
+                """
                 你是一个智能助手，可以使用工具来回答问题。请遵循以下格式：
 
                 问题: 用户的输入问题

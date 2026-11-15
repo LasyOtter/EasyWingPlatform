@@ -18,24 +18,20 @@ package com.easywing.platform.ai.starter.config;
 import com.easywing.platform.ai.starter.rag.RagService;
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentSplitter;
-import dev.langchain4j.data.document.loader.FileSystemDocumentLoader;
 import dev.langchain4j.data.document.splitter.DocumentByParagraphSplitter;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingStore;
-import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
 import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.io.File;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
 
 @Configuration
 @ConditionalOnProperty(prefix = "easywing.ai.rag", name = "enabled", havingValue = "true", matchIfMissing = true)
@@ -55,16 +51,18 @@ public class RagAutoConfiguration {
     public DocumentSplitter documentSplitter(AiProperties properties) {
         AiProperties.Rag.DocumentLoader config = properties.getRag().getDocumentLoader();
         int chunkSize = config.getChunkSize() != null && config.getChunkSize() > 0 ? config.getChunkSize() : 1000;
-        int chunkOverlap = config.getChunkOverlap() != null && config.getChunkOverlap() > 0 ? config.getChunkOverlap() : 200;
+        int chunkOverlap =
+                config.getChunkOverlap() != null && config.getChunkOverlap() > 0 ? config.getChunkOverlap() : 200;
         return new DocumentByParagraphSplitter(chunkSize, chunkOverlap);
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public RagService ragService(EmbeddingModel embeddingModel,
-                                  EmbeddingStore<TextSegment> embeddingStore,
-                                  DocumentSplitter documentSplitter,
-                                  AiProperties properties) {
+    public RagService ragService(
+            EmbeddingModel embeddingModel,
+            EmbeddingStore<TextSegment> embeddingStore,
+            DocumentSplitter documentSplitter,
+            AiProperties properties) {
         log.info("Creating RagService");
         return new RagService(embeddingModel, embeddingStore, documentSplitter, properties);
     }

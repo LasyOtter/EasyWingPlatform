@@ -19,13 +19,12 @@ import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
-import org.springframework.web.ErrorResponse;
-
 import java.net.URI;
 import java.time.Instant;
 import java.util.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.web.ErrorResponse;
 
 /**
  * RFC 9457 Problem Detail 扩展实现
@@ -175,7 +174,7 @@ public class Rfc9457ProblemDetail {
                 .instance(errorResponse.getBody().getInstance())
                 .build();
     }
-    
+
     /**
      * 转换为 Builder 以支持修改
      */
@@ -208,8 +207,7 @@ public class Rfc9457ProblemDetail {
             @JsonProperty("field") String field,
             @JsonProperty("message") String message,
             @JsonProperty("rejectedValue") Object rejectedValue,
-            @JsonProperty("code") String code
-    ) {
+            @JsonProperty("code") String code) {
         public ValidationError(String field, String message) {
             this(field, message, null, null);
         }

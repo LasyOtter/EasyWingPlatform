@@ -1,17 +1,15 @@
 package com.easywing.platform.ai.agent;
 
-import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.tool.ToolDefinition;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * OpenAI Function Calling 格式转换器
@@ -28,9 +26,7 @@ public class FunctionCallingConverter {
      * 将工具定义转换为 OpenAI Function 格式
      */
     public List<FunctionDefinition> convertToFunctions(List<ToolDefinition> tools) {
-        return tools.stream()
-                .map(this::convertToFunction)
-                .collect(Collectors.toList());
+        return tools.stream().map(this::convertToFunction).collect(Collectors.toList());
     }
 
     /**
@@ -40,8 +36,7 @@ public class FunctionCallingConverter {
         return FunctionDefinition.builder()
                 .name(tool.getName())
                 .description(tool.getDescription())
-                .parameters(tool.getParametersSchema() != null ?
-                        tool.getParametersSchema() : createDefaultSchema())
+                .parameters(tool.getParametersSchema() != null ? tool.getParametersSchema() : createDefaultSchema())
                 .build();
     }
 
@@ -50,7 +45,8 @@ public class FunctionCallingConverter {
      */
     private JsonNode createDefaultSchema() {
         try {
-            return objectMapper.readTree("""
+            return objectMapper.readTree(
+                    """
                     {
                       "type": "object",
                       "properties": {}
@@ -83,7 +79,7 @@ public class FunctionCallingConverter {
     @AllArgsConstructor
     public static class FunctionCall {
         private String name;
-        private String arguments;  // JSON string
+        private String arguments; // JSON string
     }
 
     /**

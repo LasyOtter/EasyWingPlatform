@@ -23,7 +23,6 @@ import static org.mockito.Mockito.*;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.easywing.platform.core.exception.BizException;
 import com.easywing.platform.system.common.TestDataFactory;
-import com.easywing.platform.system.config.PageProperties;
 import com.easywing.platform.system.config.UserProperties;
 import com.easywing.platform.system.domain.dto.SysUserDTO;
 import com.easywing.platform.system.domain.entity.SysUser;
@@ -190,8 +189,7 @@ class SysUserServiceImplTest {
         when(pageHelper.normalizePage(current, size)).thenReturn(new Page<>(current, size));
         when(pageHelper.getCountCache(anyString())).thenReturn(null);
         when(userMapper.selectPage(any(Page.class), any())).thenReturn(userPage);
-        when(userMapperStruct.toVO(any(SysUser.class)))
-                .thenReturn(voList.get(0), voList.get(1));
+        when(userMapperStruct.toVO(any(SysUser.class))).thenReturn(voList.get(0), voList.get(1));
 
         // When
         Page<SysUserVO> result = userService.selectUserPage(current, size, query);

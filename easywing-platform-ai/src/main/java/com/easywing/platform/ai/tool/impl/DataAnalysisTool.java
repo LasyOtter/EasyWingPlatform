@@ -1,12 +1,11 @@
 package com.easywing.platform.ai.tool.impl;
 
 import com.easywing.platform.ai.tool.AiTool;
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 数据分析工具 - 对数值数据进行统计分析
@@ -22,10 +21,9 @@ public class DataAnalysisTool implements AiTool {
 
     @Override
     public String getDescription() {
-        return "对数值数据进行统计分析。" +
-                "输入参数：operation (string) - 操作类型: 'statistics', 'sort', 'filter', 'group'。" +
-                "data (array) - 数值数组。" +
-                "其他参数根据操作类型而定";
+        return "对数值数据进行统计分析。" + "输入参数：operation (string) - 操作类型: 'statistics', 'sort', 'filter', 'group'。"
+                + "data (array) - 数值数组。"
+                + "其他参数根据操作类型而定";
     }
 
     @Override
@@ -47,25 +45,28 @@ public class DataAnalysisTool implements AiTool {
             response.put("dataSize", data.size());
 
             try {
-                Object result = switch (operation.toLowerCase()) {
-                    case "statistics" -> calculateStatistics(data);
-                    case "sort" -> {
-                        String order = (String) arguments.getOrDefault("order", "asc");
-                        yield sortData(data, order);
-                    }
-                    case "filter" -> {
-                        String condition = (String) arguments.get("condition");
-                        Double threshold = arguments.containsKey("threshold") ?
-                                ((Number) arguments.get("threshold")).doubleValue() : null;
-                        yield filterData(data, condition, threshold);
-                    }
-                    case "group" -> {
-                        Integer bins = arguments.containsKey("bins") ?
-                                ((Number) arguments.get("bins")).intValue() : 10;
-                        yield groupData(data, bins);
-                    }
-                    default -> throw new IllegalArgumentException("不支持的操作: " + operation);
-                };
+                Object result =
+                        switch (operation.toLowerCase()) {
+                            case "statistics" -> calculateStatistics(data);
+                            case "sort" -> {
+                                String order = (String) arguments.getOrDefault("order", "asc");
+                                yield sortData(data, order);
+                            }
+                            case "filter" -> {
+                                String condition = (String) arguments.get("condition");
+                                Double threshold = arguments.containsKey("threshold")
+                                        ? ((Number) arguments.get("threshold")).doubleValue()
+                                        : null;
+                                yield filterData(data, condition, threshold);
+                            }
+                            case "group" -> {
+                                Integer bins = arguments.containsKey("bins")
+                                        ? ((Number) arguments.get("bins")).intValue()
+                                        : 10;
+                                yield groupData(data, bins);
+                            }
+                            default -> throw new IllegalArgumentException("不支持的操作: " + operation);
+                        };
 
                 response.put("result", result);
                 log.info("Data analysis completed: {}", operation);
@@ -96,9 +97,9 @@ public class DataAnalysisTool implements AiTool {
         Collections.sort(numbers);
         double sum = numbers.stream().mapToDouble(Double::doubleValue).sum();
         double mean = sum / numbers.size();
-        double median = numbers.size() % 2 == 0 ?
-                (numbers.get(numbers.size() / 2 - 1) + numbers.get(numbers.size() / 2)) / 2 :
-                numbers.get(numbers.size() / 2);
+        double median = numbers.size() % 2 == 0
+                ? (numbers.get(numbers.size() / 2 - 1) + numbers.get(numbers.size() / 2)) / 2
+                : numbers.get(numbers.size() / 2);
         double variance = numbers.stream()
                 .mapToDouble(n -> Math.pow(n - mean, 2))
                 .average()
@@ -120,9 +121,8 @@ public class DataAnalysisTool implements AiTool {
     }
 
     private List<Double> sortData(List<Object> data, String order) {
-        List<Double> numbers = data.stream()
-                .map(obj -> ((Number) obj).doubleValue())
-                .collect(Collectors.toList());
+        List<Double> numbers =
+                data.stream().map(obj -> ((Number) obj).doubleValue()).collect(Collectors.toList());
 
         if ("desc".equalsIgnoreCase(order)) {
             numbers.sort(Collections.reverseOrder());
@@ -154,9 +154,8 @@ public class DataAnalysisTool implements AiTool {
     }
 
     private Map<String, Object> groupData(List<Object> data, int bins) {
-        List<Double> numbers = data.stream()
-                .map(obj -> ((Number) obj).doubleValue())
-                .collect(Collectors.toList());
+        List<Double> numbers =
+                data.stream().map(obj -> ((Number) obj).doubleValue()).collect(Collectors.toList());
 
         double min = Collections.min(numbers);
         double max = Collections.max(numbers);

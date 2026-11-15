@@ -25,7 +25,6 @@ import com.easywing.platform.messaging.core.SendCallback;
 import com.easywing.platform.messaging.core.SendResult;
 import com.easywing.platform.messaging.core.TransactionExecutor;
 import com.easywing.platform.messaging.interceptor.MessageInterceptor;
-
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -37,10 +36,11 @@ public abstract class AbstractMessageTemplate implements com.easywing.platform.m
     protected final List<MessageInterceptor> interceptors;
     protected final MessagingProperties properties;
 
-    public AbstractMessageTemplate(MessagingAdapter adapter,
-                                   MessageConverter converter,
-                                   List<MessageInterceptor> interceptors,
-                                   MessagingProperties properties) {
+    public AbstractMessageTemplate(
+            MessagingAdapter adapter,
+            MessageConverter converter,
+            List<MessageInterceptor> interceptors,
+            MessagingProperties properties) {
         this.adapter = adapter;
         this.converter = converter;
         this.interceptors = sortInterceptors(interceptors);
@@ -57,13 +57,15 @@ public abstract class AbstractMessageTemplate implements com.easywing.platform.m
             applyPostSendInterceptors(wrappedMessage, result);
             return result;
         } catch (MessagingException e) {
-            applyPostSendInterceptors(wrappedMessage, SendResult.failure(destination, 
-                wrappedMessage.getHeaders().getId(), e));
+            applyPostSendInterceptors(
+                    wrappedMessage,
+                    SendResult.failure(destination, wrappedMessage.getHeaders().getId(), e));
             throw e;
         } catch (Exception e) {
             MessagingException messagingException = new MessagingException("Failed to send message", e);
-            applyPostSendInterceptors(wrappedMessage, SendResult.failure(destination, 
-                wrappedMessage.getHeaders().getId(), messagingException));
+            applyPostSendInterceptors(
+                    wrappedMessage,
+                    SendResult.failure(destination, wrappedMessage.getHeaders().getId(), messagingException));
             throw messagingException;
         }
     }
@@ -78,13 +80,15 @@ public abstract class AbstractMessageTemplate implements com.easywing.platform.m
             applyPostSendInterceptors(intercepted, result);
             return result;
         } catch (MessagingException e) {
-            applyPostSendInterceptors(intercepted, SendResult.failure(destination, 
-                intercepted.getHeaders().getId(), e));
+            applyPostSendInterceptors(
+                    intercepted,
+                    SendResult.failure(destination, intercepted.getHeaders().getId(), e));
             throw e;
         } catch (Exception e) {
             MessagingException messagingException = new MessagingException("Failed to send message", e);
-            applyPostSendInterceptors(wrappedMessage, SendResult.failure(destination, 
-                wrappedMessage.getHeaders().getId(), messagingException));
+            applyPostSendInterceptors(
+                    wrappedMessage,
+                    SendResult.failure(destination, wrappedMessage.getHeaders().getId(), messagingException));
             throw messagingException;
         }
     }
@@ -95,7 +99,7 @@ public abstract class AbstractMessageTemplate implements com.easywing.platform.m
         final Message<?> intercepted = applyPreSendInterceptors(wrappedMessage);
 
         CompletableFuture<SendResult> future = new CompletableFuture<>();
-        
+
         adapter.doSendAsync(destination, intercepted, new SendCallback() {
             @Override
             public void onSuccess(SendResult result) {
@@ -105,8 +109,9 @@ public abstract class AbstractMessageTemplate implements com.easywing.platform.m
 
             @Override
             public void onFailure(MessagingException exception) {
-                applyPostSendInterceptors(intercepted, SendResult.failure(destination, 
-                    intercepted.getHeaders().getId(), exception));
+                applyPostSendInterceptors(
+                        intercepted,
+                        SendResult.failure(destination, intercepted.getHeaders().getId(), exception));
                 future.completeExceptionally(exception);
             }
         });
@@ -128,18 +133,19 @@ public abstract class AbstractMessageTemplate implements com.easywing.platform.m
 
             @Override
             public void onFailure(MessagingException exception) {
-                applyPostSendInterceptors(intercepted, SendResult.failure(destination, 
-                    intercepted.getHeaders().getId(), exception));
+                applyPostSendInterceptors(
+                        intercepted,
+                        SendResult.failure(destination, intercepted.getHeaders().getId(), exception));
                 callback.onFailure(exception);
             }
         });
     }
 
     @Override
-    public <T> SendResult sendInTransaction(String destination, T message, 
-                                            TransactionExecutor transactionExecutor) throws MessagingException {
+    public <T> SendResult sendInTransaction(String destination, T message, TransactionExecutor transactionExecutor)
+            throws MessagingException {
         Message<?> wrappedMessage = wrapMessage(message);
-        
+
         boolean transactionResult;
         try {
             transactionResult = transactionExecutor.execute();
@@ -158,14 +164,16 @@ public abstract class AbstractMessageTemplate implements com.easywing.platform.m
             applyPostSendInterceptors(wrappedMessage, result);
             return result;
         } catch (MessagingException e) {
-            applyPostSendInterceptors(wrappedMessage, SendResult.failure(destination, 
-                wrappedMessage.getHeaders().getId(), e));
+            applyPostSendInterceptors(
+                    wrappedMessage,
+                    SendResult.failure(destination, wrappedMessage.getHeaders().getId(), e));
             throw new MessagingException("Transaction executed successfully but message sending failed", e);
         } catch (Exception e) {
-            MessagingException messagingException = new MessagingException(
-                "Transaction executed successfully but message sending failed", e);
-            applyPostSendInterceptors(wrappedMessage, SendResult.failure(destination, 
-                wrappedMessage.getHeaders().getId(), messagingException));
+            MessagingException messagingException =
+                    new MessagingException("Transaction executed successfully but message sending failed", e);
+            applyPostSendInterceptors(
+                    wrappedMessage,
+                    SendResult.failure(destination, wrappedMessage.getHeaders().getId(), messagingException));
             throw messagingException;
         }
     }
@@ -185,8 +193,8 @@ public abstract class AbstractMessageTemplate implements com.easywing.platform.m
             return List.of();
         }
         return interceptors.stream()
-            .sorted(Comparator.comparingInt(MessageInterceptor::getOrder))
-            .toList();
+                .sorted(Comparator.comparingInt(MessageInterceptor::getOrder))
+                .toList();
     }
 
     protected Message<?> applyPreSendInterceptors(Message<?> message) {

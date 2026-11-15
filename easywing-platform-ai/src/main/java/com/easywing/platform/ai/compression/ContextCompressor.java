@@ -3,11 +3,10 @@ package com.easywing.platform.ai.compression;
 import com.easywing.platform.ai.config.AiProperties;
 import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.model.ConversationContext;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
@@ -72,7 +71,7 @@ public class ContextCompressor {
             else if ("assistant".equals(msg.getRole())) assistantCount++;
         }
 
-        return String.format("Conversation with %d user messages and %d assistant responses",
-                userCount, assistantCount);
+        return String.format(
+                "Conversation with %d user messages and %d assistant responses", userCount, assistantCount);
     }
 }

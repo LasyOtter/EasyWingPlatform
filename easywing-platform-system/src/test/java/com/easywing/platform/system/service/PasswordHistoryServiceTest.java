@@ -15,7 +15,13 @@
  */
 package com.easywing.platform.system.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
 import com.easywing.platform.system.config.UserProperties;
+import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,13 +32,6 @@ import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
-import java.util.Collections;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 /**
  * 密码历史服务单元测试
@@ -185,7 +184,8 @@ class PasswordHistoryServiceTest {
         customProperties.setPasswordHistoryCount(10);
         customProperties.setPasswordExpireDays(30);
 
-        PasswordHistoryService customService = new PasswordHistoryService(redisTemplate, customProperties, passwordEncoder);
+        PasswordHistoryService customService =
+                new PasswordHistoryService(redisTemplate, customProperties, passwordEncoder);
         String encodedPassword = "encodedPassword";
 
         customService.recordPassword(1L, encodedPassword);

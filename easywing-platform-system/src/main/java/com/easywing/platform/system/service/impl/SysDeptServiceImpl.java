@@ -11,14 +11,13 @@ import com.easywing.platform.system.domain.vo.SysDeptVO;
 import com.easywing.platform.system.mapper.SysDeptMapper;
 import com.easywing.platform.system.mapper.struct.DeptMapper;
 import com.easywing.platform.system.service.SysDeptService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -137,13 +136,19 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
     }
 
     @Override
-    public boolean hasChildren(Long deptId) { return deptMapper.selectChildrenCountByParentId(deptId) > 0; }
+    public boolean hasChildren(Long deptId) {
+        return deptMapper.selectChildrenCountByParentId(deptId) > 0;
+    }
 
     @Override
-    public boolean checkDeptExistUser(Long deptId) { return deptMapper.checkDeptExistUser(deptId) > 0; }
+    public boolean checkDeptExistUser(Long deptId) {
+        return deptMapper.checkDeptExistUser(deptId) > 0;
+    }
 
     @Override
-    public List<Long> selectDeptIdsByParentId(Long deptId) { return deptMapper.selectDeptIdsByParentId(deptId); }
+    public List<Long> selectDeptIdsByParentId(Long deptId) {
+        return deptMapper.selectDeptIdsByParentId(deptId);
+    }
 
     private List<SysDeptVO> buildDeptTree(List<SysDeptVO> depts) {
         List<SysDeptVO> returnList = new ArrayList<>();

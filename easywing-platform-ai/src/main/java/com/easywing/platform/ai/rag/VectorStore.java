@@ -1,9 +1,8 @@
 package com.easywing.platform.ai.rag;
 
-import reactor.core.publisher.Mono;
-
 import java.util.List;
 import java.util.Map;
+import reactor.core.publisher.Mono;
 
 /**
  * 向量存储接口 - 支持多种向量数据库
@@ -28,10 +27,7 @@ public interface VectorStore {
     /**
      * 搜索相似文档（带过滤条件）
      */
-    Mono<List<DocumentChunk>> searchWithFilter(
-            float[] queryEmbedding,
-            int topK,
-            Map<String, Object> filter);
+    Mono<List<DocumentChunk>> searchWithFilter(float[] queryEmbedding, int topK, Map<String, Object> filter);
 
     /**
      * 删除文档

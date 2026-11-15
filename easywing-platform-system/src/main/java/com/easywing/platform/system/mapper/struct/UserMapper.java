@@ -3,13 +3,12 @@ package com.easywing.platform.system.mapper.struct;
 import com.easywing.platform.system.domain.dto.SysUserDTO;
 import com.easywing.platform.system.domain.entity.SysUser;
 import com.easywing.platform.system.domain.vo.SysUserVO;
+import java.util.List;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 import org.mapstruct.ReportingPolicy;
-
-import java.util.List;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface UserMapper {

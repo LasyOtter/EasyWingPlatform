@@ -9,16 +9,28 @@ import java.util.List;
 
 public interface SysMenuService extends IService<SysMenu> {
     List<SysMenuVO> selectMenuList(SysMenuDTO menuDTO);
+
     List<SysMenuVO> selectMenusByUserId(Long userId);
+
     List<Long> selectMenuIdsByRoleId(Long roleId);
+
     SysMenuVO selectMenuById(Long menuId);
+
     Long insertMenu(SysMenuDTO menuDTO);
+
     int updateMenu(SysMenuDTO menuDTO);
+
     int deleteMenuById(Long menuId);
+
     List<RouterVO> buildRouters(List<SysMenuVO> menus);
+
     List<SysMenuVO> buildMenuTree(List<SysMenuVO> menus);
+
     List<String> selectPermsByUserId(Long userId);
+
     boolean checkMenuNameUnique(String menuName, Long parentId, Long menuId);
+
     boolean hasChildren(Long menuId);
+
     boolean checkMenuExistRole(Long menuId);
 }

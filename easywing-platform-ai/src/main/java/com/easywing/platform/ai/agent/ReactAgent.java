@@ -1,21 +1,20 @@
 package com.easywing.platform.ai.agent;
 
-import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.model.ChatCompletionRequest;
 import com.easywing.platform.ai.model.ChatCompletionResponse;
+import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.provider.AiProviderRegistry;
 import com.easywing.platform.ai.tool.ToolDefinition;
 import com.easywing.platform.ai.tool.ToolExecutor;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
-
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
 /**
  * ReAct Agent - 实现 Reasoning + Acting 模式
@@ -30,7 +29,8 @@ public class ReactAgent {
     private final ObjectMapper objectMapper;
 
     // ReAct 提示词模板
-    private static final String REACT_SYSTEM_PROMPT = """
+    private static final String REACT_SYSTEM_PROMPT =
+            """
             你是一个智能助手，可以使用工具来回答问题。请遵循以下格式：
 
             问题: 用户的输入问题
@@ -50,15 +50,14 @@ public class ReactAgent {
             问题: {input}
             思考:""";
 
-    private static final Pattern THOUGHT_PATTERN = Pattern.compile("思考[:：]\\s*(.+?)(?=行动[:：]|最终答案[:：]|$)", Pattern.DOTALL);
+    private static final Pattern THOUGHT_PATTERN =
+            Pattern.compile("思考[:：]\\s*(.+?)(?=行动[:：]|最终答案[:：]|$)", Pattern.DOTALL);
     private static final Pattern ACTION_PATTERN = Pattern.compile("行动[:：]\\s*([^\\n]+)");
-    private static final Pattern ACTION_INPUT_PATTERN = Pattern.compile("行动输入[:：]\\s*(.+?)(?=观察[:：]|思考[:：]|$)", Pattern.DOTALL);
+    private static final Pattern ACTION_INPUT_PATTERN =
+            Pattern.compile("行动输入[:：]\\s*(.+?)(?=观察[:：]|思考[:：]|$)", Pattern.DOTALL);
     private static final Pattern FINAL_ANSWER_PATTERN = Pattern.compile("最终答案[:：]\\s*(.+)", Pattern.DOTALL);
 
-    public ReactAgent(
-            AiProviderRegistry providerRegistry,
-            ToolExecutor toolExecutor,
-            ObjectMapper objectMapper) {
+    public ReactAgent(AiProviderRegistry providerRegistry, ToolExecutor toolExecutor, ObjectMapper objectMapper) {
         this.providerRegistry = providerRegistry;
         this.toolExecutor = toolExecutor;
         this.objectMapper = objectMapper;
@@ -68,21 +67,22 @@ public class ReactAgent {
      * 执行 ReAct Agent
      */
     public Mono<AgentResponse> execute(AgentRequest request) {
-        String sessionId = request.getSessionId() != null ?
-                request.getSessionId() : UUID.randomUUID().toString();
+        String sessionId = request.getSessionId() != null
+                ? request.getSessionId()
+                : UUID.randomUUID().toString();
 
-        AgentRequest.AgentConfig config = request.getConfig() != null ?
-                request.getConfig() : AgentRequest.AgentConfig.builder()
-                .maxIterations(10)
-                .maxToolCalls(20)
-                .timeoutMs(60000)
-                .model("gpt-4o")
-                .temperature(0.7)
-                .build();
+        AgentRequest.AgentConfig config = request.getConfig() != null
+                ? request.getConfig()
+                : AgentRequest.AgentConfig.builder()
+                        .maxIterations(10)
+                        .maxToolCalls(20)
+                        .timeoutMs(60000)
+                        .model("gpt-4o")
+                        .temperature(0.7)
+                        .build();
 
         List<AgentIteration> iterations = new ArrayList<>();
-        List<ChatMessage> messages = new ArrayList<>(request.getMessages() != null ?
-                request.getMessages() : List.of());
+        List<ChatMessage> messages = new ArrayList<>(request.getMessages() != null ? request.getMessages() : List.of());
 
         long startTime = System.currentTimeMillis();
 
@@ -155,34 +155,31 @@ public class ReactAgent {
         // 调用 LLM
         ChatCompletionRequest completionRequest = ChatCompletionRequest.builder()
                 .model(config.getModel())
-                .messages(List.of(ChatMessage.builder()
-                        .role("user")
-                        .content(prompt)
-                        .build()))
+                .messages(List.of(
+                        ChatMessage.builder().role("user").content(prompt).build()))
                 .temperature(config.getTemperature())
                 .build();
 
         long iterationStartTime = System.currentTimeMillis();
 
-        return providerRegistry.chat(completionRequest)
-                .flatMap(response -> {
-                    String llmResponse = extractContent(response);
-                    long iterationTime = System.currentTimeMillis() - iterationStartTime;
+        return providerRegistry.chat(completionRequest).flatMap(response -> {
+            String llmResponse = extractContent(response);
+            long iterationTime = System.currentTimeMillis() - iterationStartTime;
 
-                    log.info("Iteration {} response: {}", currentIteration, llmResponse);
+            log.info("Iteration {} response: {}", currentIteration, llmResponse);
 
-                    // 解析 LLM 响应
-                    return parseAndExecute(llmResponse, config, iterations, currentIteration, iterationTime)
-                            .flatMap(result -> {
-                                if (result.isFinalAnswer()) {
-                                    return Mono.just(result.getAnswer());
-                                } else {
-                                    // 继续下一次迭代
-                                    return executeReactLoop(input, config, iterations,
-                                            conversationHistory, currentIteration + 1);
-                                }
-                            });
-                });
+            // 解析 LLM 响应
+            return parseAndExecute(llmResponse, config, iterations, currentIteration, iterationTime)
+                    .flatMap(result -> {
+                        if (result.isFinalAnswer()) {
+                            return Mono.just(result.getAnswer());
+                        } else {
+                            // 继续下一次迭代
+                            return executeReactLoop(
+                                    input, config, iterations, conversationHistory, currentIteration + 1);
+                        }
+                    });
+        });
     }
 
     /**
@@ -222,8 +219,7 @@ public class ReactAgent {
         if (!actionMatcher.find()) {
             iteration.setError("无法解析行动");
             iterations.add(iteration);
-            return Mono.just(new ParseResult(true,
-                    "抱歉，无法理解如何执行该任务。"));
+            return Mono.just(new ParseResult(true, "抱歉，无法理解如何执行该任务。"));
         }
 
         String action = actionMatcher.group(1).trim();
@@ -235,8 +231,7 @@ public class ReactAgent {
         if (actionInputMatcher.find()) {
             String actionInputStr = actionInputMatcher.group(1).trim();
             try {
-                actionInput = objectMapper.readValue(actionInputStr,
-                        new TypeReference<Map<String, Object>>() {});
+                actionInput = objectMapper.readValue(actionInputStr, new TypeReference<Map<String, Object>>() {});
             } catch (Exception e) {
                 log.warn("Failed to parse action input as JSON, using as text: {}", actionInputStr);
                 actionInput.put("input", actionInputStr);
@@ -245,7 +240,8 @@ public class ReactAgent {
         iteration.setActionInput(actionInput);
 
         // 执行工具
-        return toolExecutor.executeTool(action, actionInput)
+        return toolExecutor
+                .executeTool(action, actionInput)
                 .map(result -> {
                     String observation = formatObservation(result);
                     iteration.setObservation(observation);
@@ -270,9 +266,7 @@ public class ReactAgent {
     private String buildReactPrompt(String input, List<AgentIteration> iterations) {
         List<ToolDefinition> tools = toolExecutor.getAvailableTools();
 
-        String toolNames = tools.stream()
-                .map(ToolDefinition::getName)
-                .collect(Collectors.joining(", "));
+        String toolNames = tools.stream().map(ToolDefinition::getName).collect(Collectors.joining(", "));
 
         String toolDescriptions = tools.stream()
                 .map(t -> String.format("- %s: %s", t.getName(), t.getDescription()))

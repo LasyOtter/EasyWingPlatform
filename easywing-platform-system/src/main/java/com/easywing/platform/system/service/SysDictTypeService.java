@@ -9,12 +9,20 @@ import java.util.List;
 
 public interface SysDictTypeService extends IService<SysDictType> {
     Page<SysDictTypeVO> selectDictTypePage(Page<SysDictType> page, SysDictTypeDTO dictTypeDTO);
+
     List<SysDictTypeVO> selectDictTypeAll();
+
     SysDictTypeVO selectDictTypeByType(String dictType);
+
     SysDictTypeVO selectDictTypeById(Long dictId);
+
     Long insertDictType(SysDictTypeDTO dictTypeDTO);
+
     int updateDictType(SysDictTypeDTO dictTypeDTO);
+
     int deleteDictTypeByIds(List<Long> dictIds);
+
     void refreshCache();
+
     boolean checkDictTypeUnique(String dictType, Long dictId);
 }

@@ -1,12 +1,11 @@
 package com.easywing.platform.ai.tool;
 
 import com.easywing.platform.ai.tool.impl.*;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.util.List;
 
 /**
  * 工具自动配置 - 注册所有内置工具
@@ -29,9 +28,7 @@ public class ToolAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public ToolInitializer toolInitializer(
-            ToolExecutor toolExecutor,
-            List<AiTool> tools) {
+    public ToolInitializer toolInitializer(ToolExecutor toolExecutor, List<AiTool> tools) {
 
         log.info("Initializing tools, found {} tool beans", tools.size());
 
@@ -49,7 +46,8 @@ public class ToolAutoConfiguration {
 
         public ToolInitializer(ToolExecutor toolExecutor) {
             this.toolExecutor = toolExecutor;
-            log.info("Tool initialization completed, {} tools available",
+            log.info(
+                    "Tool initialization completed, {} tools available",
                     toolExecutor.getAvailableTools().size());
         }
 

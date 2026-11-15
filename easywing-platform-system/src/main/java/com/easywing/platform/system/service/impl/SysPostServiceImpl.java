@@ -12,12 +12,10 @@ import com.easywing.platform.system.mapper.SysPostMapper;
 import com.easywing.platform.system.mapper.struct.PostMapper;
 import com.easywing.platform.system.service.SysPostService;
 import com.easywing.platform.system.util.PageUtil;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -40,7 +38,8 @@ public class SysPostServiceImpl extends ServiceImpl<SysPostMapper, SysPost> impl
 
     @Override
     public List<SysPostVO> selectPostAll() {
-        List<SysPost> posts = postMapper.selectList(new LambdaQueryWrapper<SysPost>().eq(SysPost::getStatus, 0).orderByAsc(SysPost::getOrderNum));
+        List<SysPost> posts = postMapper.selectList(
+                new LambdaQueryWrapper<SysPost>().eq(SysPost::getStatus, 0).orderByAsc(SysPost::getOrderNum));
         return postMapperStruct.toVOList(posts);
     }
 

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ==================== 基础设施 ====================
   
@@ -49,7 +47,8 @@ services:
     environment:
       MODE: standalone
       NACOS_AUTH_ENABLE: "true"
-      NACOS_AUTH_TOKEN: "yTZ/H+D/xJVfZLeLGi2vOg7c6lKbPDgOxRhdWf2DPZs="
+      # Nacos 3 鉴权 token，生产环境必须通过环境变量注入，勿使用默认值
+      NACOS_AUTH_TOKEN: ${NACOS_AUTH_TOKEN:-changeme}
       NACOS_AUTH_IDENTITY_KEY: serverIdentity
       NACOS_AUTH_IDENTITY_VALUE: security
       SPRING_DATASOURCE_PLATFORM: mysql

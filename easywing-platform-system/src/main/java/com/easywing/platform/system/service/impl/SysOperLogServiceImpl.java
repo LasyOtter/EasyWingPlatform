@@ -11,15 +11,13 @@ import com.easywing.platform.system.mapper.SysOperLogMapper;
 import com.easywing.platform.system.mapper.struct.OperLogMapper;
 import com.easywing.platform.system.service.SysOperLogService;
 import com.easywing.platform.system.util.PageUtil;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -44,7 +42,9 @@ public class SysOperLogServiceImpl extends ServiceImpl<SysOperLogMapper, SysOper
 
     @Override
     @Async
-    public int insertOperLog(SysOperLog operLog) { return operLogMapper.insert(operLog); }
+    public int insertOperLog(SysOperLog operLog) {
+        return operLogMapper.insert(operLog);
+    }
 
     @Override
     public int deleteOperLogByIds(List<Long> operIds) {
@@ -53,7 +53,9 @@ public class SysOperLogServiceImpl extends ServiceImpl<SysOperLogMapper, SysOper
     }
 
     @Override
-    public void cleanOperLog() { operLogMapper.delete(new LambdaQueryWrapper<>()); }
+    public void cleanOperLog() {
+        operLogMapper.delete(new LambdaQueryWrapper<>());
+    }
 
     private LambdaQueryWrapper<SysOperLog> buildQueryWrapper(SysOperLogQuery query) {
         LambdaQueryWrapper<SysOperLog> wrapper = new LambdaQueryWrapper<>();
@@ -62,7 +64,8 @@ public class SysOperLogServiceImpl extends ServiceImpl<SysOperLogMapper, SysOper
                 .like(StrUtil.isNotBlank(query.getOperName()), SysOperLog::getOperName, query.getOperName())
                 .eq(query.getStatus() != null, SysOperLog::getStatus, query.getStatus());
         if (StrUtil.isNotBlank(query.getBeginTime())) {
-            wrapper.ge(SysOperLog::getOperTime, LocalDateTime.parse(query.getBeginTime() + " 00:00:00", DATE_FORMATTER));
+            wrapper.ge(
+                    SysOperLog::getOperTime, LocalDateTime.parse(query.getBeginTime() + " 00:00:00", DATE_FORMATTER));
         }
         if (StrUtil.isNotBlank(query.getEndTime())) {
             wrapper.le(SysOperLog::getOperTime, LocalDateTime.parse(query.getEndTime() + " 23:59:59", DATE_FORMATTER));

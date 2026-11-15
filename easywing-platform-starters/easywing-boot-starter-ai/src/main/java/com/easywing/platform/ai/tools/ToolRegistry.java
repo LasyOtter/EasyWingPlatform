@@ -15,14 +15,13 @@
  */
 package com.easywing.platform.ai.tools;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationContext;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationContext;
 
 public class ToolRegistry {
 
@@ -96,8 +95,7 @@ public class ToolRegistry {
     }
 
     private String extractToolName(Class<?> clazz) {
-        dev.langchain4j.agent.tool.Tool toolAnnotation =
-            clazz.getAnnotation(dev.langchain4j.agent.tool.Tool.class);
+        dev.langchain4j.agent.tool.Tool toolAnnotation = clazz.getAnnotation(dev.langchain4j.agent.tool.Tool.class);
 
         if (toolAnnotation != null && !toolAnnotation.name().isEmpty()) {
             return toolAnnotation.name();

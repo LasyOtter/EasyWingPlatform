@@ -26,7 +26,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@ConditionalOnProperty(prefix = "easywing.ai.embedding-model", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(
+        prefix = "easywing.ai.embedding-model",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class EmbeddingModelAutoConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(EmbeddingModelAutoConfiguration.class);
@@ -35,7 +39,8 @@ public class EmbeddingModelAutoConfiguration {
     @ConditionalOnProperty(prefix = "easywing.ai.embedding-model.openai", name = "api-key")
     @ConditionalOnMissingBean
     public EmbeddingModel openAiEmbeddingModel(AiProperties properties) {
-        AiProperties.EmbeddingModel.OpenAiEmbedding config = properties.getEmbeddingModel().getOpenAi();
+        AiProperties.EmbeddingModel.OpenAiEmbedding config =
+                properties.getEmbeddingModel().getOpenAi();
         log.info("Creating OpenAI EmbeddingModel with model: {}", config.getModelName());
 
         return OpenAiEmbeddingModel.builder()
@@ -50,7 +55,8 @@ public class EmbeddingModelAutoConfiguration {
     @ConditionalOnProperty(prefix = "easywing.ai.embedding-model.qwen", name = "api-key")
     @ConditionalOnMissingBean(EmbeddingModel.class)
     public EmbeddingModel qwenEmbeddingModel(AiProperties properties) {
-        AiProperties.EmbeddingModel.QwenEmbedding config = properties.getEmbeddingModel().getQwen();
+        AiProperties.EmbeddingModel.QwenEmbedding config =
+                properties.getEmbeddingModel().getQwen();
         log.info("Creating Qwen EmbeddingModel with model: {}", config.getModelName());
 
         OpenAiEmbeddingModel.OpenAiEmbeddingModelBuilder builder = OpenAiEmbeddingModel.builder()

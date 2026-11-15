@@ -1,14 +1,12 @@
 package com.easywing.platform.ai.tool.impl;
 
-import com.easywing.platform.ai.tool.AiTool;
-import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 /**
  * 工具测试类

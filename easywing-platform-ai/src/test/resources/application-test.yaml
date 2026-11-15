@@ -1,6 +1,10 @@
 spring:
   application:
-    name: easywing-platform-ai-test
+    name: ai-service-test
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
 
 easywing:
   ai:

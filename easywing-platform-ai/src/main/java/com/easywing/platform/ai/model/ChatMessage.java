@@ -1,12 +1,13 @@
 package com.easywing.platform.ai.model;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
-import java.util.Map;
 
 @Data
 @Builder
@@ -16,8 +17,10 @@ public class ChatMessage {
 
     private String id;
 
+    @NotBlank
     private String role;
 
+    @Size(max = 100000)
     private String content;
 
     private String name;

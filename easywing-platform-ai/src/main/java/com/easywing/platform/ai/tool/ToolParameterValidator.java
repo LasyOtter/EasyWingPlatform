@@ -6,12 +6,11 @@ import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 /**
  * 工具参数验证器 - 使用 JSON Schema 验证工具参数
@@ -47,9 +46,8 @@ public class ToolParameterValidator {
                 log.debug("Tool {} parameters validated successfully", toolDef.getName());
                 return ValidationResult.valid();
             } else {
-                String errorMsg = errors.stream()
-                        .map(ValidationMessage::getMessage)
-                        .collect(Collectors.joining("; "));
+                String errorMsg =
+                        errors.stream().map(ValidationMessage::getMessage).collect(Collectors.joining("; "));
                 log.warn("Tool {} parameter validation failed: {}", toolDef.getName(), errorMsg);
                 return ValidationResult.invalid(errorMsg, errors);
             }

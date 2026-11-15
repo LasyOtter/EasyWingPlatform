@@ -1,12 +1,11 @@
 package com.easywing.platform.observability.health;
 
+import java.util.Properties;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
-
-import java.util.Properties;
 
 @Component
 public class RedisHealthIndicator implements HealthIndicator {
@@ -30,9 +29,8 @@ public class RedisHealthIndicator implements HealthIndicator {
             String pong = connectionFactory.getConnection().ping();
 
             if ("PONG".equals(pong)) {
-                Properties info = connectionFactory.getConnection()
-                        .serverCommands()
-                        .info();
+                Properties info =
+                        connectionFactory.getConnection().serverCommands().info();
 
                 if (info != null) {
                     return Health.up()
@@ -42,18 +40,12 @@ public class RedisHealthIndicator implements HealthIndicator {
                             .withDetail("uptime_in_days", info.getProperty("uptime_in_days", "unknown"))
                             .build();
                 }
-                return Health.up()
-                        .withDetail("status", "PONG")
-                        .build();
+                return Health.up().withDetail("status", "PONG").build();
             } else {
-                return Health.down()
-                        .withDetail("ping_response", pong)
-                        .build();
+                return Health.down().withDetail("ping_response", pong).build();
             }
         } catch (Exception e) {
-            return Health.down()
-                    .withException(e)
-                    .build();
+            return Health.down().withException(e).build();
         }
     }
 }

@@ -1,12 +1,11 @@
 package com.easywing.platform.ai.rag;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
-
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
 /**
  * 内存向量存储 - 用于开发和测试
@@ -21,8 +20,8 @@ public class InMemoryVectorStore implements VectorStore {
     @Override
     public Mono<String> addDocument(DocumentChunk chunk) {
         String collectionName = "default";
-        Collection collection = collections.computeIfAbsent(collectionName,
-                k -> new Collection(collectionName, 1536)); // OpenAI embedding dimension
+        Collection collection = collections.computeIfAbsent(
+                collectionName, k -> new Collection(collectionName, 1536)); // OpenAI embedding dimension
 
         collection.addChunk(chunk);
         log.debug("Added document chunk: {}", chunk.getId());
@@ -42,10 +41,7 @@ public class InMemoryVectorStore implements VectorStore {
     }
 
     @Override
-    public Mono<List<DocumentChunk>> searchWithFilter(
-            float[] queryEmbedding,
-            int topK,
-            Map<String, Object> filter) {
+    public Mono<List<DocumentChunk>> searchWithFilter(float[] queryEmbedding, int topK, Map<String, Object> filter) {
 
         String collectionName = "default";
         Collection collection = collections.get(collectionName);
@@ -72,8 +68,8 @@ public class InMemoryVectorStore implements VectorStore {
 
     @Override
     public Mono<Void> deleteDocument(String documentId) {
-        collections.values().forEach(collection ->
-                collection.getChunks().removeIf(chunk -> chunk.getDocumentId().equals(documentId)));
+        collections.values().forEach(collection -> collection.getChunks().removeIf(chunk -> chunk.getDocumentId()
+                .equals(documentId)));
         log.info("Deleted document: {}", documentId);
         return Mono.empty();
     }

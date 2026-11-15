@@ -20,13 +20,12 @@ import com.easywing.platform.core.exception.ErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 用户控制器
@@ -53,21 +52,15 @@ public class UserController {
     public ResponseEntity<UserInfo> getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
         String username = jwt.getClaimAsString("preferred_username");
         String email = jwt.getClaimAsString("email");
-        
-        UserInfo userInfo = new UserInfo(
-                jwt.getSubject(),
-                username,
-                email,
-                jwt.getClaimAsStringList("roles")
-        );
-        
+
+        UserInfo userInfo = new UserInfo(jwt.getSubject(), username, email, jwt.getClaimAsStringList("roles"));
+
         return ResponseEntity.ok(userInfo);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "根据ID获取用户", description = "根据用户ID获取用户详细信息")
-    public ResponseEntity<User> getUserById(
-            @Parameter(description = "用户ID") @PathVariable Long id) {
+    public ResponseEntity<User> getUserById(@Parameter(description = "用户ID") @PathVariable Long id) {
         User user = userStore.get(id);
         if (user == null) {
             throw new BizException(ErrorCode.RESOURCE_NOT_FOUND, "用户不存在: " + id);
@@ -92,21 +85,18 @@ public class UserController {
 
     @PutMapping("/{id}")
     @Operation(summary = "更新用户", description = "更新用户信息")
-    public ResponseEntity<User> updateUser(
-            @PathVariable Long id,
-            @RequestBody UserUpdateRequest request) {
+    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody UserUpdateRequest request) {
         User existingUser = userStore.get(id);
         if (existingUser == null) {
             throw new BizException(ErrorCode.RESOURCE_NOT_FOUND, "用户不存在: " + id);
         }
-        
+
         User updatedUser = new User(
                 id,
                 existingUser.username(),
                 request.email() != null ? request.email() : existingUser.email(),
-                request.nickname() != null ? request.nickname() : existingUser.nickname()
-        );
-        
+                request.nickname() != null ? request.nickname() : existingUser.nickname());
+
         userStore.put(id, updatedUser);
         return ResponseEntity.ok(updatedUser);
     }
@@ -124,24 +114,20 @@ public class UserController {
     /**
      * 用户信息
      */
-    public record User(Long id, String username, String email, String nickname) {
-    }
+    public record User(Long id, String username, String email, String nickname) {}
 
     /**
      * 用户信息（JWT）
      */
-    public record UserInfo(String userId, String username, String email, java.util.List<String> roles) {
-    }
+    public record UserInfo(String userId, String username, String email, java.util.List<String> roles) {}
 
     /**
      * 创建用户请求
      */
-    public record UserCreateRequest(String username, String email, String nickname) {
-    }
+    public record UserCreateRequest(String username, String email, String nickname) {}
 
     /**
      * 更新用户请求
      */
-    public record UserUpdateRequest(String email, String nickname) {
-    }
+    public record UserUpdateRequest(String email, String nickname) {}
 }

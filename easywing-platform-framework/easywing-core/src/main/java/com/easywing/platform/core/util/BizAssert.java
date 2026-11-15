@@ -17,7 +17,6 @@ package com.easywing.platform.core.util;
 
 import com.easywing.platform.core.exception.BizException;
 import com.easywing.platform.core.exception.ErrorCode;
-
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
@@ -32,8 +31,7 @@ import java.util.Objects;
  */
 public final class BizAssert {
 
-    private BizAssert() {
-    }
+    private BizAssert() {}
 
     // ==================== 通用断言 ====================
 

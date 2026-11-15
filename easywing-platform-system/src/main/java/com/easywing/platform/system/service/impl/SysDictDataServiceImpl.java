@@ -11,14 +11,13 @@ import com.easywing.platform.system.mapper.SysDictDataMapper;
 import com.easywing.platform.system.mapper.struct.DictDataMapper;
 import com.easywing.platform.system.service.SysDictDataService;
 import com.easywing.platform.system.util.PageUtil;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,8 +31,14 @@ public class SysDictDataServiceImpl extends ServiceImpl<SysDictDataMapper, SysDi
     public Page<SysDictDataVO> selectDictDataPage(Page<SysDictData> page, SysDictDataDTO dictDataDTO) {
         LambdaQueryWrapper<SysDictData> wrapper = new LambdaQueryWrapper<>();
         if (dictDataDTO != null) {
-            wrapper.like(StrUtil.isNotBlank(dictDataDTO.getDictLabel()), SysDictData::getDictLabel, dictDataDTO.getDictLabel())
-                    .eq(StrUtil.isNotBlank(dictDataDTO.getDictType()), SysDictData::getDictType, dictDataDTO.getDictType())
+            wrapper.like(
+                            StrUtil.isNotBlank(dictDataDTO.getDictLabel()),
+                            SysDictData::getDictLabel,
+                            dictDataDTO.getDictLabel())
+                    .eq(
+                            StrUtil.isNotBlank(dictDataDTO.getDictType()),
+                            SysDictData::getDictType,
+                            dictDataDTO.getDictType())
                     .eq(dictDataDTO.getStatus() != null, SysDictData::getStatus, dictDataDTO.getStatus());
         }
         wrapper.orderByAsc(SysDictData::getDictSort);
@@ -97,10 +102,14 @@ public class SysDictDataServiceImpl extends ServiceImpl<SysDictDataMapper, SysDi
     }
 
     @Override
-    public String getDictLabel(String dictType, String dictValue) { return dictDataMapper.selectDictLabel(dictType, dictValue); }
+    public String getDictLabel(String dictType, String dictValue) {
+        return dictDataMapper.selectDictLabel(dictType, dictValue);
+    }
 
     @Override
     public List<String> getDictValues(String dictType) {
-        return selectDictDataByType(dictType).stream().map(SysDictDataVO::getDictValue).collect(Collectors.toList());
+        return selectDictDataByType(dictType).stream()
+                .map(SysDictDataVO::getDictValue)
+                .collect(Collectors.toList());
     }
 }

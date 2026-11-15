@@ -9,8 +9,12 @@ import java.util.List;
 
 public interface SysOperLogService extends IService<SysOperLog> {
     Page<SysOperLogVO> selectOperLogPage(Page<SysOperLog> page, SysOperLogQuery query);
+
     SysOperLogVO selectOperLogById(Long operId);
+
     int insertOperLog(SysOperLog operLog);
+
     int deleteOperLogByIds(List<Long> operIds);
+
     void cleanOperLog();
 }

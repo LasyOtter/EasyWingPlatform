@@ -10,23 +10,24 @@ import com.easywing.platform.system.domain.vo.SysUserVO;
 import com.easywing.platform.system.enums.BusinessType;
 import com.easywing.platform.system.service.SysUserService;
 import com.easywing.platform.web.idempotent.Idempotent;
+import com.easywing.platform.web.version.ApiVersion;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/system/users")
 @Tag(name = "用户管理")
+@ApiVersion("v1")
 @RequiredArgsConstructor
 @Validated
 public class SysUserController {

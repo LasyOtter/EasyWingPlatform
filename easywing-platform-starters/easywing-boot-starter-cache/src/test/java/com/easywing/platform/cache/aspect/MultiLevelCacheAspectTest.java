@@ -15,9 +15,13 @@
  */
 package com.easywing.platform.cache.aspect;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import com.easywing.platform.cache.annotation.MultiLevelCache;
 import com.easywing.platform.cache.properties.CacheProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.lang.reflect.Method;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,11 +36,6 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
-
-import java.lang.reflect.Method;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 /**
  * 多级缓存切面测试
@@ -81,12 +80,11 @@ class MultiLevelCacheAspectTest {
         Method method = MultiLevelCacheAspectTest.class.getDeclaredMethod("cacheMethod", Long.class);
         when(joinPoint.getSignature()).thenReturn(signature);
         when(signature.getMethod()).thenReturn(method);
-        when(joinPoint.getArgs()).thenReturn(new Object[]{123L});
+        when(joinPoint.getArgs()).thenReturn(new Object[] {123L});
     }
 
     @SuppressWarnings("unused")
-    public void cacheMethod(Long userId) {
-    }
+    public void cacheMethod(Long userId) {}
 
     @Test
     @DisplayName("测试本地缓存命中")
@@ -95,7 +93,7 @@ class MultiLevelCacheAspectTest {
         MultiLevelCache annotation = createAnnotation("user", "#userId", 60, 300, false);
         Object cachedValue = new Object();
         Cache.ValueWrapper wrapper = mock(Cache.ValueWrapper.class);
-        
+
         when(localCacheManager.getCache("user")).thenReturn(localCache);
         when(localCache.get("123")).thenReturn(wrapper);
         when(wrapper.get()).thenReturn(cachedValue);
@@ -115,7 +113,7 @@ class MultiLevelCacheAspectTest {
         MultiLevelCache annotation = createAnnotation("user", "#userId", 60, 300, false);
         String jsonValue = "{\"id\":123,\"name\":\"test\"}";
         Object deserializedValue = new Object();
-        
+
         when(localCacheManager.getCache("user")).thenReturn(localCache);
         when(localCache.get("123")).thenReturn(null);
         when(valueOperations.get("easywing:user:123")).thenReturn(jsonValue);
@@ -136,7 +134,7 @@ class MultiLevelCacheAspectTest {
         // 准备测试数据
         MultiLevelCache annotation = createAnnotation("user", "#userId", 60, 300, false);
         Object methodResult = new Object();
-        
+
         when(localCacheManager.getCache("user")).thenReturn(localCache);
         when(localCache.get("123")).thenReturn(null);
         when(valueOperations.get("easywing:user:123")).thenReturn(null);
@@ -158,7 +156,7 @@ class MultiLevelCacheAspectTest {
     void testDoNotCacheNull() throws Throwable {
         // 准备测试数据
         MultiLevelCache annotation = createAnnotation("user", "#userId", 60, 300, false);
-        
+
         when(localCacheManager.getCache("user")).thenReturn(localCache);
         when(localCache.get("123")).thenReturn(null);
         when(valueOperations.get("easywing:user:123")).thenReturn(null);
@@ -178,7 +176,7 @@ class MultiLevelCacheAspectTest {
     void testCacheNull() throws Throwable {
         // 准备测试数据
         MultiLevelCache annotation = createAnnotation("user", "#userId", 60, 300, true);
-        
+
         when(localCacheManager.getCache("user")).thenReturn(localCache);
         when(localCache.get("123")).thenReturn(null);
         when(valueOperations.get("easywing:user:123")).thenReturn(null);
@@ -194,7 +192,8 @@ class MultiLevelCacheAspectTest {
         verify(valueOperations).set(eq("easywing:user:123"), anyString(), eq(300L), any());
     }
 
-    private MultiLevelCache createAnnotation(String value, String key, int localExpire, int redisExpire, boolean cacheNull) {
+    private MultiLevelCache createAnnotation(
+            String value, String key, int localExpire, int redisExpire, boolean cacheNull) {
         return new MultiLevelCache() {
             @Override
             public String value() {

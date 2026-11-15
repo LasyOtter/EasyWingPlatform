@@ -17,14 +17,12 @@ package com.easywing.platform.ai.agent;
 
 import com.easywing.platform.ai.tools.ToolRegistry;
 import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.service.AiServices;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AgentService {
 

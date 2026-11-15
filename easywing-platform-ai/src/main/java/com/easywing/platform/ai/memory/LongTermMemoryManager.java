@@ -3,6 +3,10 @@ package com.easywing.platform.ai.memory;
 import com.easywing.platform.ai.rag.DocumentChunk;
 import com.easywing.platform.ai.rag.EmbeddingService;
 import com.easywing.platform.ai.rag.VectorStore;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,11 +14,6 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 长期记忆管理器 - 跨会话的知识积累
@@ -38,25 +37,23 @@ public class LongTermMemoryManager {
      * 保存到长期记忆
      */
     public Mono<String> save(LongTermMemory memory) {
-        log.info("Saving long-term memory for user: {}, type: {}",
-                memory.getUserId(), memory.getType());
+        log.info("Saving long-term memory for user: {}, type: {}", memory.getUserId(), memory.getType());
 
-        return embeddingService.embed(memory.getContent())
-                .flatMap(embedding -> {
-                    DocumentChunk chunk = DocumentChunk.builder()
-                            .id(UUID.randomUUID().toString())
-                            .documentId(memory.getUserId())
-                            .title(memory.getTitle())
-                            .content(memory.getContent())
-                            .embedding(embedding)
-                            .metadata(buildMetadata(memory))
-                            .createdAt(System.currentTimeMillis())
-                            .source(memory.getSource())
-                            .tags(memory.getTags())
-                            .build();
+        return embeddingService.embed(memory.getContent()).flatMap(embedding -> {
+            DocumentChunk chunk = DocumentChunk.builder()
+                    .id(UUID.randomUUID().toString())
+                    .documentId(memory.getUserId())
+                    .title(memory.getTitle())
+                    .content(memory.getContent())
+                    .embedding(embedding)
+                    .metadata(buildMetadata(memory))
+                    .createdAt(System.currentTimeMillis())
+                    .source(memory.getSource())
+                    .tags(memory.getTags())
+                    .build();
 
-                    return vectorStore.addDocument(chunk);
-                });
+            return vectorStore.addDocument(chunk);
+        });
     }
 
     /**
@@ -74,39 +71,27 @@ public class LongTermMemoryManager {
     public Mono<List<LongTermMemory>> retrieve(String userId, String query, int topK) {
         log.info("Retrieving memories for user: {}, query: {}", userId, query);
 
-        return embeddingService.embed(query)
-                .flatMap(embedding ->
-                    vectorStore.searchWithFilter(embedding, topK,
-                        Map.of("userId", userId))
-                )
-                .map(chunks -> chunks.stream()
-                        .map(this::chunkToMemory)
-                        .collect(Collectors.toList())
-                );
+        return embeddingService
+                .embed(query)
+                .flatMap(embedding -> vectorStore.searchWithFilter(embedding, topK, Map.of("userId", userId)))
+                .map(chunks -> chunks.stream().map(this::chunkToMemory).collect(Collectors.toList()));
     }
 
     /**
      * 按类型检索
      */
-    public Mono<List<LongTermMemory>> retrieveByType(
-            String userId,
-            MemoryType type,
-            int limit) {
+    public Mono<List<LongTermMemory>> retrieveByType(String userId, MemoryType type, int limit) {
 
         log.info("Retrieving memories by type for user: {}, type: {}", userId, type);
 
         // 使用一个通用查询来检索该类型的记忆
         String typeQuery = getTypeQuery(type);
 
-        return embeddingService.embed(typeQuery)
+        return embeddingService
+                .embed(typeQuery)
                 .flatMap(embedding ->
-                    vectorStore.searchWithFilter(embedding, limit,
-                        Map.of("userId", userId, "type", type.name()))
-                )
-                .map(chunks -> chunks.stream()
-                        .map(this::chunkToMemory)
-                        .collect(Collectors.toList())
-                );
+                        vectorStore.searchWithFilter(embedding, limit, Map.of("userId", userId, "type", type.name())))
+                .map(chunks -> chunks.stream().map(this::chunkToMemory).collect(Collectors.toList()));
     }
 
     /**
@@ -137,9 +122,7 @@ public class LongTermMemoryManager {
     /**
      * 记忆摘要 - 定期整理和压缩记忆
      */
-    public Mono<List<LongTermMemory>> summarizeMemories(
-            String userId,
-            LocalDateTime since) {
+    public Mono<List<LongTermMemory>> summarizeMemories(String userId, LocalDateTime since) {
 
         log.info("Summarizing memories for user: {} since: {}", userId, since);
 
@@ -150,9 +133,7 @@ public class LongTermMemoryManager {
     /**
      * 智能记忆增强 - 从对话中提取值得记住的信息
      */
-    public Mono<List<LongTermMemory>> extractMemoriesFromConversation(
-            String userId,
-            String conversationText) {
+    public Mono<List<LongTermMemory>> extractMemoriesFromConversation(String userId, String conversationText) {
 
         log.info("Extracting memories from conversation for user: {}", userId);
 

@@ -4,12 +4,11 @@ import com.easywing.platform.ai.skill.SkillContext;
 import com.easywing.platform.ai.skill.SkillExecutor;
 import com.easywing.platform.ai.skill.SkillResult;
 import com.easywing.platform.ai.tool.ToolExecutor;
+import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.util.*;
 
 /**
  * 信息检索技能 - 从多个来源检索和聚合信息
@@ -45,7 +44,8 @@ public class InformationRetrievalSkill implements SkillExecutor {
                     toolArgs.put("url", url);
                     toolArgs.put("method", method);
 
-                    return toolExecutor.executeTool("http_request", toolArgs)
+                    return toolExecutor
+                            .executeTool("http_request", toolArgs)
                             .doOnSuccess(r -> toolsUsed.add("http_request"));
                 })
                 .collectList()
@@ -71,11 +71,7 @@ public class InformationRetrievalSkill implements SkillExecutor {
                         aggregatedResult.put("errors", errors);
                     }
 
-                    String message = String.format(
-                            "检索完成: %d/%d 成功",
-                            successResults.size(),
-                            urls.size()
-                    );
+                    String message = String.format("检索完成: %d/%d 成功", successResults.size(), urls.size());
 
                     SkillResult skillResult = SkillResult.success(aggregatedResult, message);
                     skillResult.setToolsUsed(toolsUsed);

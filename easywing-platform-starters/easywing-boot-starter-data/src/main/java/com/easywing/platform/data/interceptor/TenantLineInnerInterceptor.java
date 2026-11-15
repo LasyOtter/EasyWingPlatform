@@ -15,16 +15,14 @@
  */
 package com.easywing.platform.data.interceptor;
 
-import com.baomidou.mybatisplus.core.plugins.InterceptorIgnoreHelper;
 import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
 import com.easywing.platform.data.properties.DataProperties;
 import com.easywing.platform.data.tenant.TenantContext;
+import java.util.HashSet;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.LongValue;
-
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * 多租户SQL拦截处理器

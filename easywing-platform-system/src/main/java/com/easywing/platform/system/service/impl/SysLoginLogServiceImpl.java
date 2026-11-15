@@ -11,14 +11,12 @@ import com.easywing.platform.system.mapper.SysLoginLogMapper;
 import com.easywing.platform.system.mapper.struct.LoginLogMapper;
 import com.easywing.platform.system.service.SysLoginLogService;
 import com.easywing.platform.system.util.PageUtil;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -42,7 +40,9 @@ public class SysLoginLogServiceImpl extends ServiceImpl<SysLoginLogMapper, SysLo
     }
 
     @Override
-    public int insertLoginLog(SysLoginLog loginLog) { return loginLogMapper.insert(loginLog); }
+    public int insertLoginLog(SysLoginLog loginLog) {
+        return loginLogMapper.insert(loginLog);
+    }
 
     @Override
     public int deleteLoginLogByIds(List<Long> infoIds) {
@@ -51,7 +51,9 @@ public class SysLoginLogServiceImpl extends ServiceImpl<SysLoginLogMapper, SysLo
     }
 
     @Override
-    public void cleanLoginLog() { loginLogMapper.delete(new LambdaQueryWrapper<>()); }
+    public void cleanLoginLog() {
+        loginLogMapper.delete(new LambdaQueryWrapper<>());
+    }
 
     private LambdaQueryWrapper<SysLoginLog> buildQueryWrapper(SysLoginLogQuery query) {
         LambdaQueryWrapper<SysLoginLog> wrapper = new LambdaQueryWrapper<>();
@@ -59,10 +61,12 @@ public class SysLoginLogServiceImpl extends ServiceImpl<SysLoginLogMapper, SysLo
         wrapper.like(StrUtil.isNotBlank(query.getUsername()), SysLoginLog::getUsername, query.getUsername())
                 .eq(query.getStatus() != null, SysLoginLog::getStatus, query.getStatus());
         if (StrUtil.isNotBlank(query.getBeginTime())) {
-            wrapper.ge(SysLoginLog::getLoginTime, LocalDateTime.parse(query.getBeginTime() + " 00:00:00", DATE_FORMATTER));
+            wrapper.ge(
+                    SysLoginLog::getLoginTime, LocalDateTime.parse(query.getBeginTime() + " 00:00:00", DATE_FORMATTER));
         }
         if (StrUtil.isNotBlank(query.getEndTime())) {
-            wrapper.le(SysLoginLog::getLoginTime, LocalDateTime.parse(query.getEndTime() + " 23:59:59", DATE_FORMATTER));
+            wrapper.le(
+                    SysLoginLog::getLoginTime, LocalDateTime.parse(query.getEndTime() + " 23:59:59", DATE_FORMATTER));
         }
         return wrapper.orderByDesc(SysLoginLog::getLoginTime);
     }

@@ -1,12 +1,11 @@
 package com.easywing.platform.ai.multiagent;
 
 import com.easywing.platform.ai.agent.AgentResponse;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
 
 /**
  * 多 Agent 响应

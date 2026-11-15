@@ -17,7 +17,7 @@
 `docker-compose.yml` 与 `easywing-platform-samples/docker-compose.yml` 已更新：
 
 - 镜像升级到 `v3.3.0`。
-- 增加 `8080:8080` 控制台端口。
+- 增加 `8081:8080` 控制台端口（宿主机 `8080` 保留给 API 网关）。
 - 增加认证环境变量，`NACOS_AUTH_TOKEN` 为 Base64 编码、解码后 32 字节的密钥。
 
 ## 数据库升级步骤
@@ -36,7 +36,7 @@
 
 ## 验证
 
-- 控制台：`http://localhost:8080`（首次访问需初始化管理员密码）。
+- 控制台：`http://localhost:8081`（首次访问需初始化管理员密码）。
 - 客户端注册：`8848`。
 - 确认 `spring-cloud-alibaba` 的 `nacos-client 3.0.3` 能正常注册与拉取配置。
 

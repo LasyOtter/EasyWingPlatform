@@ -21,6 +21,10 @@ import static org.mockito.Mockito.when;
 
 import com.easywing.platform.data.datascope.DataScopeContext;
 import com.easywing.platform.data.properties.DataProperties;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
@@ -37,11 +41,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * DataScopeInterceptor 单元测试
@@ -115,8 +114,8 @@ class DataScopeInterceptorTest {
     @Test
     @DisplayName("超级管理员-跳过数据权限")
     void beforeQuery_AdminUser() {
-        DataScopeInterceptor.DataScopeInfo adminInfo = createDataScopeInfo(
-                1L, 100L, DataScopeInterceptor.DataScopeType.ALL, true, null, null);
+        DataScopeInterceptor.DataScopeInfo adminInfo =
+                createDataScopeInfo(1L, 100L, DataScopeInterceptor.DataScopeType.ALL, true, null, null);
         when(dataScopeHandler.getDataScopeInfo()).thenReturn(adminInfo);
 
         String originalSql = "SELECT * FROM sys_user WHERE status = 0";
@@ -130,8 +129,8 @@ class DataScopeInterceptorTest {
     @Test
     @DisplayName("全部数据权限-不需要过滤")
     void beforeQuery_AllDataScope() {
-        DataScopeInterceptor.DataScopeInfo allScopeInfo = createDataScopeInfo(
-                1L, 100L, DataScopeInterceptor.DataScopeType.ALL, false, null, null);
+        DataScopeInterceptor.DataScopeInfo allScopeInfo =
+                createDataScopeInfo(1L, 100L, DataScopeInterceptor.DataScopeType.ALL, false, null, null);
         when(dataScopeHandler.getDataScopeInfo()).thenReturn(allScopeInfo);
 
         String originalSql = "SELECT * FROM sys_user WHERE status = 0";
@@ -145,8 +144,8 @@ class DataScopeInterceptorTest {
     @Test
     @DisplayName("仅本人权限-添加create_by过滤")
     void beforeQuery_SelfOnly() {
-        DataScopeInterceptor.DataScopeInfo selfOnlyInfo = createDataScopeInfo(
-                1L, 100L, DataScopeInterceptor.DataScopeType.SELF_ONLY, false, null, null);
+        DataScopeInterceptor.DataScopeInfo selfOnlyInfo =
+                createDataScopeInfo(1L, 100L, DataScopeInterceptor.DataScopeType.SELF_ONLY, false, null, null);
         when(dataScopeHandler.getDataScopeInfo()).thenReturn(selfOnlyInfo);
 
         String originalSql = "SELECT * FROM sys_user WHERE status = 0";
@@ -161,8 +160,8 @@ class DataScopeInterceptorTest {
     @Test
     @DisplayName("本部门权限-添加dept_id过滤")
     void beforeQuery_DeptOnly() {
-        DataScopeInterceptor.DataScopeInfo deptOnlyInfo = createDataScopeInfo(
-                1L, 100L, DataScopeInterceptor.DataScopeType.DEPT_ONLY, false, null, null);
+        DataScopeInterceptor.DataScopeInfo deptOnlyInfo =
+                createDataScopeInfo(1L, 100L, DataScopeInterceptor.DataScopeType.DEPT_ONLY, false, null, null);
         when(dataScopeHandler.getDataScopeInfo()).thenReturn(deptOnlyInfo);
 
         String originalSql = "SELECT * FROM sys_user WHERE status = 0";
@@ -178,8 +177,7 @@ class DataScopeInterceptorTest {
     @DisplayName("本部门及以下权限-添加dept_id IN过滤")
     void beforeQuery_DeptAndChild() {
         DataScopeInterceptor.DataScopeInfo deptAndChildInfo = createDataScopeInfo(
-                1L, 100L, DataScopeInterceptor.DataScopeType.DEPT_AND_CHILD, false,
-                Set.of(101L, 102L), null);
+                1L, 100L, DataScopeInterceptor.DataScopeType.DEPT_AND_CHILD, false, Set.of(101L, 102L), null);
         when(dataScopeHandler.getDataScopeInfo()).thenReturn(deptAndChildInfo);
 
         String originalSql = "SELECT * FROM sys_user WHERE status = 0";
@@ -195,8 +193,7 @@ class DataScopeInterceptorTest {
     @DisplayName("自定义权限-添加dept_id IN过滤")
     void beforeQuery_Custom() {
         DataScopeInterceptor.DataScopeInfo customInfo = createDataScopeInfo(
-                1L, 100L, DataScopeInterceptor.DataScopeType.CUSTOM, false,
-                null, List.of(201L, 202L));
+                1L, 100L, DataScopeInterceptor.DataScopeType.CUSTOM, false, null, List.of(201L, 202L));
         when(dataScopeHandler.getDataScopeInfo()).thenReturn(customInfo);
 
         String originalSql = "SELECT * FROM sys_user WHERE status = 0";
@@ -211,9 +208,8 @@ class DataScopeInterceptorTest {
     @Test
     @DisplayName("自定义权限无部门-降级为仅本人")
     void beforeQuery_CustomNoDepts_FallbackToSelfOnly() {
-        DataScopeInterceptor.DataScopeInfo customInfo = createDataScopeInfo(
-                1L, 100L, DataScopeInterceptor.DataScopeType.CUSTOM, false,
-                null, List.of());
+        DataScopeInterceptor.DataScopeInfo customInfo =
+                createDataScopeInfo(1L, 100L, DataScopeInterceptor.DataScopeType.CUSTOM, false, null, List.of());
         when(dataScopeHandler.getDataScopeInfo()).thenReturn(customInfo);
 
         String originalSql = "SELECT * FROM sys_user WHERE status = 0";
@@ -228,8 +224,8 @@ class DataScopeInterceptorTest {
     @Test
     @DisplayName("无WHERE子句的SQL-添加WHERE条件")
     void beforeQuery_NoWhereClause() {
-        DataScopeInterceptor.DataScopeInfo selfOnlyInfo = createDataScopeInfo(
-                1L, 100L, DataScopeInterceptor.DataScopeType.SELF_ONLY, false, null, null);
+        DataScopeInterceptor.DataScopeInfo selfOnlyInfo =
+                createDataScopeInfo(1L, 100L, DataScopeInterceptor.DataScopeType.SELF_ONLY, false, null, null);
         when(dataScopeHandler.getDataScopeInfo()).thenReturn(selfOnlyInfo);
 
         String originalSql = "SELECT * FROM sys_user";
@@ -245,8 +241,8 @@ class DataScopeInterceptorTest {
     @Test
     @DisplayName("更新语句-添加数据权限过滤")
     void beforeUpdate_UpdateStatement() {
-        DataScopeInterceptor.DataScopeInfo selfOnlyInfo = createDataScopeInfo(
-                1L, 100L, DataScopeInterceptor.DataScopeType.SELF_ONLY, false, null, null);
+        DataScopeInterceptor.DataScopeInfo selfOnlyInfo =
+                createDataScopeInfo(1L, 100L, DataScopeInterceptor.DataScopeType.SELF_ONLY, false, null, null);
         when(dataScopeHandler.getDataScopeInfo()).thenReturn(selfOnlyInfo);
 
         String originalSql = "UPDATE sys_user SET status = 1 WHERE status = 0";
@@ -262,8 +258,8 @@ class DataScopeInterceptorTest {
     @Test
     @DisplayName("删除语句-添加数据权限过滤")
     void beforeUpdate_DeleteStatement() {
-        DataScopeInterceptor.DataScopeInfo deptOnlyInfo = createDataScopeInfo(
-                1L, 100L, DataScopeInterceptor.DataScopeType.DEPT_ONLY, false, null, null);
+        DataScopeInterceptor.DataScopeInfo deptOnlyInfo =
+                createDataScopeInfo(1L, 100L, DataScopeInterceptor.DataScopeType.DEPT_ONLY, false, null, null);
         when(dataScopeHandler.getDataScopeInfo()).thenReturn(deptOnlyInfo);
 
         String originalSql = "DELETE FROM sys_user WHERE status = 0";
@@ -280,14 +276,14 @@ class DataScopeInterceptorTest {
     @DisplayName("注入风险字段-校验列名")
     void beforeQuery_SqlInjectionColumnNameRejected() {
         when(dataProperties.getDeptIdColumn()).thenReturn("dept_id OR 1=1");
-        DataScopeInterceptor.DataScopeInfo deptOnlyInfo = createDataScopeInfo(
-                1L, 100L, DataScopeInterceptor.DataScopeType.DEPT_ONLY, false, null, null);
+        DataScopeInterceptor.DataScopeInfo deptOnlyInfo =
+                createDataScopeInfo(1L, 100L, DataScopeInterceptor.DataScopeType.DEPT_ONLY, false, null, null);
         when(dataScopeHandler.getDataScopeInfo()).thenReturn(deptOnlyInfo);
 
         BoundSql boundSql = createBoundSql("SELECT * FROM sys_user WHERE status = 0");
 
         assertThatThrownBy(() -> interceptor.beforeQuery(
-                executor, mappedStatement, null, RowBounds.DEFAULT, resultHandler, boundSql))
+                        executor, mappedStatement, null, RowBounds.DEFAULT, resultHandler, boundSql))
                 .isInstanceOf(DataScopeSqlException.class)
                 .hasMessageContaining("Invalid data scope column name");
     }
@@ -304,8 +300,12 @@ class DataScopeInterceptorTest {
     }
 
     private DataScopeInterceptor.DataScopeInfo createDataScopeInfo(
-            Long userId, Long deptId, DataScopeInterceptor.DataScopeType dataScope,
-            boolean isAdmin, Set<Long> childDeptIds, List<Long> customDeptIds) {
+            Long userId,
+            Long deptId,
+            DataScopeInterceptor.DataScopeType dataScope,
+            boolean isAdmin,
+            Set<Long> childDeptIds,
+            List<Long> customDeptIds) {
         return new DataScopeInterceptor.DataScopeInfo() {
             @Override
             public Long getUserId() {

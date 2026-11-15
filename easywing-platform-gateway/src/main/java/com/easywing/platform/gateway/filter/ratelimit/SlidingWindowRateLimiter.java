@@ -29,25 +29,26 @@ import org.springframework.stereotype.Component;
 @Component
 public class SlidingWindowRateLimiter implements RedisScript<Long> {
 
-    private static final String SCRIPT = """
+    private static final String SCRIPT =
+            """
             local key = KEYS[1]
             local limit = tonumber(ARGV[1])
             local window = tonumber(ARGV[2])
             local now = tonumber(ARGV[3])
-            
+
             -- 清理过期数据
             local clearBefore = now - window * 1000
             redis.call('ZREMRANGEBYSCORE', key, 0, clearBefore)
-            
+
             -- 获取当前窗口内的请求数
             local count = redis.call('ZCARD', key)
-            
+
             if count < limit then
                 redis.call('ZADD', key, now, now .. '-' .. math.random())
                 redis.call('PEXPIRE', key, window * 1000 + 1000)
                 return limit - count - 1
             end
-            
+
             return -1
             """;
 

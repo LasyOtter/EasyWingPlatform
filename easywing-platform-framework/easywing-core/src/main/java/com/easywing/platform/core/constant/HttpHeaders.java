@@ -23,8 +23,7 @@ package com.easywing.platform.core.constant;
  */
 public final class HttpHeaders {
 
-    private HttpHeaders() {
-    }
+    private HttpHeaders() {}
 
     // ==================== 标准 HTTP 头 ====================
     public static final String CONTENT_TYPE = "Content-Type";

@@ -4,15 +4,13 @@ import com.easywing.platform.ai.config.AiProperties;
 import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.model.ConversationContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 
 @Slf4j
 @Component
@@ -25,9 +23,7 @@ public class RedisMemoryManager implements MemoryManager {
     private final AiProperties properties;
 
     public RedisMemoryManager(
-            ReactiveRedisTemplate<String, String> redisTemplate,
-            ObjectMapper objectMapper,
-            AiProperties properties) {
+            ReactiveRedisTemplate<String, String> redisTemplate, ObjectMapper objectMapper, AiProperties properties) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
         this.properties = properties;
@@ -36,7 +32,9 @@ public class RedisMemoryManager implements MemoryManager {
     @Override
     public Mono<ConversationContext> getContext(String conversationId) {
         String key = KEY_PREFIX + conversationId;
-        return redisTemplate.opsForValue().get(key)
+        return redisTemplate
+                .opsForValue()
+                .get(key)
                 .flatMap(json -> {
                     try {
                         ConversationContext context = objectMapper.readValue(json, ConversationContext.class);
@@ -78,12 +76,11 @@ public class RedisMemoryManager implements MemoryManager {
 
     @Override
     public Mono<ConversationContext> addMessage(String conversationId, ChatMessage message) {
-        return getContext(conversationId)
-                .flatMap(context -> {
-                    context.getMessages().add(message);
-                    context.setMessageCount(context.getMessages().size());
-                    context.setUpdatedAt(Instant.now().toEpochMilli());
-                    return saveContext(context);
-                });
+        return getContext(conversationId).flatMap(context -> {
+            context.getMessages().add(message);
+            context.setMessageCount(context.getMessages().size());
+            context.setUpdatedAt(Instant.now().toEpochMilli());
+            return saveContext(context);
+        });
     }
 }

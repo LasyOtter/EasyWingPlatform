@@ -24,7 +24,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(agentWebSocketHandler, "/ws/agent")
-                .setAllowedOrigins(properties.getWebsocket().getAllowedOrigins()
-                        .toArray(new String[0]));
+                .setAllowedOrigins(properties.getWebsocket().getAllowedOrigins().toArray(new String[0]));
     }
 }

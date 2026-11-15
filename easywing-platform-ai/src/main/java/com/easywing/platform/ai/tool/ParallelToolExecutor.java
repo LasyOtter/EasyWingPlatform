@@ -1,15 +1,15 @@
 package com.easywing.platform.ai.tool;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
+import jakarta.validation.constraints.NotBlank;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * 并行工具执行器 - 同时执行多个工具调用
@@ -41,7 +41,8 @@ public class ParallelToolExecutor {
         return Flux.fromIterable(toolCalls)
                 .flatMap(toolCall -> {
                     log.debug("Executing tool in parallel: {}", toolCall.getToolName());
-                    return toolExecutor.executeTool(toolCall.getToolName(), toolCall.getArguments())
+                    return toolExecutor
+                            .executeTool(toolCall.getToolName(), toolCall.getArguments())
                             .map(result -> {
                                 if (Boolean.TRUE.equals(result.get("success"))) {
                                     successCount.incrementAndGet();
@@ -72,43 +73,45 @@ public class ParallelToolExecutor {
                 .collectList()
                 .doOnSuccess(results -> {
                     long totalTime = System.currentTimeMillis() - startTime;
-                    log.info("Parallel execution completed: {} tools, {} succeeded, {} failed, total time: {}ms",
-                            toolCalls.size(), successCount.get(), failureCount.get(), totalTime);
+                    log.info(
+                            "Parallel execution completed: {} tools, {} succeeded, {} failed, total time: {}ms",
+                            toolCalls.size(),
+                            successCount.get(),
+                            failureCount.get(),
+                            totalTime);
                 });
     }
 
     /**
      * 并行执行，带最大并发数限制
      */
-    public Mono<List<ToolExecutionResult>> executeParallelWithLimit(
-            List<ToolCall> toolCalls,
-            int maxConcurrency) {
+    public Mono<List<ToolExecutionResult>> executeParallelWithLimit(List<ToolCall> toolCalls, int maxConcurrency) {
 
         if (toolCalls == null || toolCalls.isEmpty()) {
             return Mono.just(List.of());
         }
 
-        log.info("Executing {} tools in parallel with max concurrency: {}",
-                toolCalls.size(), maxConcurrency);
+        log.info("Executing {} tools in parallel with max concurrency: {}", toolCalls.size(), maxConcurrency);
 
         return Flux.fromIterable(toolCalls)
-                .flatMap(toolCall ->
-                    toolExecutor.executeTool(toolCall.getToolName(), toolCall.getArguments())
-                            .map(result -> ToolExecutionResult.builder()
-                                    .toolName(toolCall.getToolName())
-                                    .callId(toolCall.getCallId())
-                                    .arguments(toolCall.getArguments())
-                                    .result(result)
-                                    .success(Boolean.TRUE.equals(result.get("success")))
-                                    .build())
-                            .onErrorResume(e -> Mono.just(ToolExecutionResult.builder()
-                                    .toolName(toolCall.getToolName())
-                                    .callId(toolCall.getCallId())
-                                    .success(false)
-                                    .error(e.getMessage())
-                                    .build())),
-                    maxConcurrency  // 限制并发数
-                )
+                .flatMap(
+                        toolCall -> toolExecutor
+                                .executeTool(toolCall.getToolName(), toolCall.getArguments())
+                                .map(result -> ToolExecutionResult.builder()
+                                        .toolName(toolCall.getToolName())
+                                        .callId(toolCall.getCallId())
+                                        .arguments(toolCall.getArguments())
+                                        .result(result)
+                                        .success(Boolean.TRUE.equals(result.get("success")))
+                                        .build())
+                                .onErrorResume(e -> Mono.just(ToolExecutionResult.builder()
+                                        .toolName(toolCall.getToolName())
+                                        .callId(toolCall.getCallId())
+                                        .success(false)
+                                        .error(e.getMessage())
+                                        .build())),
+                        maxConcurrency // 限制并发数
+                        )
                 .collectList();
     }
 
@@ -129,8 +132,7 @@ public class ParallelToolExecutor {
         return Flux.fromIterable(analysis.getBatches())
                 .concatMap(batch -> {
                     log.info("Executing batch of {} tools", batch.size());
-                    return executeParallel(batch)
-                            .doOnSuccess(allResults::addAll);
+                    return executeParallel(batch).doOnSuccess(allResults::addAll);
                 })
                 .then(Mono.just(allResults));
     }
@@ -183,10 +185,13 @@ public class ParallelToolExecutor {
     @lombok.NoArgsConstructor
     @lombok.AllArgsConstructor
     public static class ToolCall {
-        private String callId;           // 调用 ID（用于追踪）
-        private String toolName;         // 工具名称
-        private Map<String, Object> arguments;  // 参数
-        private List<String> dependsOn;  // 依赖的其他调用 ID
+        private String callId; // 调用 ID（用于追踪）
+
+        @NotBlank
+        private String toolName; // 工具名称
+
+        private Map<String, Object> arguments; // 参数
+        private List<String> dependsOn; // 依赖的其他调用 ID
     }
 
     /**

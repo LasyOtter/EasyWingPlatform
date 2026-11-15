@@ -63,7 +63,8 @@ public class MyBatisPlusConfig {
         paginationInnerInterceptor.setMaxLimit(dataProperties.getPagination().getMaxLimit());
         paginationInnerInterceptor.setOverflow(dataProperties.getPagination().isOverflow());
         interceptor.addInnerInterceptor(paginationInnerInterceptor);
-        log.info("MyBatis-Plus pagination plugin configured: maxLimit={}, overflow={}",
+        log.info(
+                "MyBatis-Plus pagination plugin configured: maxLimit={}, overflow={}",
                 dataProperties.getPagination().getMaxLimit(),
                 dataProperties.getPagination().isOverflow());
 
@@ -86,7 +87,11 @@ public class MyBatisPlusConfig {
      * 仅在未配置其他MetaObjectHandler时生效
      */
     @Bean
-    @ConditionalOnProperty(prefix = "easywing.data", name = "audit-enabled", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(
+            prefix = "easywing.data",
+            name = "audit-enabled",
+            havingValue = "true",
+            matchIfMissing = true)
     public MetaObjectHandler auditMetaObjectHandler(DataProperties properties) {
         return new com.easywing.platform.data.handler.AuditMetaObjectHandler(properties);
     }

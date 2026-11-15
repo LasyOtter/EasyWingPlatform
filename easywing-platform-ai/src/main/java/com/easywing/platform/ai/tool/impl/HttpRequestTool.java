@@ -1,6 +1,16 @@
 package com.easywing.platform.ai.tool.impl;
 
 import com.easywing.platform.ai.tool.AiTool;
+import java.io.ByteArrayOutputStream;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
@@ -13,17 +23,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.io.ByteArrayOutputStream;
-import java.net.InetAddress;
-import java.net.URI;
-import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-
 /**
  * HTTP 请求工具 - 发送 HTTP 请求
  */
@@ -35,8 +34,8 @@ public class HttpRequestTool implements AiTool {
     private static final int TIMEOUT_SECONDS = 30;
     private static final int MAX_RESPONSE_SIZE = 1024 * 1024; // 1MB
     private static final Set<String> ALLOWED_METHODS = Set.of("GET", "POST", "PUT", "DELETE");
-    private static final Set<String> BLOCKED_HOST_NAMES = Set.of(
-            "localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]", "metadata.google.internal");
+    private static final Set<String> BLOCKED_HOST_NAMES =
+            Set.of("localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]", "metadata.google.internal");
 
     public HttpRequestTool(WebClient.Builder webClientBuilder) {
         this.webClient = webClientBuilder
@@ -51,11 +50,10 @@ public class HttpRequestTool implements AiTool {
 
     @Override
     public String getDescription() {
-        return "发送 HTTP 请求获取数据。" +
-                "输入参数：url (string) - 请求 URL。" +
-                "method (string, 可选) - HTTP 方法，默认 GET，支持: GET, POST, PUT, DELETE。" +
-                "headers (object, 可选) - 请求头键值对。" +
-                "body (object, 可选) - 请求体，用于 POST/PUT";
+        return "发送 HTTP 请求获取数据。" + "输入参数：url (string) - 请求 URL。"
+                + "method (string, 可选) - HTTP 方法，默认 GET，支持: GET, POST, PUT, DELETE。"
+                + "headers (object, 可选) - 请求头键值对。"
+                + "body (object, 可选) - 请求体，用于 POST/PUT";
     }
 
     @Override
@@ -107,7 +105,8 @@ public class HttpRequestTool implements AiTool {
     private Mono<Map<String, Object>> executeRequest(
             String method, URI uri, Map<String, String> headers, Object body, String url) {
 
-        WebClient.RequestBodySpec requestSpec = webClient.method(HttpMethod.valueOf(method)).uri(uri);
+        WebClient.RequestBodySpec requestSpec =
+                webClient.method(HttpMethod.valueOf(method)).uri(uri);
 
         if (headers != null) {
             headers.forEach(requestSpec::header);
@@ -118,7 +117,8 @@ public class HttpRequestTool implements AiTool {
             requestSpec.bodyValue(body);
         }
 
-        return requestSpec.exchangeToMono(response -> buildResponse(response, method, url))
+        return requestSpec
+                .exchangeToMono(response -> buildResponse(response, method, url))
                 .timeout(Duration.ofSeconds(TIMEOUT_SECONDS))
                 .onErrorResume(e -> {
                     log.error("HTTP request failed: {} {}", method, url, e);
@@ -131,26 +131,24 @@ public class HttpRequestTool implements AiTool {
      */
     private Mono<Map<String, Object>> buildResponse(ClientResponse response, String method, String url) {
         int statusCode = response.statusCode().value();
-        return readBody(response, MAX_RESPONSE_SIZE)
-                .map(content -> {
-                    Map<String, Object> result = new HashMap<>();
-                    result.put("success", statusCode >= 200 && statusCode < 300);
-                    result.put("url", url);
-                    result.put("method", method);
-                    result.put("statusCode", statusCode);
-                    result.put("body", content.content());
-                    result.put("bodyLength", content.length());
-                    result.put("truncated", content.truncated());
-                    return result;
-                });
+        return readBody(response, MAX_RESPONSE_SIZE).map(content -> {
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", statusCode >= 200 && statusCode < 300);
+            result.put("url", url);
+            result.put("method", method);
+            result.put("statusCode", statusCode);
+            result.put("body", content.content());
+            result.put("bodyLength", content.length());
+            result.put("truncated", content.truncated());
+            return result;
+        });
     }
 
     /**
      * 读取响应体并限制大小，超出部分直接截断，避免大响应占满内存
      */
     private Mono<BodyContent> readBody(ClientResponse response, int maxSize) {
-        return response.bodyToFlux(DataBuffer.class)
-                .collect(() -> new BodyContent(maxSize), BodyContent::append);
+        return response.bodyToFlux(DataBuffer.class).collect(() -> new BodyContent(maxSize), BodyContent::append);
     }
 
     /**
@@ -167,8 +165,10 @@ public class HttpRequestTool implements AiTool {
                 return false;
             }
             for (InetAddress address : addresses) {
-                if (address.isLoopbackAddress() || address.isAnyLocalAddress()
-                        || address.isSiteLocalAddress() || address.isLinkLocalAddress()
+                if (address.isLoopbackAddress()
+                        || address.isAnyLocalAddress()
+                        || address.isSiteLocalAddress()
+                        || address.isLinkLocalAddress()
                         || address.isMulticastAddress()) {
                     return false;
                 }

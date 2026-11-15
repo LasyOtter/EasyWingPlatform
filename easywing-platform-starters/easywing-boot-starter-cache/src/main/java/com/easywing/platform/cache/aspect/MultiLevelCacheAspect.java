@@ -21,6 +21,10 @@ import com.easywing.platform.cache.annotation.MultiLevelCache;
 import com.easywing.platform.cache.properties.CacheProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -30,17 +34,12 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.core.DefaultParameterNameDiscoverer;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
-
-import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 多级缓存切面
@@ -60,7 +59,7 @@ public class MultiLevelCacheAspect {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private final CacheProperties properties;
-    
+
     private final SpelExpressionParser parser = new SpelExpressionParser();
     private final DefaultParameterNameDiscoverer parameterNameDiscoverer = new DefaultParameterNameDiscoverer();
 
@@ -72,7 +71,7 @@ public class MultiLevelCacheAspect {
         String cacheName = multiLevelCache.value();
         String cacheKey = generateKey(point, multiLevelCache.key());
         String fullKey = buildFullKey(cacheName, cacheKey);
-        
+
         // 1. 先查本地缓存
         Cache localCache = localCacheManager.getCache(cacheName);
         Cache.ValueWrapper localValue = localCache != null ? localCache.get(cacheKey) : null;
@@ -80,7 +79,7 @@ public class MultiLevelCacheAspect {
             log.debug("Local cache hit: {}", fullKey);
             return localValue.get();
         }
-        
+
         // 2. 再查Redis
         String redisValue = redisTemplate.opsForValue().get(fullKey);
         if (redisValue != null) {
@@ -92,22 +91,22 @@ public class MultiLevelCacheAspect {
             }
             return value;
         }
-        
+
         log.debug("Cache miss: {}", fullKey);
-        
+
         // 3. 执行实际查询
         Object result = point.proceed();
-        
+
         // 4. 写入缓存
         if (result != null || multiLevelCache.cacheNull()) {
             int localExpire = multiLevelCache.localExpire();
             int redisExpire = multiLevelCache.redisExpire();
-            
+
             // 写入本地缓存
             if (localCache != null) {
                 localCache.put(cacheKey, result);
             }
-            
+
             // 写入Redis
             try {
                 String jsonValue = serialize(result);
@@ -117,7 +116,7 @@ public class MultiLevelCacheAspect {
                 log.error("Failed to serialize cache value: {}", fullKey, e);
             }
         }
-        
+
         return result;
     }
 
@@ -127,20 +126,20 @@ public class MultiLevelCacheAspect {
     @Around("@annotation(cacheEvict)")
     public Object aroundEvict(ProceedingJoinPoint point, CacheEvict cacheEvict) throws Throwable {
         String cacheName = cacheEvict.value();
-        
+
         // 如果需要在方法执行前清理缓存
         if (cacheEvict.beforeInvocation()) {
             performEvict(cacheName, cacheEvict.key(), cacheEvict.allEntries(), point);
         }
-        
+
         try {
             Object result = point.proceed();
-            
+
             // 默认在方法执行成功后清理缓存
             if (!cacheEvict.beforeInvocation()) {
                 performEvict(cacheName, cacheEvict.key(), cacheEvict.allEntries(), point);
             }
-            
+
             return result;
         } catch (Exception e) {
             // 如果方法执行失败且不是beforeInvocation，则不清理缓存
@@ -158,13 +157,13 @@ public class MultiLevelCacheAspect {
     public Object aroundPut(ProceedingJoinPoint point, CachePut cachePut) throws Throwable {
         // CachePut总是执行方法
         Object result = point.proceed();
-        
+
         // 检查条件
         if (shouldPut(cachePut, result)) {
             String cacheName = cachePut.value();
             String cacheKey = generateKey(point, cachePut.key());
             String fullKey = buildFullKey(cacheName, cacheKey);
-            
+
             // 检查unless条件
             if (!shouldSkip(cachePut.unless(), result, point)) {
                 // 更新本地缓存
@@ -172,7 +171,7 @@ public class MultiLevelCacheAspect {
                 if (localCache != null) {
                     localCache.put(cacheKey, result);
                 }
-                
+
                 // 更新Redis
                 try {
                     String jsonValue = serialize(result);
@@ -183,7 +182,7 @@ public class MultiLevelCacheAspect {
                 }
             }
         }
-        
+
         return result;
     }
 
@@ -198,7 +197,7 @@ public class MultiLevelCacheAspect {
                 localCache.clear();
                 log.debug("Local cache clear: {}", cacheName);
             }
-            
+
             // 清理Redis
             String pattern = properties.getKeyPrefix() + cacheName + ":*";
             var keys = redisTemplate.keys(pattern);
@@ -210,14 +209,14 @@ public class MultiLevelCacheAspect {
             // 清理指定key
             String cacheKey = generateKey(point, keyExpression);
             String fullKey = buildFullKey(cacheName, cacheKey);
-            
+
             // 清理本地缓存
             Cache localCache = localCacheManager.getCache(cacheName);
             if (localCache != null) {
                 localCache.evict(cacheKey);
                 log.debug("Local cache evict: {}", fullKey);
             }
-            
+
             // 清理Redis
             redisTemplate.delete(fullKey);
             log.debug("Redis cache evict: {}", fullKey);
@@ -233,13 +232,13 @@ public class MultiLevelCacheAspect {
             Object[] args = point.getArgs();
             return String.valueOf(Arrays.hashCode(args));
         }
-        
+
         // 解析SpEL表达式
         MethodSignature signature = (MethodSignature) point.getSignature();
         Method method = signature.getMethod();
         Object[] args = point.getArgs();
         String[] parameterNames = parameterNameDiscoverer.getParameterNames(method);
-        
+
         EvaluationContext context = new StandardEvaluationContext();
         if (parameterNames != null) {
             for (int i = 0; i < parameterNames.length; i++) {
@@ -248,7 +247,7 @@ public class MultiLevelCacheAspect {
                 context.setVariable("a" + i, args[i]);
             }
         }
-        
+
         Expression expression = parser.parseExpression(keyExpression);
         Object value = expression.getValue(context);
         return Objects.toString(value, "");
@@ -287,13 +286,13 @@ public class MultiLevelCacheAspect {
         if (result == null && !cachePut.cacheNull()) {
             return false;
         }
-        
+
         if (!cachePut.condition().isEmpty()) {
             // 解析条件表达式
             // 简化处理，实际应该解析SpEL
             return true;
         }
-        
+
         return true;
     }
 
@@ -304,12 +303,12 @@ public class MultiLevelCacheAspect {
         if (unlessExpression == null || unlessExpression.isEmpty()) {
             return false;
         }
-        
+
         // 解析SpEL表达式
         MethodSignature signature = (MethodSignature) point.getSignature();
         EvaluationContext context = new StandardEvaluationContext();
         context.setVariable("result", result);
-        
+
         try {
             Expression expression = parser.parseExpression(unlessExpression);
             Boolean value = expression.getValue(context, Boolean.class);

@@ -40,18 +40,27 @@ import org.springframework.data.redis.core.script.RedisScript;
 public class GatewayAutoConfiguration {
 
     @Bean
-    @ConditionalOnProperty(prefix = "easywing.gateway.jwt", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public JwtValidationFilter jwtValidationFilter(GatewayProperties properties,
-                                                   ReactiveStringRedisTemplate redisTemplate) {
+    @ConditionalOnProperty(
+            prefix = "easywing.gateway.jwt",
+            name = "enabled",
+            havingValue = "true",
+            matchIfMissing = true)
+    public JwtValidationFilter jwtValidationFilter(
+            GatewayProperties properties, ReactiveStringRedisTemplate redisTemplate) {
         return new JwtValidationFilter(properties, redisTemplate);
     }
 
     @Bean
     @ConditionalOnBean(ReactiveStringRedisTemplate.class)
-    @ConditionalOnProperty(prefix = "easywing.gateway.rate-limit", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public RateLimitFilter rateLimitFilter(GatewayProperties properties,
-                                           ReactiveStringRedisTemplate redisTemplate,
-                                           RedisScript<Long> rateLimitScript) {
+    @ConditionalOnProperty(
+            prefix = "easywing.gateway.rate-limit",
+            name = "enabled",
+            havingValue = "true",
+            matchIfMissing = true)
+    public RateLimitFilter rateLimitFilter(
+            GatewayProperties properties,
+            ReactiveStringRedisTemplate redisTemplate,
+            RedisScript<Long> rateLimitScript) {
         return new RateLimitFilter(properties, redisTemplate, rateLimitScript);
     }
 
@@ -61,13 +70,21 @@ public class GatewayAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnProperty(prefix = "easywing.gateway.gray", name = "enabled", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(
+            prefix = "easywing.gateway.gray",
+            name = "enabled",
+            havingValue = "true",
+            matchIfMissing = true)
     public GrayReleaseFilter grayReleaseFilter(GatewayProperties properties) {
         return new GrayReleaseFilter(properties);
     }
 
     @Bean
-    @ConditionalOnProperty(prefix = "easywing.gateway.logging", name = "enabled", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(
+            prefix = "easywing.gateway.logging",
+            name = "enabled",
+            havingValue = "true",
+            matchIfMissing = true)
     public LoggingFilter loggingFilter(GatewayProperties properties) {
         return new LoggingFilter(properties);
     }

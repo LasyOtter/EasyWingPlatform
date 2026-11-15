@@ -9,11 +9,18 @@ import java.util.List;
 
 public interface SysDictDataService extends IService<SysDictData> {
     Page<SysDictDataVO> selectDictDataPage(Page<SysDictData> page, SysDictDataDTO dictDataDTO);
+
     List<SysDictDataVO> selectDictDataByType(String dictType);
+
     SysDictDataVO selectDictDataById(Long dictCode);
+
     Long insertDictData(SysDictDataDTO dictDataDTO);
+
     int updateDictData(SysDictDataDTO dictDataDTO);
+
     int deleteDictDataByIds(List<Long> dictCodes);
+
     String getDictLabel(String dictType, String dictValue);
+
     List<String> getDictValues(String dictType);
 }

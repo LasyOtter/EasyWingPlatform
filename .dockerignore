@@ -1,0 +1,9 @@
+.git
+**/.git
+**/target
+**/.idea
+**/*.iml
+easywing-ui/node_modules
+easywing-ui/dist
+**/logs
+**/*.log

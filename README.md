@@ -123,9 +123,11 @@ mvn spring-boot:run
 ### 访问服务
 
 - API Gateway: http://localhost:8080
-- User Service: http://localhost:8081
-- Swagger UI: http://localhost:8081/swagger-ui.html
-- Nacos Console: http://localhost:8848/nacos
+- System Service: http://localhost:8083
+- Auth Service: http://localhost:8085
+- AI Service: http://localhost:8082
+- User Service: http://localhost:8081/swagger-ui.html
+- Nacos Console: http://localhost:8081
 - Grafana: http://localhost:3000
 - Jaeger: http://localhost:16686
 

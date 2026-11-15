@@ -15,19 +15,17 @@
  */
 package com.easywing.platform.data.interceptor;
 
-import com.baomidou.mybatisplus.core.plugins.InterceptorIgnoreHelper;
 import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
 import com.easywing.platform.data.datascope.DataScopeContext;
 import com.easywing.platform.data.properties.DataProperties;
+import java.util.List;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
-
-import java.util.List;
-import java.util.Set;
 
 /**
  * 数据权限拦截器
@@ -55,8 +53,13 @@ public class DataScopeInterceptor implements InnerInterceptor {
     }
 
     @Override
-    public void beforeQuery(Executor executor, MappedStatement ms, Object parameter,
-                           RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
+    public void beforeQuery(
+            Executor executor,
+            MappedStatement ms,
+            Object parameter,
+            RowBounds rowBounds,
+            ResultHandler resultHandler,
+            BoundSql boundSql) {
         applyDataScope(ms, boundSql);
     }
 
@@ -90,8 +93,11 @@ public class DataScopeInterceptor implements InnerInterceptor {
         try {
             boolean applied = dataScopeSqlParser.applyDataScope(boundSql, ms, dataScopeInfo);
             if (applied) {
-                log.debug("Data scope filter applied: userId={}, scope={}, sql={}",
-                        dataScopeInfo.getUserId(), dataScopeInfo.getDataScope(), boundSql.getSql());
+                log.debug(
+                        "Data scope filter applied: userId={}, scope={}, sql={}",
+                        dataScopeInfo.getUserId(),
+                        dataScopeInfo.getDataScope(),
+                        boundSql.getSql());
             }
         } catch (DataScopeSqlException ex) {
             log.error("Failed to apply data scope filter", ex);
@@ -106,11 +112,11 @@ public class DataScopeInterceptor implements InnerInterceptor {
      * 数据权限类型枚举
      */
     public enum DataScopeType {
-        ALL,            // 全部数据权限
-        CUSTOM,         // 自定义数据权限
-        DEPT_ONLY,      // 本部门数据权限
+        ALL, // 全部数据权限
+        CUSTOM, // 自定义数据权限
+        DEPT_ONLY, // 本部门数据权限
         DEPT_AND_CHILD, // 本部门及以下数据权限
-        SELF_ONLY       // 仅本人数据权限
+        SELF_ONLY // 仅本人数据权限
     }
 
     /**
@@ -118,10 +124,15 @@ public class DataScopeInterceptor implements InnerInterceptor {
      */
     public interface DataScopeInfo {
         Long getUserId();
+
         Long getDeptId();
+
         DataScopeType getDataScope();
+
         boolean isAdmin();
+
         Set<Long> getChildDeptIds();
+
         List<Long> getCustomDeptIds();
     }
 

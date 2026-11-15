@@ -2,12 +2,11 @@ package com.easywing.platform.ai.debug;
 
 import com.easywing.platform.ai.agent.AgentIteration;
 import com.easywing.platform.ai.agent.AgentResponse;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * 调试服务 - 追踪和分析 Agent 执行
@@ -53,9 +52,8 @@ public class DebugService {
         if (trace != null) {
             trace.getIterations().add(iteration);
 
-            addTimelineEvent(traceId, "ITERATION",
-                    String.format("Iteration %d", iteration.getIterationNumber()),
-                    iteration);
+            addTimelineEvent(
+                    traceId, "ITERATION", String.format("Iteration %d", iteration.getIterationNumber()), iteration);
         }
     }
 
@@ -66,7 +64,9 @@ public class DebugService {
         AgentTrace trace = traces.get(traceId);
         if (trace == null) return;
 
-        addTimelineEvent(traceId, "TOOL_CALL",
+        addTimelineEvent(
+                traceId,
+                "TOOL_CALL",
                 String.format("Tool: %s (%s)", toolName, success ? "success" : "failed"),
                 Map.of("toolName", toolName, "duration", durationMs, "success", success));
 
@@ -225,7 +225,8 @@ public class DebugService {
      */
     private AgentTrace.PerformanceMetrics calculateMetrics(AgentTrace trace) {
         long totalDuration = trace.getEndTime() - trace.getStartTime();
-        int iterationCount = trace.getIterations() != null ? trace.getIterations().size() : 0;
+        int iterationCount =
+                trace.getIterations() != null ? trace.getIterations().size() : 0;
 
         long toolDuration = 0;
         int toolCallCount = 0;
@@ -258,9 +259,11 @@ public class DebugService {
                 trace.getStatus(),
                 trace.getEndTime() - trace.getStartTime(),
                 trace.getIterations().size(),
-                trace.getToolStats() != null ? trace.getToolStats().values().stream()
-                        .mapToInt(AgentTrace.ToolCallStats::getCallCount).sum() : 0
-        );
+                trace.getToolStats() != null
+                        ? trace.getToolStats().values().stream()
+                                .mapToInt(AgentTrace.ToolCallStats::getCallCount)
+                                .sum()
+                        : 0);
     }
 
     /**
@@ -273,10 +276,10 @@ public class DebugService {
         analysis.put("总耗时", metrics.getTotalDurationMs() + "ms");
         analysis.put("LLM耗时", metrics.getLlmDurationMs() + "ms");
         analysis.put("工具耗时", metrics.getToolDurationMs() + "ms");
-        analysis.put("LLM占比", String.format("%.1f%%",
-                100.0 * metrics.getLlmDurationMs() / metrics.getTotalDurationMs()));
-        analysis.put("工具占比", String.format("%.1f%%",
-                100.0 * metrics.getToolDurationMs() / metrics.getTotalDurationMs()));
+        analysis.put(
+                "LLM占比", String.format("%.1f%%", 100.0 * metrics.getLlmDurationMs() / metrics.getTotalDurationMs()));
+        analysis.put(
+                "工具占比", String.format("%.1f%%", 100.0 * metrics.getToolDurationMs() / metrics.getTotalDurationMs()));
 
         return analysis;
     }
@@ -292,8 +295,7 @@ public class DebugService {
                     "迭代 %d: %s (耗时: %dms)",
                     iteration.getIterationNumber(),
                     iteration.getAction() != null ? iteration.getAction() : "思考",
-                    iteration.getExecutionTimeMs()
-            ));
+                    iteration.getExecutionTimeMs()));
         }
 
         return analysis;
@@ -307,14 +309,14 @@ public class DebugService {
 
         if (trace.getToolStats() != null) {
             trace.getToolStats().forEach((toolName, stats) -> {
-                analysis.put(toolName, Map.of(
-                        "调用次数", stats.getCallCount(),
-                        "成功率", String.format("%.1f%%",
-                                100.0 * stats.getSuccessCount() / stats.getCallCount()),
-                        "平均耗时", stats.getAvgDurationMs() + "ms",
-                        "最小耗时", stats.getMinDurationMs() + "ms",
-                        "最大耗时", stats.getMaxDurationMs() + "ms"
-                ));
+                analysis.put(
+                        toolName,
+                        Map.of(
+                                "调用次数", stats.getCallCount(),
+                                "成功率", String.format("%.1f%%", 100.0 * stats.getSuccessCount() / stats.getCallCount()),
+                                "平均耗时", stats.getAvgDurationMs() + "ms",
+                                "最小耗时", stats.getMinDurationMs() + "ms",
+                                "最大耗时", stats.getMaxDurationMs() + "ms"));
             });
         }
 
@@ -344,9 +346,7 @@ public class DebugService {
             trace.getToolStats().forEach((toolName, stats) -> {
                 double failureRate = 100.0 * stats.getFailureCount() / stats.getCallCount();
                 if (failureRate > 20) {
-                    recommendations.add(String.format(
-                            "工具 %s 失败率较高 (%.1f%%)，检查参数验证和错误处理",
-                            toolName, failureRate));
+                    recommendations.add(String.format("工具 %s 失败率较高 (%.1f%%)，检查参数验证和错误处理", toolName, failureRate));
                 }
             });
         }

@@ -1,8 +1,11 @@
 package com.easywing.platform.ai.optimization;
 
+import com.easywing.platform.ai.rag.EmbeddingService;
 import com.easywing.platform.ai.tool.ToolDefinition;
 import com.easywing.platform.ai.tool.ToolExecutor;
-import com.easywing.platform.ai.rag.EmbeddingService;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,10 +13,6 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 /**
  * 工具推荐系统 - 基于任务智能推荐相关工具
@@ -42,11 +41,10 @@ public class ToolRecommender {
 
         tools.forEach(tool -> {
             String toolText = tool.getName() + " " + tool.getDescription();
-            embeddingService.embed(toolText)
-                    .subscribe(embedding -> {
-                        toolEmbeddings.put(tool.getName(), embedding);
-                        log.debug("Initialized embedding for tool: {}", tool.getName());
-                    });
+            embeddingService.embed(toolText).subscribe(embedding -> {
+                toolEmbeddings.put(tool.getName(), embedding);
+                log.debug("Initialized embedding for tool: {}", tool.getName());
+            });
         });
     }
 
@@ -56,41 +54,34 @@ public class ToolRecommender {
     public Mono<List<ToolRecommendation>> recommendTools(String task, int topK) {
         log.info("Recommending tools for task: {}", task);
 
-        return embeddingService.embed(task)
-                .map(taskEmbedding -> {
-                    List<ToolDefinition> allTools = toolExecutor.getAvailableTools();
+        return embeddingService.embed(task).map(taskEmbedding -> {
+            List<ToolDefinition> allTools = toolExecutor.getAvailableTools();
 
-                    return allTools.stream()
-                            .map(tool -> {
-                                // 计算相似度分数
-                                double similarityScore = calculateSimilarity(
-                                        taskEmbedding,
-                                        toolEmbeddings.get(tool.getName())
-                                );
+            return allTools.stream()
+                    .map(tool -> {
+                        // 计算相似度分数
+                        double similarityScore = calculateSimilarity(taskEmbedding, toolEmbeddings.get(tool.getName()));
 
-                                // 获取使用统计
-                                ToolUsageStats stats = usageStats.get(tool.getName());
+                        // 获取使用统计
+                        ToolUsageStats stats = usageStats.get(tool.getName());
 
-                                // 计算综合得分
-                                double finalScore = calculateFinalScore(
-                                        similarityScore,
-                                        stats,
-                                        tool
-                                );
+                        // 计算综合得分
+                        double finalScore = calculateFinalScore(similarityScore, stats, tool);
 
-                                return ToolRecommendation.builder()
-                                        .tool(tool)
-                                        .score(finalScore)
-                                        .similarityScore(similarityScore)
-                                        .usageCount(stats != null ? stats.getTotalUsages() : 0)
-                                        .successRate(stats != null ? stats.getSuccessRate() : 0.0)
-                                        .reason(generateReason(tool, similarityScore, stats))
-                                        .build();
-                            })
-                            .sorted(Comparator.comparingDouble(ToolRecommendation::getScore).reversed())
-                            .limit(topK)
-                            .collect(Collectors.toList());
-                });
+                        return ToolRecommendation.builder()
+                                .tool(tool)
+                                .score(finalScore)
+                                .similarityScore(similarityScore)
+                                .usageCount(stats != null ? stats.getTotalUsages() : 0)
+                                .successRate(stats != null ? stats.getSuccessRate() : 0.0)
+                                .reason(generateReason(tool, similarityScore, stats))
+                                .build();
+                    })
+                    .sorted(Comparator.comparingDouble(ToolRecommendation::getScore)
+                            .reversed())
+                    .limit(topK)
+                    .collect(Collectors.toList());
+        });
     }
 
     /**
@@ -106,8 +97,7 @@ public class ToolRecommender {
                     double keywordScore = calculateKeywordScore(tool, keywords);
                     ToolUsageStats stats = usageStats.get(tool.getName());
 
-                    double finalScore = keywordScore * 0.7 +
-                            (stats != null ? stats.getSuccessRate() * 30 : 0);
+                    double finalScore = keywordScore * 0.7 + (stats != null ? stats.getSuccessRate() * 30 : 0);
 
                     return ToolRecommendation.builder()
                             .tool(tool)
@@ -134,8 +124,7 @@ public class ToolRecommender {
         return usageStats.entrySet().stream()
                 .sorted((a, b) -> Double.compare(
                         b.getValue().getSuccessRate() * b.getValue().getTotalUsages(),
-                        a.getValue().getSuccessRate() * a.getValue().getTotalUsages()
-                ))
+                        a.getValue().getSuccessRate() * a.getValue().getTotalUsages()))
                 .limit(topK)
                 .map(entry -> {
                     ToolDefinition tool = toolExecutor.getAvailableTools().stream()
@@ -163,10 +152,7 @@ public class ToolRecommender {
      * 记录工具使用
      */
     public void recordUsage(String toolName, boolean success, long executionTime) {
-        ToolUsageStats stats = usageStats.computeIfAbsent(
-                toolName,
-                k -> new ToolUsageStats()
-        );
+        ToolUsageStats stats = usageStats.computeIfAbsent(toolName, k -> new ToolUsageStats());
 
         stats.recordUsage(success, executionTime);
     }
@@ -216,10 +202,7 @@ public class ToolRecommender {
     /**
      * 计算最终得分
      */
-    private double calculateFinalScore(
-            double similarityScore,
-            ToolUsageStats stats,
-            ToolDefinition tool) {
+    private double calculateFinalScore(double similarityScore, ToolUsageStats stats, ToolDefinition tool) {
 
         // 基础分：相似度 (0-100)
         double score = similarityScore * 100;
@@ -244,10 +227,7 @@ public class ToolRecommender {
     /**
      * 生成推荐理由
      */
-    private String generateReason(
-            ToolDefinition tool,
-            double similarityScore,
-            ToolUsageStats stats) {
+    private String generateReason(ToolDefinition tool, double similarityScore, ToolUsageStats stats) {
 
         List<String> reasons = new ArrayList<>();
 
@@ -287,9 +267,7 @@ public class ToolRecommender {
     public List<ToolRecommendation> getPopularTools(int topK) {
         return usageStats.entrySet().stream()
                 .sorted((a, b) -> Integer.compare(
-                        b.getValue().getTotalUsages(),
-                        a.getValue().getTotalUsages()
-                ))
+                        b.getValue().getTotalUsages(), a.getValue().getTotalUsages()))
                 .limit(topK)
                 .map(entry -> {
                     ToolDefinition tool = toolExecutor.getAvailableTools().stream()

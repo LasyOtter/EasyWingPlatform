@@ -9,9 +9,14 @@ import java.lang.annotation.*;
 @Documented
 public @interface Log {
     String title() default "";
+
     BusinessType businessType() default BusinessType.OTHER;
+
     OperatorType operatorType() default OperatorType.MANAGE;
+
     boolean isSaveRequestData() default true;
+
     boolean isSaveResponseData() default true;
+
     String[] excludeParamNames() default {"password", "oldPassword", "newPassword", "confirmPassword"};
 }

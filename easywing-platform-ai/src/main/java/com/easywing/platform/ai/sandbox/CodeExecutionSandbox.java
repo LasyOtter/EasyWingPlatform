@@ -1,5 +1,14 @@
 package com.easywing.platform.ai.sandbox;
 
+import com.easywing.platform.ai.config.AiProperties;
+import jakarta.annotation.PreDestroy;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,56 +18,69 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
-import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.*;
-import jakarta.annotation.PreDestroy;
-
 /**
- * 代码执行沙箱 - 安全执行用户代码
- * 注意：这是简化实现，生产环境应使用 Docker 容器隔离
+ * 代码执行沙箱 - 安全执行用户代码。
+ * <p>
+ * 支持两种隔离模式：
+ * <ul>
+ * <li>{@link ExecutionMode#PROCESS}：本机进程隔离，仅适合开发/演示，无法承受不可信代码。</li>
+ * <li>{@link ExecutionMode#DOCKER}：容器隔离，禁用网络、只读根文件系统、限额内存/CPU/进程数，适合生产。</li>
+ * </ul>
+ * Docker 不可用时自动回退到进程模式并记录告警。
  */
 @Slf4j
 @Service
 public class CodeExecutionSandbox {
 
-    private final ExecutorService executorService;
-    private final Map<String, LanguageConfig> languageConfigs;
-    private final SandboxConfig config;
+    private static final String DOCKER_SANDBOX_DIR = "/sandbox";
 
     /**
      * 静态安全检查的敏感调用特征。
      * <p>
-     * 注意：字符串匹配只能拦住直白的写法，无法防御混淆绕过。
-     * 生产环境必须使用容器隔离并配置网络/文件系统策略。
+     * 注意：字符串匹配只能拦住直白的写法，无法防御混淆绕过，不能替代容器隔离。
      */
     private static final List<String> DANGEROUS_PATTERNS = List.of(
-            "exec(", "eval(", "__import__", "importlib", "getattr(", "setattr(",
-            "os.system", "os.popen", "subprocess", "child_process",
-            "import os", "require('fs')", "require(\"fs\")",
-            "import socket", "require('net')", "urllib", "requests.",
-            "http.client", "ctypes", "multiprocessing", "fork(",
-            "Runtime.getRuntime", "ProcessBuilder", "java.io", "java.nio.file",
-            "Files.", "System.exit"
-    );
+            "exec(",
+            "eval(",
+            "__import__",
+            "importlib",
+            "getattr(",
+            "setattr(",
+            "os.system",
+            "os.popen",
+            "subprocess",
+            "child_process",
+            "import os",
+            "require('fs')",
+            "require(\"fs\")",
+            "import socket",
+            "require('net')",
+            "urllib",
+            "requests.",
+            "http.client",
+            "ctypes",
+            "multiprocessing",
+            "fork(",
+            "Runtime.getRuntime",
+            "ProcessBuilder",
+            "java.io",
+            "java.nio.file",
+            "Files.",
+            "System.exit");
 
-    public CodeExecutionSandbox() {
+    private final ExecutorService executorService;
+    private final Map<String, LanguageConfig> languageConfigs;
+    private final AiProperties aiProperties;
+    private final AtomicReference<Boolean> dockerAvailable = new AtomicReference<>();
+
+    public CodeExecutionSandbox(AiProperties aiProperties) {
         this.executorService = Executors.newFixedThreadPool(4, runnable -> {
             Thread thread = new Thread(runnable, "code-sandbox");
             thread.setDaemon(true);
             return thread;
         });
         this.languageConfigs = initializeLanguageConfigs();
-        this.config = SandboxConfig.builder()
-                .maxExecutionTime(10000)        // 10秒
-                .maxMemoryMB(512)               // 512MB
-                .maxOutputSize(10 * 1024)       // 10KB
-                .allowNetworkAccess(false)
-                .allowFileSystemAccess(false)
-                .build();
+        this.aiProperties = aiProperties;
     }
 
     /**
@@ -75,64 +97,68 @@ public class CodeExecutionSandbox {
     private Map<String, LanguageConfig> initializeLanguageConfigs() {
         Map<String, LanguageConfig> configs = new HashMap<>();
 
-        // Python
-        configs.put("python", LanguageConfig.builder()
-                .language("python")
-                .fileExtension(".py")
-                .compileCommand(null) // 解释型语言
-                .executeCommand(List.of("python", "{file}"))
-                .timeoutMultiplier(1.0)
-                .build());
+        configs.put(
+                "python",
+                LanguageConfig.builder()
+                        .language("python")
+                        .fileExtension(".py")
+                        .compileCommand(null)
+                        .executeCommand(List.of("python", "{file}"))
+                        .dockerImage("python:3.12-slim")
+                        .dockerCommand(List.of("python", "Main.py"))
+                        .timeoutMultiplier(1.0)
+                        .build());
 
-        // JavaScript (Node.js)
-        configs.put("javascript", LanguageConfig.builder()
-                .language("javascript")
-                .fileExtension(".js")
-                .compileCommand(null)
-                .executeCommand(List.of("node", "{file}"))
-                .timeoutMultiplier(1.0)
-                .build());
+        configs.put(
+                "javascript",
+                LanguageConfig.builder()
+                        .language("javascript")
+                        .fileExtension(".js")
+                        .compileCommand(null)
+                        .executeCommand(List.of("node", "{file}"))
+                        .dockerImage("node:22-slim")
+                        .dockerCommand(List.of("node", "Main.js"))
+                        .timeoutMultiplier(1.0)
+                        .build());
 
-        // Java
-        configs.put("java", LanguageConfig.builder()
-                .language("java")
-                .fileExtension(".java")
-                .compileCommand(List.of("javac", "{file}"))
-                .executeCommand(List.of("java", "-cp", "{dir}", "Main"))
-                .timeoutMultiplier(1.5)
-                .build());
+        configs.put(
+                "java",
+                LanguageConfig.builder()
+                        .language("java")
+                        .fileExtension(".java")
+                        .compileCommand(List.of("javac", "{file}"))
+                        .executeCommand(List.of("java", "-cp", "{dir}", "Main"))
+                        .dockerImage("eclipse-temurin:21-jdk")
+                        .dockerCommand(List.of("sh", "-c", "javac Main.java && java -cp . Main"))
+                        .timeoutMultiplier(1.5)
+                        .build());
 
-        // Go
-        configs.put("go", LanguageConfig.builder()
-                .language("go")
-                .fileExtension(".go")
-                .compileCommand(List.of("go", "build", "-o", "{output}", "{file}"))
-                .executeCommand(List.of("{output}"))
-                .timeoutMultiplier(1.2)
-                .build());
+        configs.put(
+                "go",
+                LanguageConfig.builder()
+                        .language("go")
+                        .fileExtension(".go")
+                        .compileCommand(List.of("go", "build", "-o", "{output}", "{file}"))
+                        .executeCommand(List.of("{output}"))
+                        .dockerImage("golang:1.23-alpine")
+                        .dockerCommand(List.of("sh", "-c", "go build -o main Main.go && ./main"))
+                        .timeoutMultiplier(1.2)
+                        .build());
 
         return configs;
     }
 
     /**
-     * 执行代码
+     * 执行代码，使用配置中的默认沙箱配置
      */
-    public Mono<ExecutionResult> executeCode(
-            String code,
-            String language,
-            String input) {
-
-        return executeCode(code, language, input, config);
+    public Mono<ExecutionResult> executeCode(String code, String language, String input) {
+        return executeCode(code, language, input, defaultConfig());
     }
 
     /**
      * 执行代码（带配置）
      */
-    public Mono<ExecutionResult> executeCode(
-            String code,
-            String language,
-            String input,
-            SandboxConfig customConfig) {
+    public Mono<ExecutionResult> executeCode(String code, String language, String input, SandboxConfig customConfig) {
 
         LanguageConfig langConfig = languageConfigs.get(language.toLowerCase());
         if (langConfig == null) {
@@ -144,53 +170,73 @@ public class CodeExecutionSandbox {
         return Mono.fromCallable(() -> executeInSandbox(code, langConfig, input, customConfig))
                 .subscribeOn(Schedulers.boundedElastic())
                 .timeout(Duration.ofMillis(
-                        (long) (customConfig.getMaxExecutionTime() * langConfig.getTimeoutMultiplier())
-                ))
+                        (long) (customConfig.getMaxExecutionTime() * langConfig.getTimeoutMultiplier())))
                 .onErrorResume(TimeoutException.class, e -> {
                     log.warn("Code execution timeout");
                     return Mono.just(ExecutionResult.builder()
                             .success(false)
-                            .error("Execution timeout: exceeded " +
-                                    customConfig.getMaxExecutionTime() + "ms")
+                            .error("Execution timeout: exceeded " + customConfig.getMaxExecutionTime() + "ms")
                             .executionTime(customConfig.getMaxExecutionTime())
                             .build());
                 });
+    }
+
+    private SandboxConfig defaultConfig() {
+        AiProperties.SandboxSettings settings = aiProperties.getSandbox();
+        return SandboxConfig.builder()
+                .mode(parseMode(settings.getMode()))
+                .maxExecutionTime(settings.getMaxExecutionTime())
+                .maxMemoryMB(settings.getMaxMemoryMB())
+                .maxOutputSize(settings.getMaxOutputSize())
+                .allowNetworkAccess(settings.isAllowNetworkAccess())
+                .allowFileSystemAccess(settings.isAllowFileSystemAccess())
+                .build();
+    }
+
+    private ExecutionMode parseMode(String mode) {
+        if (mode == null || mode.isBlank()) {
+            return ExecutionMode.PROCESS;
+        }
+        try {
+            return ExecutionMode.valueOf(mode.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            log.warn("Unknown sandbox mode '{}', falling back to process", mode);
+            return ExecutionMode.PROCESS;
+        }
     }
 
     /**
      * 在沙箱中执行
      */
     private ExecutionResult executeInSandbox(
-            String code,
-            LanguageConfig langConfig,
-            String input,
-            SandboxConfig sandboxConfig) {
+            String code, LanguageConfig langConfig, String input, SandboxConfig sandboxConfig) {
+
+        if (sandboxConfig.getMode() == ExecutionMode.DOCKER && isDockerAvailable()) {
+            return executeInDockerSandbox(code, langConfig, input, sandboxConfig);
+        }
+        if (sandboxConfig.getMode() == ExecutionMode.DOCKER) {
+            log.warn("Docker is not available, falling back to process sandbox");
+        }
+        return executeInProcessSandbox(code, langConfig, input, sandboxConfig);
+    }
+
+    private ExecutionResult executeInProcessSandbox(
+            String code, LanguageConfig langConfig, String input, SandboxConfig sandboxConfig) {
 
         Path tempDir = null;
         long startTime = System.currentTimeMillis();
 
         try {
-            // 创建临时目录
             tempDir = Files.createTempDirectory("sandbox_");
             log.debug("Created sandbox directory: {}", tempDir);
 
-            // 写入代码文件
             Path codeFile = createCodeFile(tempDir, code, langConfig);
 
-            // 当配置限制网络/文件访问时，先做静态安全检查，拦截高风险代码
-            if (!sandboxConfig.isAllowNetworkAccess() || !sandboxConfig.isAllowFileSystemAccess()) {
-                SecurityCheckResult security = checkCodeSecurity(code, langConfig.getLanguage()).block();
-                if (security != null && !security.isSafe()) {
-                    log.warn("Code blocked by sandbox security check: {}", security.getIssues());
-                    return ExecutionResult.builder()
-                            .success(false)
-                            .error("代码未通过安全检查: " + String.join(", ", security.getIssues()))
-                            .executionTime(System.currentTimeMillis() - startTime)
-                            .build();
-                }
+            SecurityCheckResult blocked = enforceSecurity(code, langConfig.getLanguage(), sandboxConfig);
+            if (blocked != null) {
+                return blockedResult(blocked, startTime);
             }
 
-            // 编译（如果需要）
             if (langConfig.getCompileCommand() != null) {
                 ExecutionOutput compileOutput = compile(codeFile, langConfig, sandboxConfig);
                 if (!compileOutput.isSuccess()) {
@@ -202,7 +248,6 @@ public class CodeExecutionSandbox {
                 }
             }
 
-            // 执行
             ExecutionOutput execOutput = execute(tempDir, codeFile, langConfig, input, sandboxConfig);
 
             return ExecutionResult.builder()
@@ -221,21 +266,79 @@ public class CodeExecutionSandbox {
                     .error("Execution failed: " + e.getMessage())
                     .executionTime(System.currentTimeMillis() - startTime)
                     .build();
-
         } finally {
-            // 清理临时目录
             if (tempDir != null) {
                 cleanupDirectory(tempDir);
             }
         }
     }
 
+    private ExecutionResult executeInDockerSandbox(
+            String code, LanguageConfig langConfig, String input, SandboxConfig sandboxConfig) {
+
+        Path tempDir = null;
+        long startTime = System.currentTimeMillis();
+
+        try {
+            tempDir = Files.createTempDirectory("sandbox_");
+            log.debug("Created docker sandbox directory: {}", tempDir);
+
+            createCodeFile(tempDir, code, langConfig);
+
+            SecurityCheckResult blocked = enforceSecurity(code, langConfig.getLanguage(), sandboxConfig);
+            if (blocked != null) {
+                return blockedResult(blocked, startTime);
+            }
+
+            ExecutionOutput execOutput = executeInDocker(tempDir, langConfig, input, sandboxConfig);
+
+            return ExecutionResult.builder()
+                    .success(execOutput.isSuccess())
+                    .output(execOutput.getStdout())
+                    .error(execOutput.getStderr())
+                    .exitCode(execOutput.getExitCode())
+                    .executionTime(System.currentTimeMillis() - startTime)
+                    .memoryUsed(estimateMemoryUsage())
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Docker execution failed", e);
+            return ExecutionResult.builder()
+                    .success(false)
+                    .error("Docker execution failed: " + e.getMessage())
+                    .executionTime(System.currentTimeMillis() - startTime)
+                    .build();
+        } finally {
+            if (tempDir != null) {
+                cleanupDirectory(tempDir);
+            }
+        }
+    }
+
+    private ExecutionResult blockedResult(SecurityCheckResult security, long startTime) {
+        log.warn("Code blocked by sandbox security check: {}", security.getIssues());
+        return ExecutionResult.builder()
+                .success(false)
+                .error("代码未通过安全检查: " + String.join(", ", security.getIssues()))
+                .executionTime(System.currentTimeMillis() - startTime)
+                .build();
+    }
+
+    /**
+     * 当配置限制网络或文件访问时，执行静态安全检查；通过返回 {@code null}。
+     */
+    private SecurityCheckResult enforceSecurity(String code, String language, SandboxConfig sandboxConfig) {
+        if (sandboxConfig.isAllowNetworkAccess() && sandboxConfig.isAllowFileSystemAccess()) {
+            return null;
+        }
+        SecurityCheckResult security = checkCodeSecurity(code, language).block();
+        return security == null || security.isSafe() ? null : security;
+    }
+
     /**
      * 创建代码文件
      */
-    private Path createCodeFile(Path dir, String code, LanguageConfig config)
-            throws IOException {
-
+    private Path createCodeFile(Path dir, String code, LanguageConfig config) throws IOException {
         String fileName = "Main" + config.getFileExtension();
         Path file = dir.resolve(fileName);
         Files.writeString(file, code);
@@ -245,11 +348,8 @@ public class CodeExecutionSandbox {
     /**
      * 编译代码
      */
-    private ExecutionOutput compile(
-            Path codeFile,
-            LanguageConfig config,
-            SandboxConfig sandboxConfig) throws Exception {
-
+    private ExecutionOutput compile(Path codeFile, LanguageConfig config, SandboxConfig sandboxConfig)
+            throws Exception {
         List<String> command = buildCommand(config.getCompileCommand(), codeFile, codeFile.getParent());
         return executeCommand(command, codeFile.getParent(), null, sandboxConfig);
     }
@@ -258,14 +358,84 @@ public class CodeExecutionSandbox {
      * 执行代码
      */
     private ExecutionOutput execute(
-            Path dir,
-            Path codeFile,
-            LanguageConfig config,
-            String input,
-            SandboxConfig sandboxConfig) throws Exception {
-
+            Path dir, Path codeFile, LanguageConfig config, String input, SandboxConfig sandboxConfig)
+            throws Exception {
         List<String> command = buildCommand(config.getExecuteCommand(), codeFile, dir);
         return executeCommand(command, dir, input, sandboxConfig);
+    }
+
+    /**
+     * 在 Docker 容器中执行代码
+     */
+    private ExecutionOutput executeInDocker(Path dir, LanguageConfig config, String input, SandboxConfig sandboxConfig)
+            throws Exception {
+        List<String> command = buildDockerCommand(dir, config, sandboxConfig);
+        return executeCommand(command, dir, input, sandboxConfig);
+    }
+
+    /**
+     * 构建 Docker 运行命令
+     * <p>
+     * 禁用网络、只读根文件系统、限额内存/CPU/进程数，仅挂载代码目录用于写入。
+     */
+    private List<String> buildDockerCommand(Path dir, LanguageConfig config, SandboxConfig sandboxConfig) {
+        List<String> command = new ArrayList<>();
+        command.add("docker");
+        command.add("run");
+        command.add("--rm");
+        command.add("-i");
+        command.add("--network");
+        command.add("none");
+        command.add("--memory");
+        command.add(sandboxConfig.getMaxMemoryMB() + "m");
+        command.add("--memory-swap");
+        command.add(sandboxConfig.getMaxMemoryMB() + "m");
+        command.add("--cpus");
+        command.add("1");
+        command.add("--pids-limit");
+        command.add("64");
+        command.add("--read-only");
+        command.add("--tmpfs");
+        command.add("/tmp:rw,noexec,nosuid,size=64m");
+        command.add("-v");
+        command.add(toDockerPath(dir) + ":" + DOCKER_SANDBOX_DIR + ":w");
+        command.add("-w");
+        command.add(DOCKER_SANDBOX_DIR);
+        command.add(config.getDockerImage());
+        command.addAll(config.getDockerCommand());
+        return command;
+    }
+
+    private boolean isDockerAvailable() {
+        Boolean cached = dockerAvailable.get();
+        if (cached != null) {
+            return cached;
+        }
+
+        boolean available = false;
+        try {
+            Process process = new ProcessBuilder("docker", "--version")
+                    .redirectErrorStream(true)
+                    .start();
+            available = process.waitFor(5, TimeUnit.SECONDS) && process.exitValue() == 0;
+        } catch (Exception e) {
+            log.debug("Docker availability check failed: {}", e.getMessage());
+        }
+
+        dockerAvailable.set(available);
+        return available;
+    }
+
+    /**
+     * 将 Windows 路径转换为 Docker Desktop 可识别的 POSIX 挂载路径。
+     */
+    private String toDockerPath(Path path) {
+        String value = path.toAbsolutePath().toString();
+        if (value.length() > 2 && value.charAt(1) == ':') {
+            return "/" + Character.toLowerCase(value.charAt(0))
+                    + value.substring(2).replace('\\', '/');
+        }
+        return value.replace('\\', '/');
     }
 
     /**
@@ -277,8 +447,7 @@ public class CodeExecutionSandbox {
         Path output = dir.resolve(isWindows() ? "main.exe" : "main");
         List<String> command = new ArrayList<>(template.size());
         for (String token : template) {
-            command.add(token
-                    .replace("{file}", codeFile.toString())
+            command.add(token.replace("{file}", codeFile.toString())
                     .replace("{dir}", dir.toString())
                     .replace("{output}", output.toString()));
         }
@@ -293,19 +462,14 @@ public class CodeExecutionSandbox {
      * 执行命令
      */
     private ExecutionOutput executeCommand(
-            List<String> command,
-            Path workingDir,
-            String input,
-            SandboxConfig sandboxConfig) throws Exception {
+            List<String> command, Path workingDir, String input, SandboxConfig sandboxConfig) throws Exception {
 
         ProcessBuilder pb = new ProcessBuilder();
         pb.command(command);
         pb.directory(workingDir.toFile());
 
-        // 启动进程
         Process process = pb.start();
 
-        // 如果有输入，写入
         if (input != null && !input.isEmpty()) {
             try (OutputStream os = process.getOutputStream()) {
                 os.write(input.getBytes(StandardCharsets.UTF_8));
@@ -313,7 +477,6 @@ public class CodeExecutionSandbox {
             }
         }
 
-        // 读取输出
         StringBuilder stdout = new StringBuilder();
         StringBuilder stderr = new StringBuilder();
 
@@ -327,18 +490,13 @@ public class CodeExecutionSandbox {
             return null;
         });
 
-        // 等待完成
-        boolean completed = process.waitFor(
-                sandboxConfig.getMaxExecutionTime(),
-                TimeUnit.MILLISECONDS
-        );
+        boolean completed = process.waitFor(sandboxConfig.getMaxExecutionTime(), TimeUnit.MILLISECONDS);
 
         if (!completed) {
             process.destroyForcibly();
             throw new TimeoutException("Execution timeout");
         }
 
-        // 等待输出读取完成
         outputReader.get(1, TimeUnit.SECONDS);
         errorReader.get(1, TimeUnit.SECONDS);
 
@@ -355,9 +513,7 @@ public class CodeExecutionSandbox {
     /**
      * 读取流
      */
-    private void readStream(InputStream is, StringBuilder buffer, int maxSize)
-            throws IOException {
-
+    private void readStream(InputStream is, StringBuilder buffer, int maxSize) throws IOException {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
             String line;
             while ((line = reader.readLine()) != null) {
@@ -375,15 +531,13 @@ public class CodeExecutionSandbox {
      */
     private void cleanupDirectory(Path dir) {
         try {
-            Files.walk(dir)
-                    .sorted(Comparator.reverseOrder())
-                    .forEach(path -> {
-                        try {
-                            Files.delete(path);
-                        } catch (IOException e) {
-                            log.warn("Failed to delete: {}", path, e);
-                        }
-                    });
+            Files.walk(dir).sorted(Comparator.reverseOrder()).forEach(path -> {
+                try {
+                    Files.delete(path);
+                } catch (IOException e) {
+                    log.warn("Failed to delete: {}", path, e);
+                }
+            });
         } catch (IOException e) {
             log.warn("Failed to cleanup directory: {}", dir, e);
         }
@@ -393,7 +547,6 @@ public class CodeExecutionSandbox {
      * 估算内存使用
      * <p>
      * 子进程内存无法通过 {@link Process} API 直接获取，返回 -1 表示不可用。
-     * 生产环境应通过 cgroup / 容器限额控制，而不是依赖该值。
      */
     private long estimateMemoryUsage() {
         return -1L;
@@ -411,7 +564,6 @@ public class CodeExecutionSandbox {
             }
         }
 
-        // 检查无限循环风险
         if (code.contains("while True") || code.contains("while(true)")) {
             if (!code.contains("break") && !code.contains("return")) {
                 issues.add("疑似无限循环");
@@ -423,8 +575,7 @@ public class CodeExecutionSandbox {
         return Mono.just(SecurityCheckResult.builder()
                 .safe(safe)
                 .issues(issues)
-                .riskLevel(safe ? RiskLevel.LOW :
-                        issues.size() > 2 ? RiskLevel.HIGH : RiskLevel.MEDIUM)
+                .riskLevel(safe ? RiskLevel.LOW : issues.size() > 2 ? RiskLevel.HIGH : RiskLevel.MEDIUM)
                 .build());
     }
 
@@ -436,13 +587,20 @@ public class CodeExecutionSandbox {
     @AllArgsConstructor
     public static class SandboxConfig {
         @Builder.Default
-        private long maxExecutionTime = 10000;  // 毫秒
+        private ExecutionMode mode = ExecutionMode.PROCESS;
+
         @Builder.Default
-        private int maxMemoryMB = 512;          // MB
+        private long maxExecutionTime = 10000;
+
         @Builder.Default
-        private int maxOutputSize = 10240;      // 字节
+        private int maxMemoryMB = 512;
+
+        @Builder.Default
+        private int maxOutputSize = 10240;
+
         @Builder.Default
         private boolean allowNetworkAccess = false;
+
         @Builder.Default
         private boolean allowFileSystemAccess = false;
     }
@@ -456,6 +614,8 @@ public class CodeExecutionSandbox {
         private String fileExtension;
         private List<String> compileCommand;
         private List<String> executeCommand;
+        private String dockerImage;
+        private List<String> dockerCommand;
         private double timeoutMultiplier;
     }
 
@@ -493,7 +653,15 @@ public class CodeExecutionSandbox {
         private RiskLevel riskLevel;
     }
 
+    public enum ExecutionMode {
+        PROCESS,
+        DOCKER
+    }
+
     public enum RiskLevel {
-        LOW, MEDIUM, HIGH, CRITICAL
+        LOW,
+        MEDIUM,
+        HIGH,
+        CRITICAL
     }
 }

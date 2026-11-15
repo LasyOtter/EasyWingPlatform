@@ -17,13 +17,12 @@ package com.easywing.platform.cache.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.caffeine.CaffeineCacheManager;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.caffeine.CaffeineCacheManager;
 
 /**
  * 缓存统计服务
@@ -46,14 +45,14 @@ public class CacheStatsService {
      */
     public Map<String, CacheStatistics> getAllCacheStats() {
         Map<String, CacheStatistics> result = new HashMap<>();
-        
+
         for (String cacheName : localCacheManager.getCacheNames()) {
             CacheStatistics stats = getCacheStats(cacheName);
             if (stats != null) {
                 result.put(cacheName, stats);
             }
         }
-        
+
         return result;
     }
 
@@ -68,7 +67,7 @@ public class CacheStatsService {
         if (springCache == null) {
             return null;
         }
-        
+
         Object nativeCache = springCache.getNativeCache();
         if (nativeCache instanceof Cache<?, ?> cache) {
             CacheStats stats = cache.stats();
@@ -80,10 +79,9 @@ public class CacheStatsService {
                     stats.loadFailureCount(),
                     stats.totalLoadTime(),
                     stats.evictionCount(),
-                    cache.estimatedSize()
-            );
+                    cache.estimatedSize());
         }
-        
+
         return null;
     }
 
@@ -93,7 +91,8 @@ public class CacheStatsService {
     public void logCacheStats() {
         Map<String, CacheStatistics> stats = getAllCacheStats();
         stats.forEach((name, stat) -> {
-            log.info("Cache [{}] - Hit Rate: {:.2f}%, Hits: {}, Misses: {}, Size: {}",
+            log.info(
+                    "Cache [{}] - Hit Rate: {:.2f}%, Hits: {}, Misses: {}, Size: {}",
                     name, stat.hitRate() * 100, stat.hitCount(), stat.missCount(), stat.size());
         });
     }
@@ -122,7 +121,7 @@ public class CacheStatsService {
      */
     public Map<Object, Object> getCacheEntries(String cacheName) {
         Map<Object, Object> entries = new HashMap<>();
-        
+
         org.springframework.cache.Cache springCache = localCacheManager.getCache(cacheName);
         if (springCache != null) {
             Object nativeCache = springCache.getNativeCache();
@@ -131,7 +130,7 @@ public class CacheStatsService {
                 map.forEach((k, v) -> entries.put(k, v));
             }
         }
-        
+
         return entries;
     }
 
@@ -146,8 +145,7 @@ public class CacheStatsService {
             long loadFailureCount,
             long totalLoadTime,
             long evictionCount,
-            long size
-    ) {
+            long size) {
         /**
          * 计算命中率
          */

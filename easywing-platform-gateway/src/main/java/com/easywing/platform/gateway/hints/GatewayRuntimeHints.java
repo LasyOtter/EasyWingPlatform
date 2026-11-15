@@ -15,17 +15,17 @@
  */
 package com.easywing.platform.gateway.hints;
 
+import com.easywing.platform.gateway.filter.gray.GrayReleaseFilter;
 import com.easywing.platform.gateway.filter.jwt.JwtClaims;
 import com.easywing.platform.gateway.filter.jwt.JwtValidationFilter;
-import com.easywing.platform.gateway.filter.ratelimit.RateLimitFilter;
-import com.easywing.platform.gateway.filter.gray.GrayReleaseFilter;
 import com.easywing.platform.gateway.filter.logging.LoggingFilter;
-import com.easywing.platform.gateway.properties.GatewayProperties;
-import com.easywing.platform.gateway.properties.JwtProperties;
-import com.easywing.platform.gateway.properties.RateLimitProperties;
-import com.easywing.platform.gateway.properties.GrayProperties;
-import com.easywing.platform.gateway.properties.LoggingProperties;
+import com.easywing.platform.gateway.filter.ratelimit.RateLimitFilter;
 import com.easywing.platform.gateway.filter.ratelimit.RedisRateLimiter;
+import com.easywing.platform.gateway.properties.GatewayProperties;
+import com.easywing.platform.gateway.properties.GrayProperties;
+import com.easywing.platform.gateway.properties.JwtProperties;
+import com.easywing.platform.gateway.properties.LoggingProperties;
+import com.easywing.platform.gateway.properties.RateLimitProperties;
 import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
@@ -52,17 +52,17 @@ public class GatewayRuntimeHints implements RuntimeHintsRegistrar {
 
     private void registerReflectionHints(RuntimeHints hints) {
         hints.reflection()
-            .registerType(GatewayProperties.class, MemberCategory.values())
-            .registerType(JwtProperties.class, MemberCategory.values())
-            .registerType(RateLimitProperties.class, MemberCategory.values())
-            .registerType(GrayProperties.class, MemberCategory.values())
-            .registerType(LoggingProperties.class, MemberCategory.values())
-            .registerType(JwtClaims.class, MemberCategory.values())
-            .registerType(JwtValidationFilter.class, MemberCategory.INVOKE_PUBLIC_METHODS)
-            .registerType(RateLimitFilter.class, MemberCategory.INVOKE_PUBLIC_METHODS)
-            .registerType(GrayReleaseFilter.class, MemberCategory.INVOKE_PUBLIC_METHODS)
-            .registerType(LoggingFilter.class, MemberCategory.INVOKE_PUBLIC_METHODS)
-            .registerType(RedisRateLimiter.class, MemberCategory.INVOKE_PUBLIC_METHODS);
+                .registerType(GatewayProperties.class, MemberCategory.values())
+                .registerType(JwtProperties.class, MemberCategory.values())
+                .registerType(RateLimitProperties.class, MemberCategory.values())
+                .registerType(GrayProperties.class, MemberCategory.values())
+                .registerType(LoggingProperties.class, MemberCategory.values())
+                .registerType(JwtClaims.class, MemberCategory.values())
+                .registerType(JwtValidationFilter.class, MemberCategory.INVOKE_PUBLIC_METHODS)
+                .registerType(RateLimitFilter.class, MemberCategory.INVOKE_PUBLIC_METHODS)
+                .registerType(GrayReleaseFilter.class, MemberCategory.INVOKE_PUBLIC_METHODS)
+                .registerType(LoggingFilter.class, MemberCategory.INVOKE_PUBLIC_METHODS)
+                .registerType(RedisRateLimiter.class, MemberCategory.INVOKE_PUBLIC_METHODS);
     }
 
     private void registerResourceHints(RuntimeHints hints) {
@@ -71,8 +71,9 @@ public class GatewayRuntimeHints implements RuntimeHintsRegistrar {
         resources.registerResource(new ClassPathResource("application.yaml"));
         resources.registerResource(new ClassPathResource("log4j2-spring.xml"));
         resources.registerResource(new ClassPathResource("META-INF/spring.factories"));
-        resources.registerResource(new ClassPathResource("META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports"));
-        
+        resources.registerResource(new ClassPathResource(
+                "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports"));
+
         resources.registerPattern("*.yml");
         resources.registerPattern("*.yaml");
         resources.registerPattern("*.json");
@@ -81,13 +82,12 @@ public class GatewayRuntimeHints implements RuntimeHintsRegistrar {
 
     private void registerProxyHints(RuntimeHints hints) {
         hints.proxies()
-            .registerJdkProxy(KeyResolver.class)
-            .registerJdkProxy(org.springframework.cloud.gateway.filter.factory.GatewayFilterFactory.class)
-            .registerJdkProxy(org.springframework.cloud.gateway.handler.predicate.RoutePredicateFactory.class);
+                .registerJdkProxy(KeyResolver.class)
+                .registerJdkProxy(org.springframework.cloud.gateway.filter.factory.GatewayFilterFactory.class)
+                .registerJdkProxy(org.springframework.cloud.gateway.handler.predicate.RoutePredicateFactory.class);
     }
 
     private void registerSerializationHints(RuntimeHints hints) {
-        hints.serialization()
-            .registerType(JwtClaims.class);
+        hints.serialization().registerType(JwtClaims.class);
     }
 }

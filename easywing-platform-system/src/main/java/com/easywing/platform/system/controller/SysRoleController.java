@@ -8,19 +8,20 @@ import com.easywing.platform.system.domain.vo.SysRoleVO;
 import com.easywing.platform.system.enums.BusinessType;
 import com.easywing.platform.system.service.SysRoleService;
 import com.easywing.platform.web.idempotent.Idempotent;
+import com.easywing.platform.web.version.ApiVersion;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/system/roles")
 @Tag(name = "角色管理")
+@ApiVersion("v1")
 @RequiredArgsConstructor
 public class SysRoleController {
 
@@ -29,8 +30,10 @@ public class SysRoleController {
     @GetMapping
     @Operation(summary = "分页查询角色列表")
     @PreAuthorize("hasAuthority('system:role:list')")
-    public ResponseEntity<Page<SysRoleVO>> list(@RequestParam(defaultValue = "1") long current,
-                                                @RequestParam(defaultValue = "10") long size, SysRoleQuery query) {
+    public ResponseEntity<Page<SysRoleVO>> list(
+            @RequestParam(defaultValue = "1") long current,
+            @RequestParam(defaultValue = "10") long size,
+            SysRoleQuery query) {
         return ResponseEntity.ok(roleService.selectRolePage(new Page<>(current, size), query));
     }
 

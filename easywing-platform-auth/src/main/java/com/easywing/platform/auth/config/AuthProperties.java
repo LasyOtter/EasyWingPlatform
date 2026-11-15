@@ -15,9 +15,8 @@
  */
 package com.easywing.platform.auth.config;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
 import java.time.Duration;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * 认证服务配置属性

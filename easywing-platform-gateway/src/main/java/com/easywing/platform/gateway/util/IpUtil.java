@@ -15,9 +15,8 @@
  */
 package com.easywing.platform.gateway.util;
 
-import org.springframework.http.server.reactive.ServerHttpRequest;
-
 import java.net.InetSocketAddress;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 
 /**
  * IP地址工具类
@@ -31,12 +30,11 @@ public final class IpUtil {
     private static final String LOCALHOST_IPV4 = "127.0.0.1";
     private static final String LOCALHOST_IPV6 = "0:0:0:0:0:0:0:1";
 
-    private IpUtil() {
-    }
+    private IpUtil() {}
 
     public static String getClientIp(ServerHttpRequest request) {
         String ip = request.getHeaders().getFirst("X-Forwarded-For");
-        
+
         if (isValidIp(ip)) {
             int index = ip.indexOf(',');
             if (index != -1) {
@@ -44,32 +42,32 @@ public final class IpUtil {
             }
             return ip.trim();
         }
-        
+
         ip = request.getHeaders().getFirst("X-Real-IP");
         if (isValidIp(ip)) {
             return ip;
         }
-        
+
         ip = request.getHeaders().getFirst("Proxy-Client-IP");
         if (isValidIp(ip)) {
             return ip;
         }
-        
+
         ip = request.getHeaders().getFirst("WL-Proxy-Client-IP");
         if (isValidIp(ip)) {
             return ip;
         }
-        
+
         ip = request.getHeaders().getFirst("HTTP_CLIENT_IP");
         if (isValidIp(ip)) {
             return ip;
         }
-        
+
         ip = request.getHeaders().getFirst("HTTP_X_FORWARDED_FOR");
         if (isValidIp(ip)) {
             return ip;
         }
-        
+
         InetSocketAddress remoteAddress = request.getRemoteAddress();
         if (remoteAddress != null && remoteAddress.getAddress() != null) {
             ip = remoteAddress.getAddress().getHostAddress();
@@ -78,7 +76,7 @@ public final class IpUtil {
             }
             return ip;
         }
-        
+
         return UNKNOWN;
     }
 
@@ -90,28 +88,28 @@ public final class IpUtil {
         if (ip == null || ip.isEmpty()) {
             return false;
         }
-        
+
         if (LOCALHOST_IPV4.equals(ip) || LOCALHOST_IPV6.equals(ip)) {
             return true;
         }
-        
+
         byte[] bytes = parseIpBytes(ip);
         if (bytes == null) {
             return false;
         }
-        
+
         if (bytes[0] == 10) {
             return true;
         }
-        
+
         if (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) {
             return true;
         }
-        
+
         if (bytes[0] == 192 && bytes[1] == 168) {
             return true;
         }
-        
+
         return false;
     }
 

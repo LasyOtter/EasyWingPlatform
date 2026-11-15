@@ -3,22 +3,22 @@ package com.easywing.platform.system.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.easywing.platform.system.annotation.Log;
 import com.easywing.platform.system.domain.dto.SysDictTypeDTO;
-import com.easywing.platform.system.domain.entity.SysDictType;
 import com.easywing.platform.system.domain.vo.SysDictTypeVO;
 import com.easywing.platform.system.enums.BusinessType;
 import com.easywing.platform.system.service.SysDictTypeService;
+import com.easywing.platform.web.version.ApiVersion;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/system/dict/types")
 @Tag(name = "字典类型管理")
+@ApiVersion("v1")
 @RequiredArgsConstructor
 public class SysDictTypeController {
 
@@ -26,8 +26,10 @@ public class SysDictTypeController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('system:dict:list')")
-    public ResponseEntity<Page<SysDictTypeVO>> list(@RequestParam(defaultValue = "1") long current,
-                                                    @RequestParam(defaultValue = "10") long size, SysDictTypeDTO dictTypeDTO) {
+    public ResponseEntity<Page<SysDictTypeVO>> list(
+            @RequestParam(defaultValue = "1") long current,
+            @RequestParam(defaultValue = "10") long size,
+            SysDictTypeDTO dictTypeDTO) {
         return ResponseEntity.ok(dictTypeService.selectDictTypePage(new Page<>(current, size), dictTypeDTO));
     }
 

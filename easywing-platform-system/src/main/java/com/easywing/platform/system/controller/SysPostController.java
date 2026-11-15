@@ -3,22 +3,22 @@ package com.easywing.platform.system.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.easywing.platform.system.annotation.Log;
 import com.easywing.platform.system.domain.dto.SysPostDTO;
-import com.easywing.platform.system.domain.entity.SysPost;
 import com.easywing.platform.system.domain.vo.SysPostVO;
 import com.easywing.platform.system.enums.BusinessType;
 import com.easywing.platform.system.service.SysPostService;
+import com.easywing.platform.web.version.ApiVersion;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/system/posts")
 @Tag(name = "岗位管理")
+@ApiVersion("v1")
 @RequiredArgsConstructor
 public class SysPostController {
 
@@ -26,8 +26,10 @@ public class SysPostController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('system:post:list')")
-    public ResponseEntity<Page<SysPostVO>> list(@RequestParam(defaultValue = "1") long current,
-                                                @RequestParam(defaultValue = "10") long size, SysPostDTO postDTO) {
+    public ResponseEntity<Page<SysPostVO>> list(
+            @RequestParam(defaultValue = "1") long current,
+            @RequestParam(defaultValue = "10") long size,
+            SysPostDTO postDTO) {
         return ResponseEntity.ok(postService.selectPostPage(new Page<>(current, size), postDTO));
     }
 

@@ -1,20 +1,17 @@
 package com.easywing.platform.ai.monitoring;
 
-import com.easywing.platform.ai.agent.AgentResponse;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * 监控仪表板服务 - 实时监控系统状态和性能
@@ -34,16 +31,9 @@ public class MonitoringDashboard {
     /**
      * 记录 Agent 执行
      */
-    public void recordAgentExecution(
-            String agentId,
-            long executionTime,
-            boolean success,
-            int iterationCount) {
+    public void recordAgentExecution(String agentId, long executionTime, boolean success, int iterationCount) {
 
-        AgentMetrics metrics = agentMetrics.computeIfAbsent(
-                agentId,
-                k -> new AgentMetrics(agentId)
-        );
+        AgentMetrics metrics = agentMetrics.computeIfAbsent(agentId, k -> new AgentMetrics(agentId));
 
         metrics.recordExecution(executionTime, success, iterationCount);
         systemMetrics.recordExecution(executionTime, success);
@@ -61,15 +51,9 @@ public class MonitoringDashboard {
     /**
      * 记录工具调用
      */
-    public void recordToolCall(
-            String toolName,
-            long executionTime,
-            boolean success) {
+    public void recordToolCall(String toolName, long executionTime, boolean success) {
 
-        ToolMetrics metrics = toolMetrics.computeIfAbsent(
-                toolName,
-                k -> new ToolMetrics(toolName)
-        );
+        ToolMetrics metrics = toolMetrics.computeIfAbsent(toolName, k -> new ToolMetrics(toolName));
 
         metrics.recordCall(executionTime, success);
 
@@ -139,7 +123,9 @@ public class MonitoringDashboard {
      */
     private List<AgentMetrics> getTopAgents(int limit) {
         return agentMetrics.values().stream()
-                .sorted(Comparator.comparingLong((AgentMetrics a) -> a.getTotalExecutions().get()).reversed())
+                .sorted(Comparator.comparingLong(
+                                (AgentMetrics a) -> a.getTotalExecutions().get())
+                        .reversed())
                 .limit(limit)
                 .collect(Collectors.toList());
     }
@@ -149,7 +135,9 @@ public class MonitoringDashboard {
      */
     private List<ToolMetrics> getTopTools(int limit) {
         return toolMetrics.values().stream()
-                .sorted(Comparator.comparingLong((ToolMetrics t) -> t.getTotalCalls().get()).reversed())
+                .sorted(Comparator.comparingLong(
+                                (ToolMetrics t) -> t.getTotalCalls().get())
+                        .reversed())
                 .limit(limit)
                 .collect(Collectors.toList());
     }
@@ -396,8 +384,7 @@ public class MonitoringDashboard {
                     successfulExecutions.get(),
                     failedExecutions.get(),
                     getSuccessRate(),
-                    getAverageExecutionTime()
-            );
+                    getAverageExecutionTime());
         }
 
         @Data
@@ -437,6 +424,9 @@ public class MonitoringDashboard {
     }
 
     public enum AlertLevel {
-        INFO, WARNING, ERROR, CRITICAL
+        INFO,
+        WARNING,
+        ERROR,
+        CRITICAL
     }
 }

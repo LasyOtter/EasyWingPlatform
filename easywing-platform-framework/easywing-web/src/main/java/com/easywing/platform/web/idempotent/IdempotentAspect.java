@@ -17,6 +17,10 @@ package com.easywing.platform.web.idempotent;
 
 import com.easywing.platform.core.exception.BizException;
 import com.easywing.platform.core.exception.ErrorCode;
+import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -36,11 +40,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.util.StringUtils;
-
-import java.lang.reflect.Method;
-import java.util.Collections;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 幂等性保护切面
@@ -77,11 +76,10 @@ public class IdempotentAspect {
      * 确保只删除自己设置的锁
      */
     private static final String RELEASE_LOCK_SCRIPT =
-            "if redis.call('get', KEYS[1]) == ARGV[1] then " +
-                    "    return redis.call('del', KEYS[1]) " +
-                    "else " +
-                    "    return 0 " +
-                    "end";
+            "if redis.call('get', KEYS[1]) == ARGV[1] then " + "    return redis.call('del', KEYS[1]) "
+                    + "else "
+                    + "    return 0 "
+                    + "end";
 
     /**
      * 业务执行成功后保留幂等键的最短时间（秒）
@@ -94,17 +92,18 @@ public class IdempotentAspect {
         String lockValue = UUID.randomUUID().toString();
 
         // 尝试获取锁
-        Boolean locked = redisTemplate.opsForValue()
-                .setIfAbsent(key, lockValue, idempotent.expire(), TimeUnit.SECONDS);
+        Boolean locked = redisTemplate.opsForValue().setIfAbsent(key, lockValue, idempotent.expire(), TimeUnit.SECONDS);
 
         if (!Boolean.TRUE.equals(locked)) {
             // 获取已存在的锁信息
             String existingValue = redisTemplate.opsForValue().get(key);
-            log.warn("Duplicate request detected: key={}, existingLock={}, method={}.{}", 
-                    key, existingValue != null ? "yes" : "no",
+            log.warn(
+                    "Duplicate request detected: key={}, existingLock={}, method={}.{}",
+                    key,
+                    existingValue != null ? "yes" : "no",
                     point.getTarget().getClass().getSimpleName(),
                     point.getSignature().getName());
-            
+
             throw new BizException(ErrorCode.REQUEST_DUPLICATE, idempotent.message());
         }
 
@@ -180,13 +179,12 @@ public class IdempotentAspect {
         try {
             Expression expression = parser.parseExpression(spel);
             Object value = expression.getValue(context);
-            return String.format("idempotent:%s:%s:%s", className, methodName, 
-                    value != null ? value.toString() : "null");
+            return String.format(
+                    "idempotent:%s:%s:%s", className, methodName, value != null ? value.toString() : "null");
         } catch (SpelEvaluationException e) {
             log.error("Failed to parse SpEL expression: {}", spel, e);
             // 解析失败时使用默认key
-            return String.format("idempotent:%s:%s:%s", className, methodName, 
-                    System.currentTimeMillis());
+            return String.format("idempotent:%s:%s:%s", className, methodName, System.currentTimeMillis());
         }
     }
 

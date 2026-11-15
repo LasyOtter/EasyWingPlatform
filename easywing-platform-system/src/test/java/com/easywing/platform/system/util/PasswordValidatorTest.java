@@ -15,10 +15,10 @@
  */
 package com.easywing.platform.system.util;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * 密码强度校验工具类单元测试

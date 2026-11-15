@@ -5,6 +5,8 @@ import com.easywing.platform.ai.model.ChatCompletionRequest;
 import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.provider.AiProviderRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,10 +14,6 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 /**
  * 提示词优化器 - 根据历史执行数据自动优化提示词
@@ -45,7 +43,9 @@ public class PromptOptimizer {
         return analyzePrompt(originalPrompt, context, history)
                 .flatMap(analysis -> generateOptimizedPrompt(originalPrompt, analysis))
                 .map(optimized -> {
-                    log.info("Prompt optimized, improvements: {}", optimized.getImprovements().size());
+                    log.info(
+                            "Prompt optimized, improvements: {}",
+                            optimized.getImprovements().size());
                     return optimized;
                 });
     }
@@ -54,10 +54,8 @@ public class PromptOptimizer {
      * 记录执行结果
      */
     public void recordExecution(String prompt, AgentResponse response, boolean success) {
-        PromptPerformanceHistory history = performanceHistory.computeIfAbsent(
-                normalizePrompt(prompt),
-                k -> new PromptPerformanceHistory()
-        );
+        PromptPerformanceHistory history =
+                performanceHistory.computeIfAbsent(normalizePrompt(prompt), k -> new PromptPerformanceHistory());
 
         ExecutionRecord record = ExecutionRecord.builder()
                 .prompt(prompt)
@@ -73,10 +71,7 @@ public class PromptOptimizer {
     /**
      * 分析提示词
      */
-    private Mono<PromptAnalysis> analyzePrompt(
-            String prompt,
-            String context,
-            PromptPerformanceHistory history) {
+    private Mono<PromptAnalysis> analyzePrompt(String prompt, String context, PromptPerformanceHistory history) {
 
         String analysisPrompt = buildAnalysisPrompt(prompt, context, history);
 
@@ -90,22 +85,20 @@ public class PromptOptimizer {
                         ChatMessage.builder()
                                 .role("user")
                                 .content(analysisPrompt)
-                                .build()
-                ))
+                                .build()))
                 .temperature(0.3)
                 .build();
 
-        return providerRegistry.chat(request)
-                .map(response -> parseAnalysis(response.getChoices().get(0).getMessage().getContent()));
+        return providerRegistry
+                .chat(request)
+                .map(response ->
+                        parseAnalysis(response.getChoices().get(0).getMessage().getContent()));
     }
 
     /**
      * 构建分析提示
      */
-    private String buildAnalysisPrompt(
-            String prompt,
-            String context,
-            PromptPerformanceHistory history) {
+    private String buildAnalysisPrompt(String prompt, String context, PromptPerformanceHistory history) {
 
         StringBuilder sb = new StringBuilder();
         sb.append("请分析以下提示词并提出优化建议：\n\n");
@@ -125,7 +118,8 @@ public class PromptOptimizer {
             sb.append("\n");
         }
 
-        sb.append("""
+        sb.append(
+                """
                 请从以下维度分析：
                 1. 清晰度 - 指令是否明确？
                 2. 完整性 - 是否包含必要信息？
@@ -147,9 +141,7 @@ public class PromptOptimizer {
     /**
      * 生成优化后的提示词
      */
-    private Mono<OptimizedPrompt> generateOptimizedPrompt(
-            String originalPrompt,
-            PromptAnalysis analysis) {
+    private Mono<OptimizedPrompt> generateOptimizedPrompt(String originalPrompt, PromptAnalysis analysis) {
 
         if (analysis.getScore() >= 85) {
             // 分数足够高，不需要优化
@@ -172,24 +164,24 @@ public class PromptOptimizer {
                 .temperature(0.5)
                 .build();
 
-        return providerRegistry.chat(request)
-                .map(response -> {
-                    String optimized = response.getChoices().get(0).getMessage().getContent();
+        return providerRegistry.chat(request).map(response -> {
+            String optimized = response.getChoices().get(0).getMessage().getContent();
 
-                    return OptimizedPrompt.builder()
-                            .originalPrompt(originalPrompt)
-                            .optimizedPrompt(optimized)
-                            .improvements(analysis.getSuggestions())
-                            .score(analysis.getScore())
-                            .build();
-                });
+            return OptimizedPrompt.builder()
+                    .originalPrompt(originalPrompt)
+                    .optimizedPrompt(optimized)
+                    .improvements(analysis.getSuggestions())
+                    .score(analysis.getScore())
+                    .build();
+        });
     }
 
     /**
      * 构建优化提示
      */
     private String buildOptimizationPrompt(String originalPrompt, PromptAnalysis analysis) {
-        return String.format("""
+        return String.format(
+                """
                 请优化以下提示词：
 
                 【原始提示词】
@@ -209,10 +201,7 @@ public class PromptOptimizer {
 
                 直接返回优化后的提示词，不要解释。
                 """,
-                originalPrompt,
-                String.join("\n", analysis.getIssues()),
-                String.join("\n", analysis.getSuggestions())
-        );
+                originalPrompt, String.join("\n", analysis.getIssues()), String.join("\n", analysis.getSuggestions()));
     }
 
     /**
@@ -293,8 +282,7 @@ public class PromptOptimizer {
      * 获取优化建议
      */
     public Mono<List<String>> getSuggestions(String prompt) {
-        return analyzePrompt(prompt, null, null)
-                .map(PromptAnalysis::getSuggestions);
+        return analyzePrompt(prompt, null, null).map(PromptAnalysis::getSuggestions);
     }
 
     /**
@@ -304,9 +292,12 @@ public class PromptOptimizer {
         Map<String, PromptTemplate> templates = new HashMap<>();
 
         // 任务规划模板
-        templates.put("planning", PromptTemplate.builder()
-                .name("任务规划")
-                .template("""
+        templates.put(
+                "planning",
+                PromptTemplate.builder()
+                        .name("任务规划")
+                        .template(
+                                """
                         任务: {task}
 
                         请制定详细的执行计划，包括：
@@ -317,14 +308,17 @@ public class PromptOptimizer {
 
                         返回结构化的计划。
                         """)
-                .variables(List.of("task"))
-                .category("planning")
-                .build());
+                        .variables(List.of("task"))
+                        .category("planning")
+                        .build());
 
         // 代码生成模板
-        templates.put("code_generation", PromptTemplate.builder()
-                .name("代码生成")
-                .template("""
+        templates.put(
+                "code_generation",
+                PromptTemplate.builder()
+                        .name("代码生成")
+                        .template(
+                                """
                         需求: {requirement}
                         编程语言: {language}
 
@@ -338,9 +332,9 @@ public class PromptOptimizer {
                         - 代码清晰易读
                         - 考虑边界情况
                         """)
-                .variables(List.of("requirement", "language"))
-                .category("coding")
-                .build());
+                        .variables(List.of("requirement", "language"))
+                        .category("coding")
+                        .build());
 
         return templates;
     }
@@ -394,7 +388,8 @@ public class PromptOptimizer {
 
         public double getSuccessRate() {
             if (records.isEmpty()) return 0.0;
-            long successCount = records.stream().filter(ExecutionRecord::isSuccess).count();
+            long successCount =
+                    records.stream().filter(ExecutionRecord::isSuccess).count();
             return (double) successCount / records.size();
         }
 

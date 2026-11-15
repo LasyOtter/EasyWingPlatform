@@ -18,28 +18,21 @@ package com.easywing.platform.gateway.filter.logging;
 import com.easywing.platform.core.constant.HttpHeaders;
 import com.easywing.platform.gateway.properties.GatewayProperties;
 import com.easywing.platform.gateway.properties.LoggingProperties;
-import org.reactivestreams.Publisher;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.core.io.buffer.NettyDataBufferFactory;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpRequestDecorator;
 import org.springframework.http.server.reactive.ServerHttpResponse;
-import org.springframework.http.server.reactive.ServerHttpResponseDecorator;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 访问日志全局过滤器
@@ -82,7 +75,7 @@ public class LoggingFilter implements GlobalFilter, Ordered {
         if (!properties.isEnabled()) {
             return chain.filter(exchange);
         }
-        
+
         if (!shouldLog()) {
             return chain.filter(exchange);
         }
@@ -94,14 +87,13 @@ public class LoggingFilter implements GlobalFilter, Ordered {
         exchange.getAttributes().put(ACCESS_LOG_ATTR, accessLog);
 
         ServerHttpRequest request = exchange.getRequest();
-        
+
         if (properties.isLogRequestBody() && shouldCaptureBody(request)) {
             return chain.filter(decorateRequest(exchange, accessLog))
                     .then(Mono.defer(() -> logResponse(exchange, accessLog)));
         }
 
-        return chain.filter(exchange)
-                .then(Mono.defer(() -> logResponse(exchange, accessLog)));
+        return chain.filter(exchange).then(Mono.defer(() -> logResponse(exchange, accessLog)));
     }
 
     private boolean shouldLog() {
@@ -113,14 +105,16 @@ public class LoggingFilter implements GlobalFilter, Ordered {
 
     private boolean shouldCaptureBody(ServerHttpRequest request) {
         HttpMethod method = request.getMethod();
-        return method == HttpMethod.POST || method == HttpMethod.PUT || 
-               method == HttpMethod.PATCH || method == HttpMethod.DELETE;
+        return method == HttpMethod.POST
+                || method == HttpMethod.PUT
+                || method == HttpMethod.PATCH
+                || method == HttpMethod.DELETE;
     }
 
     private AccessLog createAccessLog(ServerWebExchange exchange, long startTime) {
         AccessLog accessLog = new AccessLog();
         ServerHttpRequest request = exchange.getRequest();
-        
+
         accessLog.setRequestTime(startTime);
         accessLog.setMethod(request.getMethod().name());
         accessLog.setPath(request.getPath().value());
@@ -131,12 +125,12 @@ public class LoggingFilter implements GlobalFilter, Ordered {
         accessLog.setTenantId(request.getHeaders().getFirst(HttpHeaders.X_TENANT_ID));
         accessLog.setTraceId(request.getHeaders().getFirst(HttpHeaders.X_TRACE_ID));
         accessLog.setRequestId(request.getHeaders().getFirst(HttpHeaders.X_REQUEST_ID));
-        
+
         String grayVersion = exchange.getAttribute("grayVersion");
         if (grayVersion != null) {
             accessLog.setGrayVersion(grayVersion);
         }
-        
+
         request.getHeaders().forEach((name, values) -> {
             if (isSensitiveHeader(name)) {
                 accessLog.getRequestHeaders().put(name, "******");
@@ -144,83 +138,85 @@ public class LoggingFilter implements GlobalFilter, Ordered {
                 accessLog.getRequestHeaders().put(name, String.join(",", values));
             }
         });
-        
+
         accessLog.setRequestSize(request.getHeaders().getContentLength());
-        
+
         return accessLog;
     }
 
     private String getClientIp(ServerWebExchange exchange) {
         ServerHttpRequest request = exchange.getRequest();
-        
+
         String xForwardedFor = request.getHeaders().getFirst(HttpHeaders.X_FORWARDED_FOR);
         if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
             return xForwardedFor.split(",")[0].trim();
         }
-        
+
         String xRealIp = request.getHeaders().getFirst(HttpHeaders.X_REAL_IP);
         if (xRealIp != null && !xRealIp.isEmpty()) {
             return xRealIp;
         }
-        
+
         if (request.getRemoteAddress() != null) {
             return request.getRemoteAddress().getAddress().getHostAddress();
         }
-        
+
         return "unknown";
     }
 
     private boolean isSensitiveHeader(String headerName) {
         String lowerName = headerName.toLowerCase();
-        return lowerName.contains("authorization") || 
-               lowerName.contains("token") || 
-               lowerName.contains("password") ||
-               lowerName.contains("secret") ||
-               lowerName.contains("key") ||
-               properties.getSensitiveHeaders().stream()
-                       .anyMatch(h -> h.equalsIgnoreCase(headerName));
+        return lowerName.contains("authorization")
+                || lowerName.contains("token")
+                || lowerName.contains("password")
+                || lowerName.contains("secret")
+                || lowerName.contains("key")
+                || properties.getSensitiveHeaders().stream().anyMatch(h -> h.equalsIgnoreCase(headerName));
     }
 
     private ServerWebExchange decorateRequest(ServerWebExchange exchange, AccessLog accessLog) {
         ServerHttpRequest request = exchange.getRequest();
-        
-        return exchange.mutate().request(new ServerHttpRequestDecorator(request) {
-            @Override
-            public Flux<DataBuffer> getBody() {
-                return super.getBody().doOnNext(buffer -> {
-                    int length = buffer.readableByteCount();
-                    if (length > 0 && length <= properties.getMaxBodyLength()) {
-                        byte[] bytes = new byte[length];
-                        buffer.read(bytes);
-                        String body = new String(bytes, StandardCharsets.UTF_8);
-                        accessLog.setRequestBody(desensitizeConverter.desensitizeJson(body));
+
+        return exchange.mutate()
+                .request(new ServerHttpRequestDecorator(request) {
+                    @Override
+                    public Flux<DataBuffer> getBody() {
+                        return super.getBody().doOnNext(buffer -> {
+                            int length = buffer.readableByteCount();
+                            if (length > 0 && length <= properties.getMaxBodyLength()) {
+                                byte[] bytes = new byte[length];
+                                buffer.read(bytes);
+                                String body = new String(bytes, StandardCharsets.UTF_8);
+                                accessLog.setRequestBody(desensitizeConverter.desensitizeJson(body));
+                            }
+                        });
                     }
-                });
-            }
-        }).build();
+                })
+                .build();
     }
 
     private Mono<Void> logResponse(ServerWebExchange exchange, AccessLog accessLog) {
         long endTime = System.currentTimeMillis();
         long duration = endTime - accessLog.getRequestTime();
-        
+
         accessLog.setResponseTime(endTime);
         accessLog.setDuration(duration);
-        
+
         ServerHttpResponse response = exchange.getResponse();
-        accessLog.setStatus(response.getStatusCode() != null ? response.getStatusCode().value() : 0);
-        
-        response.getHeaders().forEach((name, values) -> 
-                accessLog.getResponseHeaders().put(name, String.join(",", values)));
-        
+        accessLog.setStatus(
+                response.getStatusCode() != null ? response.getStatusCode().value() : 0);
+
+        response.getHeaders()
+                .forEach((name, values) -> accessLog.getResponseHeaders().put(name, String.join(",", values)));
+
         accessLog.setResponseSize(response.getHeaders().getContentLength());
-        
+
         if (accessLog.getStatus() >= 400) {
             log.warn("Request failed: {}", accessLog);
         } else {
             log.info("Request completed: {}", accessLog);
         }
-        
+
         return Mono.empty();
     }
 

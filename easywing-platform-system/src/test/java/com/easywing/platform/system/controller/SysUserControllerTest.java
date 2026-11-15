@@ -28,15 +28,15 @@ import com.easywing.platform.system.domain.vo.SysUserVO;
 import com.easywing.platform.system.service.SysUserService;
 import com.easywing.platform.web.exception.GlobalExceptionHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.context.annotation.Import;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -70,12 +70,10 @@ class SysUserControllerTest {
         when(userService.selectUserPage(eq(1L), eq(10L), any())).thenReturn(page);
 
         // When & Then
-        mockMvc.perform(
-                        get("/api/system/users")
-                                .param("current", "1")
-                                .param("size", "10")
-                                .with(jwt()
-                                        .authorities(new SimpleGrantedAuthority("system:user:list"))))
+        mockMvc.perform(get("/api/system/users")
+                        .param("current", "1")
+                        .param("size", "10")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("system:user:list"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.records").isArray())
                 .andExpect(jsonPath("$.total").value(1));
@@ -84,11 +82,10 @@ class SysUserControllerTest {
     @Test
     @DisplayName("分页查询用户列表-无权限")
     void list_AccessDenied() throws Exception {
-        mockMvc.perform(
-                        get("/api/system/users")
-                                .param("current", "1")
-                                .param("size", "10")
-                                .with(jwt()))
+        mockMvc.perform(get("/api/system/users")
+                        .param("current", "1")
+                        .param("size", "10")
+                        .with(jwt()))
                 .andExpect(status().isForbidden());
     }
 
@@ -100,10 +97,8 @@ class SysUserControllerTest {
         when(userService.selectUserById(1L)).thenReturn(userVO);
 
         // When & Then
-        mockMvc.perform(
-                        get("/api/system/users/1")
-                                .with(jwt()
-                                        .authorities(new SimpleGrantedAuthority("system:user:query"))))
+        mockMvc.perform(get("/api/system/users/1")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("system:user:query"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.username").value("testuser"));
@@ -112,8 +107,7 @@ class SysUserControllerTest {
     @Test
     @DisplayName("根据ID查询用户-无权限")
     void getInfo_AccessDenied() throws Exception {
-        mockMvc.perform(get("/api/system/users/1").with(jwt()))
-                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/system/users/1").with(jwt())).andExpect(status().isForbidden());
     }
 
     @Test
@@ -138,12 +132,10 @@ class SysUserControllerTest {
         when(userService.insertUser(any())).thenReturn(1L);
 
         // When & Then
-        mockMvc.perform(
-                        post("/api/system/users")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(userDTO))
-                                .with(jwt()
-                                        .authorities(new SimpleGrantedAuthority("system:user:add"))))
+        mockMvc.perform(post("/api/system/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userDTO))
+                        .with(jwt().authorities(new SimpleGrantedAuthority("system:user:add"))))
                 .andExpect(status().isOk())
                 .andExpect(content().string("1"));
     }
@@ -156,12 +148,10 @@ class SysUserControllerTest {
         when(userService.checkUsernameUnique("existinguser")).thenReturn(false);
 
         // When & Then
-        mockMvc.perform(
-                        post("/api/system/users")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(userDTO))
-                                .with(jwt()
-                                        .authorities(new SimpleGrantedAuthority("system:user:add"))))
+        mockMvc.perform(post("/api/system/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userDTO))
+                        .with(jwt().authorities(new SimpleGrantedAuthority("system:user:add"))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.detail").value("用户名已存在"));
     }
@@ -174,12 +164,10 @@ class SysUserControllerTest {
         userDTO.setNickname("Test User");
 
         // When & Then
-        mockMvc.perform(
-                        post("/api/system/users")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(userDTO))
-                                .with(jwt()
-                                        .authorities(new SimpleGrantedAuthority("system:user:add"))))
+        mockMvc.perform(post("/api/system/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userDTO))
+                        .with(jwt().authorities(new SimpleGrantedAuthority("system:user:add"))))
                 .andExpect(status().isBadRequest());
     }
 
@@ -192,12 +180,10 @@ class SysUserControllerTest {
         userDTO.setNickname("Test User");
 
         // When & Then
-        mockMvc.perform(
-                        post("/api/system/users")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(userDTO))
-                                .with(jwt()
-                                        .authorities(new SimpleGrantedAuthority("system:user:add"))))
+        mockMvc.perform(post("/api/system/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userDTO))
+                        .with(jwt().authorities(new SimpleGrantedAuthority("system:user:add"))))
                 .andExpect(status().isBadRequest());
     }
 
@@ -209,12 +195,10 @@ class SysUserControllerTest {
         userDTO.setEmail("invalid-email");
 
         // When & Then
-        mockMvc.perform(
-                        post("/api/system/users")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(userDTO))
-                                .with(jwt()
-                                        .authorities(new SimpleGrantedAuthority("system:user:add"))))
+        mockMvc.perform(post("/api/system/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userDTO))
+                        .with(jwt().authorities(new SimpleGrantedAuthority("system:user:add"))))
                 .andExpect(status().isBadRequest());
     }
 
@@ -226,12 +210,10 @@ class SysUserControllerTest {
         userDTO.setPhone("12345678900");
 
         // When & Then
-        mockMvc.perform(
-                        post("/api/system/users")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(userDTO))
-                                .with(jwt()
-                                        .authorities(new SimpleGrantedAuthority("system:user:add"))))
+        mockMvc.perform(post("/api/system/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userDTO))
+                        .with(jwt().authorities(new SimpleGrantedAuthority("system:user:add"))))
                 .andExpect(status().isBadRequest());
     }
 
@@ -240,11 +222,10 @@ class SysUserControllerTest {
     void add_AccessDenied() throws Exception {
         SysUserDTO userDTO = TestDataFactory.createNewUserDTO("newuser");
 
-        mockMvc.perform(
-                        post("/api/system/users")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(userDTO))
-                                .with(jwt()))
+        mockMvc.perform(post("/api/system/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userDTO))
+                        .with(jwt()))
                 .andExpect(status().isForbidden());
     }
 
@@ -258,12 +239,10 @@ class SysUserControllerTest {
         when(userService.updateUser(any())).thenReturn(1);
 
         // When & Then
-        mockMvc.perform(
-                        put("/api/system/users")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(userDTO))
-                                .with(jwt()
-                                        .authorities(new SimpleGrantedAuthority("system:user:edit"))))
+        mockMvc.perform(put("/api/system/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userDTO))
+                        .with(jwt().authorities(new SimpleGrantedAuthority("system:user:edit"))))
                 .andExpect(status().isOk());
     }
 
@@ -275,12 +254,10 @@ class SysUserControllerTest {
         userDTO.setId(null);
 
         // When & Then
-        mockMvc.perform(
-                        put("/api/system/users")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(userDTO))
-                                .with(jwt()
-                                        .authorities(new SimpleGrantedAuthority("system:user:edit"))))
+        mockMvc.perform(put("/api/system/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userDTO))
+                        .with(jwt().authorities(new SimpleGrantedAuthority("system:user:edit"))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("用户ID不能为空"));
     }
@@ -290,11 +267,10 @@ class SysUserControllerTest {
     void edit_AccessDenied() throws Exception {
         SysUserDTO userDTO = TestDataFactory.createUserDTO();
 
-        mockMvc.perform(
-                        put("/api/system/users")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(userDTO))
-                                .with(jwt()))
+        mockMvc.perform(put("/api/system/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userDTO))
+                        .with(jwt()))
                 .andExpect(status().isForbidden());
     }
 
@@ -303,18 +279,15 @@ class SysUserControllerTest {
     void remove_Success() throws Exception {
         when(userService.deleteUserByIds(List.of(1L, 2L, 3L))).thenReturn(3);
 
-        mockMvc.perform(
-                        delete("/api/system/users/1,2,3")
-                                .with(jwt()
-                                        .authorities(new SimpleGrantedAuthority("system:user:remove"))))
+        mockMvc.perform(delete("/api/system/users/1,2,3")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("system:user:remove"))))
                 .andExpect(status().isOk());
     }
 
     @Test
     @DisplayName("删除用户-无权限")
     void remove_AccessDenied() throws Exception {
-        mockMvc.perform(delete("/api/system/users/1,2,3").with(jwt()))
-                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/system/users/1,2,3").with(jwt())).andExpect(status().isForbidden());
     }
 
     @Test
@@ -322,21 +295,16 @@ class SysUserControllerTest {
     void changeStatus_Success() throws Exception {
         when(userService.updateStatus(1L, 0)).thenReturn(1);
 
-        mockMvc.perform(
-                        put("/api/system/users/1/status")
-                                .param("status", "0")
-                                .with(jwt()
-                                        .authorities(new SimpleGrantedAuthority("system:user:edit"))))
+        mockMvc.perform(put("/api/system/users/1/status")
+                        .param("status", "0")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("system:user:edit"))))
                 .andExpect(status().isOk());
     }
 
     @Test
     @DisplayName("修改用户状态-无权限")
     void changeStatus_AccessDenied() throws Exception {
-        mockMvc.perform(
-                        put("/api/system/users/1/status")
-                                .param("status", "0")
-                                .with(jwt()))
+        mockMvc.perform(put("/api/system/users/1/status").param("status", "0").with(jwt()))
                 .andExpect(status().isForbidden());
     }
 
@@ -345,31 +313,27 @@ class SysUserControllerTest {
     void resetPassword_Success() throws Exception {
         when(userService.resetPassword(1L, "NewPass@123")).thenReturn(1);
 
-        mockMvc.perform(
-                        put("/api/system/users/1/reset-password")
-                                .param("password", "NewPass@123")
-                                .with(jwt()
-                                        .authorities(new SimpleGrantedAuthority("system:user:resetPwd"))))
+        mockMvc.perform(put("/api/system/users/1/reset-password")
+                        .param("password", "NewPass@123")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("system:user:resetPwd"))))
                 .andExpect(status().isOk());
     }
 
     @Test
     @DisplayName("重置密码-无权限")
     void resetPassword_AccessDenied() throws Exception {
-        mockMvc.perform(
-                        put("/api/system/users/1/reset-password")
-                                .param("password", "NewPass@123")
-                                .with(jwt()))
+        mockMvc.perform(put("/api/system/users/1/reset-password")
+                        .param("password", "NewPass@123")
+                        .with(jwt()))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @DisplayName("重置密码-缺少权限声明")
     void resetPassword_MissingAuthority() throws Exception {
-        mockMvc.perform(
-                        put("/api/system/users/1/reset-password")
-                                .param("password", "NewPass@123")
-                                .with(jwt().authorities(new SimpleGrantedAuthority("system:user:list"))))
+        mockMvc.perform(put("/api/system/users/1/reset-password")
+                        .param("password", "NewPass@123")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("system:user:list"))))
                 .andExpect(status().isForbidden());
     }
 }

@@ -18,7 +18,6 @@ package com.easywing.platform.messaging.interceptor;
 import com.easywing.platform.messaging.core.Message;
 import com.easywing.platform.messaging.core.MessageHeaders;
 import com.easywing.platform.messaging.core.SendResult;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -28,7 +27,7 @@ public class MetricsInterceptor implements MessageInterceptor {
     private final Map<String, AtomicLong> sendSuccessCounters = new ConcurrentHashMap<>();
     private final Map<String, AtomicLong> sendFailureCounters = new ConcurrentHashMap<>();
     private final Map<String, AtomicLong> sendLatencies = new ConcurrentHashMap<>();
-    
+
     private final Map<String, AtomicLong> receiveSuccessCounters = new ConcurrentHashMap<>();
     private final Map<String, AtomicLong> receiveFailureCounters = new ConcurrentHashMap<>();
     private final Map<String, AtomicLong> receiveLatencies = new ConcurrentHashMap<>();
@@ -41,10 +40,10 @@ public class MetricsInterceptor implements MessageInterceptor {
 
     @Override
     public void postSend(Message<?> message, SendResult result) {
-        String destination = message.getHeaders().get(MessageHeaders.PARTITION) != null 
-            ? message.getHeaders().get(MessageHeaders.PARTITION).toString() 
-            : "unknown";
-        
+        String destination = message.getHeaders().get(MessageHeaders.PARTITION) != null
+                ? message.getHeaders().get(MessageHeaders.PARTITION).toString()
+                : "unknown";
+
         Long startTime = message.getHeaders().get("sendStartTime", Long.class);
         if (startTime != null) {
             long latency = System.currentTimeMillis() - startTime;
@@ -52,9 +51,13 @@ public class MetricsInterceptor implements MessageInterceptor {
         }
 
         if (result != null && result.isSuccess()) {
-            sendSuccessCounters.computeIfAbsent(destination, k -> new AtomicLong()).incrementAndGet();
+            sendSuccessCounters
+                    .computeIfAbsent(destination, k -> new AtomicLong())
+                    .incrementAndGet();
         } else {
-            sendFailureCounters.computeIfAbsent(destination, k -> new AtomicLong()).incrementAndGet();
+            sendFailureCounters
+                    .computeIfAbsent(destination, k -> new AtomicLong())
+                    .incrementAndGet();
         }
     }
 
@@ -67,7 +70,7 @@ public class MetricsInterceptor implements MessageInterceptor {
     @Override
     public void postReceive(Message<?> message, Object result) {
         String destination = "unknown";
-        
+
         Long startTime = message.getHeaders().get("receiveStartTime", Long.class);
         if (startTime != null) {
             long latency = System.currentTimeMillis() - startTime;
@@ -75,9 +78,13 @@ public class MetricsInterceptor implements MessageInterceptor {
         }
 
         if (result == null) {
-            receiveSuccessCounters.computeIfAbsent(destination, k -> new AtomicLong()).incrementAndGet();
+            receiveSuccessCounters
+                    .computeIfAbsent(destination, k -> new AtomicLong())
+                    .incrementAndGet();
         } else {
-            receiveFailureCounters.computeIfAbsent(destination, k -> new AtomicLong()).incrementAndGet();
+            receiveFailureCounters
+                    .computeIfAbsent(destination, k -> new AtomicLong())
+                    .incrementAndGet();
         }
     }
 

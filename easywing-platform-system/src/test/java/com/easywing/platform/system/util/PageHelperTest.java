@@ -223,12 +223,7 @@ class PageHelperTest {
         pageHelper.setCountCache("test:key", 100L);
 
         // Then
-        verify(valueOperations)
-                .set(
-                        eq("page:count:test:key"),
-                        eq("100"),
-                        eq(60L),
-                        eq(TimeUnit.SECONDS));
+        verify(valueOperations).set(eq("page:count:test:key"), eq("100"), eq(60L), eq(TimeUnit.SECONDS));
     }
 
     @Test

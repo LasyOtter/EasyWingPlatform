@@ -8,8 +8,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -20,8 +18,10 @@ public class UserDeletedEventListener {
     @Async
     @EventListener
     public void handleUserDeleted(UserDeletedEvent event) {
-        log.info("Processing user deleted event: userCount={}, operator={}",
-                event.getUserIds().size(), event.getOperator());
+        log.info(
+                "Processing user deleted event: userCount={}, operator={}",
+                event.getUserIds().size(),
+                event.getOperator());
 
         try {
             // 1. 清理用户缓存
@@ -39,11 +39,11 @@ public class UserDeletedEventListener {
             }
             log.debug("Deleted user sessions: {}", event.getUserIds());
 
-            log.info("User deleted event processed successfully: userCount={}",
+            log.info(
+                    "User deleted event processed successfully: userCount={}",
                     event.getUserIds().size());
         } catch (Exception e) {
-            log.error("Failed to process user deleted event: userIds={}",
-                    event.getUserIds(), e);
+            log.error("Failed to process user deleted event: userIds={}", event.getUserIds(), e);
         }
     }
 }

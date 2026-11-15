@@ -38,8 +38,7 @@ import java.util.Map;
  */
 public final class ErrorCode {
 
-    private ErrorCode() {
-    }
+    private ErrorCode() {}
 
     // ==================== HTTP状态码 ====================
     public static final int BAD_REQUEST_STATUS = 400;
@@ -175,6 +174,5 @@ public final class ErrorCode {
         return ERROR_MAP.get(code);
     }
 
-    private record ErrorInfo(String code, int status, String title, String message) {
-    }
+    private record ErrorInfo(String code, int status, String title, String message) {}
 }

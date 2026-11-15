@@ -1,11 +1,10 @@
 package com.easywing.platform.ai.skill;
 
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.Map;
 
 /**
  * 技能执行结果
@@ -55,20 +54,13 @@ public class SkillResult {
      * 创建成功结果
      */
     public static SkillResult success(Object data, String message) {
-        return SkillResult.builder()
-                .success(true)
-                .data(data)
-                .message(message)
-                .build();
+        return SkillResult.builder().success(true).data(data).message(message).build();
     }
 
     /**
      * 创建失败结果
      */
     public static SkillResult failure(String error) {
-        return SkillResult.builder()
-                .success(false)
-                .error(error)
-                .build();
+        return SkillResult.builder().success(false).error(error).build();
     }
 }

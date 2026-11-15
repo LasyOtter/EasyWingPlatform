@@ -15,16 +15,14 @@
  */
 package com.easywing.platform.cache.warmer;
 
+import java.util.Comparator;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-
-import java.util.Comparator;
-import java.util.List;
 
 /**
  * 缓存预热启动器
@@ -50,22 +48,20 @@ public class CacheWarmUpRunner implements ApplicationRunner {
         }
 
         log.info("Starting cache warm-up with {} warmers", warmers.size());
-        
+
         // 按顺序执行预热
-        warmers.stream()
-                .sorted(Comparator.comparingInt(CacheWarmer::getOrder))
-                .forEach(warmer -> {
-                    try {
-                        log.info("Running cache warmer: {}", warmer.getName());
-                        long start = System.currentTimeMillis();
-                        warmer.warmUp();
-                        long elapsed = System.currentTimeMillis() - start;
-                        log.info("Cache warmer {} completed in {}ms", warmer.getName(), elapsed);
-                    } catch (Exception e) {
-                        log.error("Cache warmer {} failed", warmer.getName(), e);
-                    }
-                });
-        
+        warmers.stream().sorted(Comparator.comparingInt(CacheWarmer::getOrder)).forEach(warmer -> {
+            try {
+                log.info("Running cache warmer: {}", warmer.getName());
+                long start = System.currentTimeMillis();
+                warmer.warmUp();
+                long elapsed = System.currentTimeMillis() - start;
+                log.info("Cache warmer {} completed in {}ms", warmer.getName(), elapsed);
+            } catch (Exception e) {
+                log.error("Cache warmer {} failed", warmer.getName(), e);
+            }
+        });
+
         log.info("Cache warm-up completed");
     }
 }

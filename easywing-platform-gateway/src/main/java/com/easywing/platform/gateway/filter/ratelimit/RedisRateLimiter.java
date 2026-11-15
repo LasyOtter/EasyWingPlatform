@@ -33,33 +33,34 @@ import org.springframework.data.redis.core.script.RedisScript;
  */
 public class RedisRateLimiter implements RedisScript<Long> {
 
-    private static final String SCRIPT = """
+    private static final String SCRIPT =
+            """
             local key = KEYS[1]
             local rate = tonumber(ARGV[1])
             local capacity = tonumber(ARGV[2])
             local now = tonumber(ARGV[3])
             local requested = tonumber(ARGV[4])
-            
+
             -- 获取当前令牌数和上次刷新时间
             local info = redis.call('HMGET', key, 'tokens', 'last_refill')
             local tokens = tonumber(info[1])
             local lastRefill = tonumber(info[2])
-            
+
             -- 初始化
             if tokens == nil then
                 tokens = capacity
                 lastRefill = now
             end
-            
+
             -- 计算新令牌
             local elapsed = math.max(0, now - lastRefill)
             local newTokens = math.floor(elapsed * rate / 1000)
-            
+
             if newTokens > 0 then
                 tokens = math.min(capacity, tokens + newTokens)
                 lastRefill = now
             end
-            
+
             -- 尝试消费令牌
             if tokens >= requested then
                 tokens = tokens - requested
@@ -67,7 +68,7 @@ public class RedisRateLimiter implements RedisScript<Long> {
                 redis.call('PEXPIRE', key, math.floor(capacity / rate * 2000))
                 return tokens
             end
-            
+
             return -1
             """;
 

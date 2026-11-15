@@ -27,8 +27,7 @@ public class TenantContext {
 
     private static final ThreadLocal<Long> TENANT_ID = new ThreadLocal<>();
 
-    private TenantContext() {
-    }
+    private TenantContext() {}
 
     /**
      * 设置当前线程的租户ID

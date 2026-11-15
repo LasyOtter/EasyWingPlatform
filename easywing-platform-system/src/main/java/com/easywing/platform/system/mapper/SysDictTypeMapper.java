@@ -8,5 +8,6 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface SysDictTypeMapper extends BaseMapper<SysDictType> {
     SysDictType selectDictTypeByType(@Param("dictType") String dictType);
+
     int checkDictTypeUnique(@Param("dictType") String dictType, @Param("dictId") Long dictId);
 }

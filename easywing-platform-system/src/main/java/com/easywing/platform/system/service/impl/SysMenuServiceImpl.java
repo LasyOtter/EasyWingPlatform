@@ -12,12 +12,11 @@ import com.easywing.platform.system.domain.vo.SysMenuVO;
 import com.easywing.platform.system.mapper.SysMenuMapper;
 import com.easywing.platform.system.mapper.struct.MenuMapper;
 import com.easywing.platform.system.service.SysMenuService;
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -50,7 +49,9 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
 
     @Override
     public List<Long> selectMenuIdsByRoleId(Long roleId) {
-        return menuMapper.selectMenusByRoleId(roleId).stream().map(SysMenu::getId).collect(Collectors.toList());
+        return menuMapper.selectMenusByRoleId(roleId).stream()
+                .map(SysMenu::getId)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -126,7 +127,9 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     }
 
     @Override
-    public List<String> selectPermsByUserId(Long userId) { return menuMapper.selectPermsByUserId(userId); }
+    public List<String> selectPermsByUserId(Long userId) {
+        return menuMapper.selectPermsByUserId(userId);
+    }
 
     @Override
     public boolean checkMenuNameUnique(String menuName, Long parentId, Long menuId) {
@@ -138,10 +141,14 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     }
 
     @Override
-    public boolean hasChildren(Long menuId) { return menuMapper.selectChildrenCountByParentId(menuId) > 0; }
+    public boolean hasChildren(Long menuId) {
+        return menuMapper.selectChildrenCountByParentId(menuId) > 0;
+    }
 
     @Override
-    public boolean checkMenuExistRole(Long menuId) { return menuMapper.checkMenuExistRole(menuId) > 0; }
+    public boolean checkMenuExistRole(Long menuId) {
+        return menuMapper.checkMenuExistRole(menuId) > 0;
+    }
 
     private String getRouterPath(SysMenuVO menu) {
         String routerPath = menu.getPath();
