@@ -26,6 +26,7 @@ import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -37,6 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 /**
@@ -52,26 +54,28 @@ import static org.mockito.Mockito.*;
  * @since 1.0.0
  */
 @DisplayName("RateLimitFilter 测试")
-class RateLimitFilterTest {
+class RateLimitFilterEnhancedTest {
 
     private RateLimitFilter filter;
     private GatewayProperties gatewayProperties;
     private ReactiveStringRedisTemplate redisTemplate;
     private GatewayFilterChain chain;
+    private RedisScript<Long> rateLimitScript;
 
     @BeforeEach
     void setUp() {
         gatewayProperties = new GatewayProperties();
         RateLimitProperties rateLimitProperties = new RateLimitProperties();
         rateLimitProperties.setEnabled(true);
-        rateLimitProperties.setRate(10); // 每秒10个请求
-        rateLimitProperties.setCapacity(100);
+        rateLimitProperties.setDefaultRate(10); // 每秒10个请求
+        rateLimitProperties.setDefaultCapacity(100);
         gatewayProperties.setRateLimit(rateLimitProperties);
 
         redisTemplate = mock(ReactiveStringRedisTemplate.class);
         chain = mock(GatewayFilterChain.class);
 
-        filter = new RateLimitFilter(gatewayProperties, redisTemplate);
+        rateLimitScript = new RedisRateLimiter();
+        filter = new RateLimitFilter(gatewayProperties, redisTemplate, rateLimitScript);
 
         // Mock chain 返回成功
         when(chain.filter(any())).thenReturn(Mono.empty());
@@ -85,8 +89,8 @@ class RateLimitFilterTest {
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
         // Mock Redis 返回成功
-        when(redisTemplate.execute(any(RedisScript.class), any(), any()))
-                .thenReturn(Mono.just(1L));
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), anyList()))
+                .thenReturn(Flux.just(1L));
 
         // When & Then
         StepVerifier.create(filter.filter(exchange, chain))
@@ -99,15 +103,24 @@ class RateLimitFilterTest {
     @DisplayName("超过限流应该返回429")
     void testExceedRateLimitShouldReturn429() {
         // Given
+        gatewayProperties.getRateLimit().setDefaultRate(1);
+        gatewayProperties.getRateLimit().setDefaultCapacity(1);
+        RateLimitFilter strictFilter = new RateLimitFilter(gatewayProperties, redisTemplate, rateLimitScript);
+
         MockServerHttpRequest request = MockServerHttpRequest.get("/api/test").build();
-        MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
         // Mock Redis 返回失败（令牌不足）
-        when(redisTemplate.execute(any(RedisScript.class), any(), any()))
-                .thenReturn(Mono.just(0L));
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), anyList()))
+                .thenReturn(Flux.just(-1L));
+        when(chain.filter(any())).thenReturn(Mono.empty());
+
+        // 首次请求消耗本地令牌
+        StepVerifier.create(strictFilter.filter(MockServerWebExchange.from(request), chain))
+                .verifyComplete();
 
         // When & Then
-        StepVerifier.create(filter.filter(exchange, chain))
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+        StepVerifier.create(strictFilter.filter(exchange, chain))
                 .verifyComplete();
 
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
@@ -125,12 +138,16 @@ class RateLimitFilterTest {
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger failCount = new AtomicInteger(0);
 
+        gatewayProperties.getRateLimit().setDefaultRate(0);
+        gatewayProperties.getRateLimit().setDefaultCapacity(100);
+        RateLimitFilter concurrentFilter = new RateLimitFilter(gatewayProperties, redisTemplate, rateLimitScript);
+
         // Mock Redis 限流：前100个成功，后面失败
         AtomicInteger callCount = new AtomicInteger(0);
-        when(redisTemplate.execute(any(RedisScript.class), any(), any()))
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), anyList()))
                 .thenAnswer(invocation -> {
                     int count = callCount.incrementAndGet();
-                    return Mono.just(count <= 100 ? 1L : 0L);
+                    return Flux.just(count <= 100 ? 1L : -1L);
                 });
 
         // When
@@ -141,7 +158,7 @@ class RateLimitFilterTest {
                         MockServerHttpRequest request = MockServerHttpRequest.get("/api/test").build();
                         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
-                        filter.filter(exchange, chain).block();
+                        concurrentFilter.filter(exchange, chain).block();
 
                         if (exchange.getResponse().getStatusCode() == null) {
                             successCount.incrementAndGet();
@@ -159,8 +176,9 @@ class RateLimitFilterTest {
         latch.await(10, TimeUnit.SECONDS);
         executor.shutdown();
 
-        assertThat(successCount.get()).isEqualTo(100);
-        assertThat(failCount.get()).isEqualTo(400);
+        // 本地桶放行 100 次，随后 Redis 再放行 100 次，其余被限流
+        assertThat(successCount.get()).isEqualTo(200);
+        assertThat(failCount.get()).isEqualTo(300);
     }
 
     @Test
@@ -171,8 +189,8 @@ class RateLimitFilterTest {
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
         // Mock Redis 抛出异常
-        when(redisTemplate.execute(any(RedisScript.class), any(), any()))
-                .thenReturn(Mono.error(new RuntimeException("Redis connection failed")));
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), anyList()))
+                .thenReturn(Flux.error(new RuntimeException("Redis connection failed")));
 
         // When & Then - 应该使用本地降级，请求通过
         StepVerifier.create(filter.filter(exchange, chain))
@@ -192,8 +210,8 @@ class RateLimitFilterTest {
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
         // Mock Redis 失败，触发本地降级
-        when(redisTemplate.execute(any(RedisScript.class), any(), any()))
-                .thenReturn(Mono.error(new RuntimeException("Redis down")));
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), anyList()))
+                .thenReturn(Flux.error(new RuntimeException("Redis down")));
 
         // When - 连续请求
         for (int i = 0; i < 50; i++) {
@@ -223,8 +241,8 @@ class RateLimitFilterTest {
         MockServerWebExchange exchange2 = MockServerWebExchange.from(request2);
 
         // Mock Redis 为两个 IP 分别返回结果
-        when(redisTemplate.execute(any(RedisScript.class), any(), any()))
-                .thenReturn(Mono.just(1L)); // 都有令牌
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), anyList()))
+                .thenReturn(Flux.just(1L)); // 都有令牌
 
         // When & Then
         StepVerifier.create(filter.filter(exchange1, chain))
@@ -242,8 +260,8 @@ class RateLimitFilterTest {
         MockServerHttpRequest request = MockServerHttpRequest.get("/api/test").build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
-        when(redisTemplate.execute(any(RedisScript.class), any(), any()))
-                .thenReturn(Mono.just(1L));
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), anyList()))
+                .thenReturn(Flux.just(1L));
 
         // When
         filter.filter(exchange, chain).block();
@@ -259,7 +277,7 @@ class RateLimitFilterTest {
     void testDisabledConfigShouldPassThrough() {
         // Given
         gatewayProperties.getRateLimit().setEnabled(false);
-        filter = new RateLimitFilter(gatewayProperties, redisTemplate);
+        filter = new RateLimitFilter(gatewayProperties, redisTemplate, rateLimitScript);
 
         MockServerHttpRequest request = MockServerHttpRequest.get("/api/test").build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
@@ -269,6 +287,6 @@ class RateLimitFilterTest {
                 .verifyComplete();
 
         verify(chain).filter(exchange);
-        verify(redisTemplate, never()).execute(any(), any(), any());
+        verify(redisTemplate, never()).execute(any(), anyList(), anyList());
     }
 }

@@ -57,8 +57,7 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
         [VITE_APP_BASE_API]: {
           target: 'http://localhost:8080',
           changeOrigin: true,
-          ws: true,
-          rewrite: (path) => path.replace(new RegExp(`^${VITE_APP_BASE_API}`), '')
+          ws: true
         }
       }
     },

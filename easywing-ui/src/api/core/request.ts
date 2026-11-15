@@ -17,6 +17,8 @@ service.interceptors.request.use(
     // 添加 Token
     const token = getToken()
     if (token) {
+      // 后端网关与认证服务使用 Authorization: Bearer <token>
+      config.headers['Authorization'] = `Bearer ${token}`
       config.headers['X-Access-Token'] = token
     }
 
@@ -46,8 +48,9 @@ service.interceptors.response.use(
       return response
     }
 
-    // 业务错误处理
-    if (res.code !== 200) {
+    // 业务错误处理：仅当响应是统一包装（含 code 字段）时按业务码判断，
+    // 后端当前直接返回实体（ResponseEntity<T>），不能默认要求 code 存在
+    if (res && typeof res.code === 'number' && res.code !== 200) {
       ElMessage.error(res.msg || '请求失败')
 
       // Token 过期

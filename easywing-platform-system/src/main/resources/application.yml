@@ -90,8 +90,7 @@ easywing:
       - /v3/api-docs/**
     oauth2:
       jwt:
-        jwk-set-uri: ${JWK_SET_URI:http://localhost:8080/realms/easywing/protocol/openid-connect/certs}
-        issuer-uri: ${ISSUER_URI:http://localhost:8080/realms/easywing}
+        jwk-set-uri: ${JWK_SET_URI:http://auth-service/.well-known/jwks.json}
         authorities-claim-name: roles
         username-claim-name: preferred_username
   data:

@@ -15,7 +15,7 @@
  */
 package com.easywing.platform.ai.client;
 
-import com.easywing.platform.ai.config.AiProperties;
+import com.easywing.platform.ai.starter.config.AiProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

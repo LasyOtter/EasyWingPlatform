@@ -39,9 +39,15 @@ spring:
         - id: auth-service
           uri: lb://auth-service
           predicates:
-            - Path=/api/auth/**
+            - Path=/api/v1/token/**,/api/auth/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=0
+        - id: system-service
+          uri: lb://system-service
+          predicates:
+            - Path=/api/system/**
+          filters:
+            - StripPrefix=0
         - id: user-service
           uri: lb://user-service
           predicates:
@@ -118,9 +124,8 @@ easywing:
         - /actuator/**
         - /swagger-ui/**
         - /v3/api-docs/**
-        - /api/auth/token/login
-        - /api/auth/token/refresh
-        - /api/auth/.well-known/jwks.json
+        - /api/v1/token/login
+        - /api/v1/token/refresh
         - /api/health
         - /health
       user-id-claim-name: sub

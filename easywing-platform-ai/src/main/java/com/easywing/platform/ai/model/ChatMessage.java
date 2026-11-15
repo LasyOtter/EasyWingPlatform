@@ -22,7 +22,9 @@ public class ChatMessage {
 
     private String name;
 
-    private List<String> toolCalls;
+    private String toolCallId;
+
+    private List<OpenAiToolCall> toolCalls;
 
     private ToolCall toolCall;
 

@@ -16,6 +16,8 @@
 package com.easywing.platform.gateway;
 
 import com.easywing.platform.gateway.hints.GatewayRuntimeHints;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
@@ -50,10 +52,12 @@ import org.springframework.context.annotation.ImportRuntimeHints;
 @ImportRuntimeHints(GatewayRuntimeHints.class)
 public class EasyWingGatewayApplication {
 
+    private static final Logger log = LoggerFactory.getLogger(EasyWingGatewayApplication.class);
+
     public static void main(String[] args) {
         long startTime = System.currentTimeMillis();
         SpringApplication.run(EasyWingGatewayApplication.class, args);
         long startupTime = System.currentTimeMillis() - startTime;
-        System.out.println("EasyWing Gateway started in " + startupTime + "ms");
+        log.info("EasyWing Gateway started in {}ms", startupTime);
     }
 }

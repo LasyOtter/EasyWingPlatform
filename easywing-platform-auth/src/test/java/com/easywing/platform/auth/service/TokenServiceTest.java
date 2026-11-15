@@ -18,6 +18,7 @@ package com.easywing.platform.auth.service;
 import com.easywing.platform.auth.config.AuthProperties;
 import com.easywing.platform.auth.domain.AuthUser;
 import com.easywing.platform.auth.dto.TokenResponse;
+import com.easywing.platform.auth.metrics.AuthMetrics;
 import com.nimbusds.jose.jwk.RSAKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,7 +28,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.SetOperations;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -49,6 +53,7 @@ import static org.mockito.Mockito.*;
  * @since 1.0.0
  */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class TokenServiceTest {
 
     @Mock
@@ -56,6 +61,12 @@ class TokenServiceTest {
 
     @Mock
     private ValueOperations<String, String> valueOperations;
+
+    @Mock
+    private SetOperations<String, String> setOperations;
+
+    @Mock
+    private AuthMetrics authMetrics;
 
     private TokenService tokenService;
     private UserDetailsService userDetailsService;
@@ -82,9 +93,10 @@ class TokenServiceTest {
 
         when(redisTemplate.hasKey(anyString())).thenReturn(false);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(redisTemplate.opsForSet()).thenReturn(setOperations);
         doNothing().when(valueOperations).set(anyString(), anyString(), any(Duration.class));
 
-        tokenService = new TokenService(properties, rsaKey, redisTemplate, userDetailsService);
+        tokenService = new TokenService(properties, rsaKey, redisTemplate, userDetailsService, authMetrics);
     }
 
     @Test
@@ -137,7 +149,8 @@ class TokenServiceTest {
     @Test
     @DisplayName("UserDetailsService - validate correct password")
     void testValidatePassword() {
-        AuthUser user = userDetailsService.loadByUsername("admin");
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        AuthUser user = new AuthUser("9", "tester", encoder.encode("admin123"), List.of("ROLE_USER"), "default");
 
         assertTrue(userDetailsService.validatePassword(user, "admin123"));
         assertFalse(userDetailsService.validatePassword(user, "wrongpassword"));

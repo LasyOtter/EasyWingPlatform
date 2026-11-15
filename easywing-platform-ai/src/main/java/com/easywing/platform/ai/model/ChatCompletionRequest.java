@@ -40,7 +40,7 @@ public class ChatCompletionRequest {
 
     private String systemPrompt;
 
-    private List<ChatMessage> tools;
+    private List<OpenAiTool> tools;
 
     private String toolChoice;
 

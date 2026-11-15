@@ -1,6 +1,7 @@
 package com.easywing.platform.ai.config;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.HashMap;
@@ -42,14 +43,17 @@ public class AiProperties {
     }
 
     @Data
+    @EqualsAndHashCode(callSuper = true)
     public static class OpenAiConfig extends ProviderConfig {
     }
 
     @Data
+    @EqualsAndHashCode(callSuper = true)
     public static class AnthropicConfig extends ProviderConfig {
     }
 
     @Data
+    @EqualsAndHashCode(callSuper = true)
     public static class GoogleConfig extends ProviderConfig {
     }
 

@@ -68,7 +68,13 @@
         
         <!-- Gateway -->
         <module>easywing-platform-gateway</module>
+
+        <!-- AI Service -->
+        <module>easywing-platform-ai</module>
         
+        <!-- System Service -->
+        <module>easywing-platform-system</module>
+
         <!-- Test -->
         <module>easywing-platform-test</module>
         

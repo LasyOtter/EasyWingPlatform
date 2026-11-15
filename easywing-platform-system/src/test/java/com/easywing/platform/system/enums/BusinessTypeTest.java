@@ -40,17 +40,17 @@ class BusinessTypeTest {
         assertThat(BusinessType.DELETE.getCode()).isEqualTo(3);
         assertThat(BusinessType.DELETE.getDescription()).isEqualTo("删除");
 
-        assertThat(BusinessType.EXPORT.getCode()).isEqualTo(4);
+        assertThat(BusinessType.GRANT.getCode()).isEqualTo(4);
+        assertThat(BusinessType.GRANT.getDescription()).isEqualTo("授权");
+
+        assertThat(BusinessType.EXPORT.getCode()).isEqualTo(5);
         assertThat(BusinessType.EXPORT.getDescription()).isEqualTo("导出");
 
-        assertThat(BusinessType.IMPORT.getCode()).isEqualTo(5);
+        assertThat(BusinessType.IMPORT.getCode()).isEqualTo(6);
         assertThat(BusinessType.IMPORT.getDescription()).isEqualTo("导入");
 
-        assertThat(BusinessType.LOGIN.getCode()).isEqualTo(6);
-        assertThat(BusinessType.LOGIN.getDescription()).isEqualTo("登录");
-
-        assertThat(BusinessType.LOGOUT.getCode()).isEqualTo(7);
-        assertThat(BusinessType.LOGOUT.getDescription()).isEqualTo("登出");
+        assertThat(BusinessType.FORCE.getCode()).isEqualTo(7);
+        assertThat(BusinessType.FORCE.getDescription()).isEqualTo("强退");
 
         assertThat(BusinessType.OTHER.getCode()).isEqualTo(0);
         assertThat(BusinessType.OTHER.getDescription()).isEqualTo("其他");
@@ -60,6 +60,6 @@ class BusinessTypeTest {
     @DisplayName("验证枚举值数量")
     void verifyEnumCount() {
         BusinessType[] values = BusinessType.values();
-        assertThat(values).hasSize(8);
+        assertThat(values).hasSize(9);
     }
 }

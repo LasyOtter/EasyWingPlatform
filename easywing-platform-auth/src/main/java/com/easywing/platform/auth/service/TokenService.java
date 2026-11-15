@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.text.ParseException;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Set;
@@ -135,6 +136,23 @@ public class TokenService {
     }
 
     /**
+      * 从令牌中解析用户ID
+      * <p>
+      * 用于让客户端只能操作自己的令牌，避免通过请求头伪造 userId 越权撤销他人会话。
+      *
+      * @param rawToken 已签名令牌
+      * @return 令牌 subject（用户ID）
+      */
+    public String resolveUserId(String rawToken) {
+        try {
+            SignedJWT jwt = parseAndValidate(rawToken);
+            return jwt.getJWTClaimsSet().getSubject();
+        } catch (ParseException e) {
+            throw new IllegalArgumentException("Invalid token", e);
+        }
+    }
+
+    /**
      * 撤销指定用户的所有的令牌
      * <p>
      * 将用户所有当前有效的令牌加入黑名单
@@ -166,7 +184,10 @@ public class TokenService {
      * @param token  令牌
      */
     public void addTokenToUserSet(String userId, String token) {
-        redisTemplate.opsForSet().add(USER_TOKEN_PREFIX + userId, token);
+        String key = USER_TOKEN_PREFIX + userId;
+        redisTemplate.opsForSet().add(key, token);
+        // 刷新过期时间，避免用户令牌集合无限增长
+        redisTemplate.expire(key, java.time.Duration.ofDays(7));
     }
 
     /**

@@ -15,7 +15,8 @@ import router from './router'
 import { setupPermissions } from './directives/permission'
 import { setupGlobComponents } from './components'
 
-import { getToken, removeToken } from '@/utils/auth'
+import { setToken } from '@/utils/auth'
+import { useUserStore } from '@/store/modules/user'
 import { AxiosCanceler } from '@/api/core/axiosCancel'
 import '@/assets/styles/index.scss'
 
@@ -48,6 +49,11 @@ app.config.globalProperties = {
 // 使用插件
 app.use(pinia)
 app.use(router)
+// 刷新后从持久化状态恢复令牌，保证请求拦截器能读取到
+const userStore = useUserStore()
+if (userStore.token) {
+  setToken(userStore.token)
+}
 app.use(ElementPlus, {
   locale: zhCn,
   size: 'default'

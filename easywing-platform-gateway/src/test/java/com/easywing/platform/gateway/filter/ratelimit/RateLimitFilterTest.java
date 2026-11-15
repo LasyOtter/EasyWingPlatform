@@ -117,13 +117,19 @@ class RateLimitFilterTest {
         properties.getRateLimit().setDefaultCapacity(1);
         RateLimitFilter strictFilter = new RateLimitFilter(properties, redisTemplate, rateLimitScript);
         
-        when(redisTemplate.execute(any(), anyList(), any(Object[].class)))
+        when(redisTemplate.execute(any(), anyList(), anyList()))
                 .thenReturn(Flux.just(-1L));
+        when(chain.filter(any())).thenReturn(Mono.empty());
         
         MockServerHttpRequest request = MockServerHttpRequest
                 .get("/api/users")
                 .build();
+
+        // 首次请求消耗本地令牌
+        StepVerifier.create(strictFilter.filter(MockServerWebExchange.from(request), chain))
+                .verifyComplete();
         
+        // 本地令牌耗尽后触发分布式限流
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
         
         StepVerifier.create(strictFilter.filter(exchange, chain))
@@ -135,23 +141,28 @@ class RateLimitFilterTest {
     @Test
     @DisplayName("Redis fallback - should use local bucket on Redis failure")
     void testRedisFallback() {
+        properties.getRateLimit().setDefaultRate(1);
+        properties.getRateLimit().setDefaultCapacity(1);
         properties.getRateLimit().setEnableFallback(true);
         properties.getRateLimit().setFallbackRate(50);
         
-        when(redisTemplate.execute(any(), anyList(), any(Object[].class)))
+        RateLimitFilter fallbackFilter = new RateLimitFilter(properties, redisTemplate, rateLimitScript);
+
+        when(redisTemplate.execute(any(), anyList(), anyList()))
                 .thenReturn(Flux.error(new RuntimeException("Redis connection failed")));
         
         MockServerHttpRequest request = MockServerHttpRequest
                 .get("/api/users")
                 .build();
-        
-        MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        
         when(chain.filter(any())).thenReturn(Mono.empty());
-        
-        StepVerifier.create(filter.filter(exchange, chain))
+
+        // 首次请求消耗本地令牌
+        StepVerifier.create(fallbackFilter.filter(MockServerWebExchange.from(request), chain))
                 .verifyComplete();
-        
-        verify(chain).filter(any());
+
+        // Redis 失败后降级到本地桶并放行
+        StepVerifier.create(fallbackFilter.filter(MockServerWebExchange.from(request), chain))
+                .verifyComplete();
+        verify(chain, times(2)).filter(any());
     }
 }

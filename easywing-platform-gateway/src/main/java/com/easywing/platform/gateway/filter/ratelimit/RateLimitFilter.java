@@ -114,7 +114,7 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
                 .onErrorResume(e -> {
                     log.warn("Rate limit check failed, using fallback: {}", e.getMessage());
                     if (properties.isEnableFallback()) {
-                        LocalTokenBucket fallbackBucket = localBuckets.get(key, 
+                        LocalTokenBucket fallbackBucket = localBuckets.get(key + ":fallback",
                                 k -> new LocalTokenBucket(properties.getFallbackRate(), properties.getFallbackRate()));
                         if (fallbackBucket.tryConsume()) {
                             return chain.filter(exchange);

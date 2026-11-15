@@ -17,6 +17,7 @@ public class SysDeptVO implements Serializable {
     private String phone;
     private String email;
     private Integer status;
+    private String remark;
     private LocalDateTime createTime;
     private List<SysDeptVO> children;
 }

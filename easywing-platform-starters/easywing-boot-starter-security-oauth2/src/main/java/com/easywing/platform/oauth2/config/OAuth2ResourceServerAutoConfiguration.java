@@ -20,14 +20,19 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.util.StringUtils;
 
 /**
  * OAuth2 资源服务器自动配置
@@ -41,12 +46,36 @@ import org.springframework.security.web.SecurityFilterChain;
 @AutoConfiguration
 @ConditionalOnClass(name = "org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken")
 @EnableWebSecurity
+@EnableConfigurationProperties(OAuth2Properties.class)
 @ConditionalOnProperty(prefix = "easywing.oauth2", name = "enabled", havingValue = "true", matchIfMissing = true)
+@EnableMethodSecurity(prePostEnabled = true)
 public class OAuth2ResourceServerAutoConfiguration {
+
+    /**
+     * 配置 JWT 解码器
+     * <p>
+     * 项目通过 {@code easywing.security.oauth2.jwt.jwk-set-uri} 指定公钥来源，
+     * 而不是 Spring Boot 默认的 {@code spring.security.oauth2.resourceserver.jwt.*}。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public JwtDecoder jwtDecoder(OAuth2Properties properties) {
+        if (StringUtils.hasText(properties.getJwkSetUri())) {
+            log.info("JWT decoder using jwk-set-uri: {}", properties.getJwkSetUri());
+            return NimbusJwtDecoder.withJwkSetUri(properties.getJwkSetUri()).build();
+        }
+        if (StringUtils.hasText(properties.getIssuerUri())) {
+            log.info("JWT decoder using issuer-uri: {}", properties.getIssuerUri());
+            return NimbusJwtDecoder.withIssuerLocation(properties.getIssuerUri()).build();
+        }
+        throw new IllegalStateException(
+                "easywing.security.oauth2.jwt.jwk-set-uri or issuer-uri must be configured");
+    }
 
     @Bean
     @ConditionalOnMissingBean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtDecoder jwtDecoder,
+                                                   OAuth2Properties properties) throws Exception {
         log.info("EasyWing OAuth2 Resource Server SecurityFilterChain configured");
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -56,19 +85,22 @@ public class OAuth2ResourceServerAutoConfiguration {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder)
+                        .jwtAuthenticationConverter(jwtAuthenticationConverter(properties))));
         return http.build();
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+    public JwtAuthenticationConverter jwtAuthenticationConverter(OAuth2Properties properties) {
         JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        grantedAuthoritiesConverter.setAuthoritiesClaimName("authorities");
+        // 必须与认证服务签发令牌时使用的 claim 名一致（AuthProperties.Jwt.rolesClaimName）
+        grantedAuthoritiesConverter.setAuthoritiesClaimName(properties.getAuthoritiesClaimName());
         grantedAuthoritiesConverter.setAuthorityPrefix("");
 
         JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
+        jwtAuthenticationConverter.setPrincipalClaimName(properties.getUsernameClaimName());
         return jwtAuthenticationConverter;
     }
 

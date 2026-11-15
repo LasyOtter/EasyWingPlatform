@@ -16,6 +16,8 @@
 package com.easywing.platform.auth.service;
 
 import com.easywing.platform.auth.domain.AuthUser;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -33,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 1.0.0
  */
 @Service
+@Slf4j
 public class UserDetailsService {
 
     private final Map<String, AuthUser> usersByUsername = new ConcurrentHashMap<>();
@@ -65,8 +68,26 @@ public class UserDetailsService {
     }
 
     private void initDefaultUsers() {
-        register("1", "admin", "admin123", List.of("ROLE_ADMIN", "ROLE_USER"), "default");
-        register("2", "user", "user123", List.of("ROLE_USER"), "default");
+        register("1", "admin", resolvePassword("ADMIN_PASSWORD"),
+                List.of("ROLE_ADMIN", "ROLE_USER"), "default");
+        register("2", "user", resolvePassword("USER_PASSWORD"),
+                List.of("ROLE_USER"), "default");
+    }
+
+    /**
+     * 解析内置账号密码：优先读取环境变量，未配置时生成随机密码并输出到日志。
+     * <p>
+     * 避免在代码中硬编码弱口令；生产环境应通过外部用户源（数据库/LDAP）提供用户。
+     */
+    private String resolvePassword(String envName) {
+        String configured = System.getenv(envName);
+        if (StringUtils.hasText(configured)) {
+            return configured;
+        }
+        String generated = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12) + "A1!";
+        log.warn("Environment variable {} is not set. Generated a random password for the built-in"
+                + " account: {}. Set {} to a strong password before production.", envName, generated, envName);
+        return generated;
     }
 
     private void register(String id, String username, String rawPassword, List<String> roles, String tenantId) {

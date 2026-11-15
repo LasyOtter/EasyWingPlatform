@@ -23,13 +23,16 @@ import java.lang.annotation.Target;
 /**
  * API版本控制注解
  * <p>
- * 用于标记Controller或方法的API版本，支持路径版本控制。
- * 配合 {@link ApiVersionConfig} 使用，自动添加版本前缀。
+ * 用于标记 Controller 或方法的 API 版本，作为接口版本元数据（文档、网关注解）。
+ * <p>
+ * 注意：不会自动改写请求路径，URL 由 {@code @RequestMapping} 显式声明。
+ * 早期版本通过 {@code WebMvcConfigurer#addPathPrefix} 统一加前缀，会与
+ * {@code @RequestMapping("/api/v1/...")} 叠加成双重前缀，已移除。
  * <p>
  * 示例：
  * <pre>
  * &#64;RestController
- * &#64;RequestMapping("/users")
+ * &#64;RequestMapping("/api/v1/users")
  * &#64;ApiVersion("v1")
  * public class UserController {
  *     // 访问路径: /api/v1/users

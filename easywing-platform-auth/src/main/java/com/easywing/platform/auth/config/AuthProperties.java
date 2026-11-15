@@ -47,6 +47,7 @@ public class AuthProperties {
         private Duration refreshTokenTtl = Duration.ofDays(7);
 
         private String keyId = "easywing-key-1";
+        private String keyPath;
 
         private String rolesClaimName = "roles";
 
@@ -82,6 +83,20 @@ public class AuthProperties {
 
         public void setKeyId(String keyId) {
             this.keyId = keyId;
+        }
+
+        /**
+         * 密钥对持久化文件路径（PEM 格式，同时包含私钥与公钥块）。
+         * <p>
+         * 配置后启动时优先从该文件加载；文件不存在则生成并写入。
+         * 多实例部署必须配置同一路径，否则各实例密钥不一致会导致验签随机失败。
+         */
+        public String getKeyPath() {
+            return keyPath;
+        }
+
+        public void setKeyPath(String keyPath) {
+            this.keyPath = keyPath;
         }
 
         public String getRolesClaimName() {

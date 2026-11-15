@@ -145,5 +145,35 @@ public class SystemDataScopeHandler implements DataScopeInterceptor.DataScopeHan
             Set<Long> childDeptIds,
             List<Long> customDeptIds
     ) implements DataScopeInterceptor.DataScopeInfo {
+
+        @Override
+        public Long getUserId() {
+            return userId;
+        }
+
+        @Override
+        public Long getDeptId() {
+            return deptId;
+        }
+
+        @Override
+        public DataScopeInterceptor.DataScopeType getDataScope() {
+            return dataScope;
+        }
+
+        @Override
+        public boolean isAdmin() {
+            return isAdmin;
+        }
+
+        @Override
+        public Set<Long> getChildDeptIds() {
+            return childDeptIds;
+        }
+
+        @Override
+        public List<Long> getCustomDeptIds() {
+            return customDeptIds;
+        }
     }
 }

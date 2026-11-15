@@ -18,4 +18,5 @@ public class SysDept extends BaseEntity {
     private String phone;
     private String email;
     private Integer status;
+    private String remark;
 }

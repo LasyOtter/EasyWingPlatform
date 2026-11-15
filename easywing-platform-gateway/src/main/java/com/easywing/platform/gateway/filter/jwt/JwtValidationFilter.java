@@ -20,19 +20,16 @@ import com.easywing.platform.core.exception.TokenBlacklistedException;
 import com.easywing.platform.gateway.constants.CacheConstants;
 import com.easywing.platform.gateway.properties.GatewayProperties;
 import com.easywing.platform.gateway.properties.JwtProperties;
+import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.security.SignatureException;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.slf4j.Logger;
@@ -50,9 +47,9 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.net.URL;
+import java.text.ParseException;
 import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -203,17 +200,17 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
                     
                     return chain.filter(exchange.mutate().request(mutatedRequest).build());
                 })
-                .onErrorResume(SignatureException.class, e -> {
+                .onErrorResume(JOSEException.class, e -> {
                     log.warn("JWT signature verification failed: {}", e.getMessage());
                     return unauthorized(exchange, "Token签名无效");
                 })
-                .onErrorResume(ExpiredJwtException.class, e -> {
-                    log.warn("JWT token expired: sub={}", e.getClaims().getSubject());
-                    return unauthorized(exchange, "Token已过期，请重新登录");
-                })
-                .onErrorResume(MalformedJwtException.class, e -> {
+                .onErrorResume(ParseException.class, e -> {
                     log.warn("Malformed JWT token: {}", e.getMessage());
                     return unauthorized(exchange, "Token格式错误");
+                })
+                .onErrorResume(IllegalArgumentException.class, e -> {
+                    log.warn("JWT validation rejected: {}", e.getMessage());
+                    return unauthorized(exchange, "Token无效");
                 })
                 .onErrorResume(TokenBlacklistedException.class, e -> {
                     log.warn("Token is blacklisted: jti={}", e.getJti());
@@ -266,6 +263,7 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
             return Mono.empty();
         }
 
+        // 只缓存"已命中黑名单"的结果：未命中不缓存，避免令牌注销后在缓存 TTL 内仍然可用
         return Mono.fromCallable(() -> {
                     Boolean cached = blacklistCache.getIfPresent(token);
                     if (cached != null && cached) {
@@ -279,7 +277,6 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
                                 blacklistCache.put(token, true);
                                 return Mono.error(new TokenBlacklistedException(token));
                             }
-                            blacklistCache.put(token, false);
                             return Mono.empty();
                         })
                 )

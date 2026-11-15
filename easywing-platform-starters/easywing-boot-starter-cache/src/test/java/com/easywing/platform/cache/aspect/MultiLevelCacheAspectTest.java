@@ -19,16 +19,21 @@ import com.easywing.platform.cache.annotation.MultiLevelCache;
 import com.easywing.platform.cache.properties.CacheProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+
+import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -40,6 +45,7 @@ import static org.mockito.Mockito.*;
  * @since 1.0.0
  */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class MultiLevelCacheAspectTest {
 
     @Mock
@@ -66,10 +72,20 @@ class MultiLevelCacheAspectTest {
     private MultiLevelCacheAspect aspect;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         aspect = new MultiLevelCacheAspect(localCacheManager, redisTemplate, objectMapper, properties);
         when(properties.getKeyPrefix()).thenReturn("easywing:");
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+        MethodSignature signature = mock(MethodSignature.class);
+        Method method = MultiLevelCacheAspectTest.class.getDeclaredMethod("cacheMethod", Long.class);
+        when(joinPoint.getSignature()).thenReturn(signature);
+        when(signature.getMethod()).thenReturn(method);
+        when(joinPoint.getArgs()).thenReturn(new Object[]{123L});
+    }
+
+    @SuppressWarnings("unused")
+    public void cacheMethod(Long userId) {
     }
 
     @Test

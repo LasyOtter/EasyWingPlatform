@@ -35,5 +35,6 @@ public class AgentRequest {
         private boolean streamingEnabled;
         private String model;
         private double temperature;
+        private Map<String, Object> metadata;  // 用于传递额外配置，如 mode
     }
 }

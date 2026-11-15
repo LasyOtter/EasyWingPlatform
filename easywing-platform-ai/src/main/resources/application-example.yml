@@ -1,0 +1,135 @@
+# AI 服务配置示例
+
+# 应用基础配置
+spring:
+  application:
+    name: easywing-platform-ai
+
+  # Redis 配置（用于记忆存储）
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+
+# EasyWing AI 配置
+easywing:
+  ai:
+    enabled: true
+
+    # AI 提供商配置
+    providers:
+      # OpenAI 配置
+      openai:
+        enabled: true
+        type: openai
+        apiKey: ${OPENAI_API_KEY:your-api-key-here}
+        baseUrl: https://api.openai.com/v1
+        model: gpt-4o
+        temperature: 0.7
+        maxTokens: 4096
+        timeoutSeconds: 120
+
+      # Anthropic Claude 配置
+      anthropic:
+        enabled: false
+        type: anthropic
+        apiKey: ${ANTHROPIC_API_KEY:}
+        baseUrl: https://api.anthropic.com
+        model: claude-3-5-sonnet-20241022
+        temperature: 0.7
+        maxTokens: 4096
+        timeoutSeconds: 120
+
+      # Google AI 配置
+      google:
+        enabled: false
+        type: google
+        apiKey: ${GOOGLE_AI_API_KEY:}
+        model: gemini-pro
+        temperature: 0.7
+        maxTokens: 4096
+
+    # 记忆管理配置
+    memory:
+      enabled: true
+      type: redis
+      maxMessages: 100          # 每个对话最多保存的消息数
+      ttlHours: 24              # 记忆过期时间（小时）
+      summaryThreshold: 20      # 触发摘要的消息数量
+
+    # 会话管理配置
+    session:
+      enabled: true
+      storageType: redis
+      defaultTtlSeconds: 86400  # 会话默认过期时间（秒）
+      maxConversationsPerUser: 100
+
+    # 上下文压缩配置
+    compression:
+      enabled: true
+      strategy: smart           # 压缩策略: smart, simple
+      targetTokens: 8000        # 目标 token 数量
+      compressionRatio: 0.5     # 压缩比例
+
+    # Agent 配置
+    agent:
+      maxIterations: 10                # ReAct 最大迭代次数
+      maxToolCallsPerIteration: 5      # 每次迭代最大工具调用次数
+      toolCallTimeoutMs: 30000         # 工具调用超时（毫秒）
+      streamingEnabled: false          # 是否启用流式响应
+
+    # 技能配置
+    skill:
+      enabled: true
+      scanPackage: com.easywing.platform.ai.skill
+
+    # 知识库配置（可选）
+    knowledgeBase:
+      enabled: false
+      vectorStore: milvus       # 向量存储: milvus, pinecone, qdrant
+      collectionName: easywing_knowledge
+      topK: 5                   # 检索 Top K 结果
+      similarityThreshold: 0.7  # 相似度阈值
+
+    # API 网关配置
+    gateway:
+      enabled: true
+      port: 8082
+      apiPrefix: /api/v1/ai
+
+# 服务器配置
+server:
+  port: 8082
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.easywing.platform.ai: DEBUG
+    com.easywing.platform.ai.agent: DEBUG
+    com.easywing.platform.ai.tool: INFO
+    com.easywing.platform.ai.skill: INFO
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n'
+  file:
+    name: logs/easywing-ai.log
+
+# 管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true

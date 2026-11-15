@@ -4,8 +4,9 @@ import com.easywing.platform.system.domain.dto.SysRoleDTO;
 import com.easywing.platform.system.domain.entity.SysRole;
 import com.easywing.platform.system.domain.vo.SysRoleVO;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
+
+import java.util.List;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface RoleMapper {
@@ -15,9 +16,6 @@ public interface RoleMapper {
     SysRoleVO toVO(SysRole role);
 
     SysRole toEntity(SysRoleDTO dto);
-
-    @Mapping(target = "dataScopeDesc", ignore = true)
-    SysRoleVO toVOWithoutDesc(SysRole role);
 
     List<SysRoleVO> toVOList(List<SysRole> roles);
 }

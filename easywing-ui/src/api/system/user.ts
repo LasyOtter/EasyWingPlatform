@@ -1,15 +1,54 @@
 import request from '@/api/core/request'
 import type { PageQuery, PageResult } from '@/types'
 
+/** 认证服务令牌结果 */
+export interface TokenResult {
+  access_token: string
+  refresh_token: string
+  token_type: string
+  expires_in: number
+}
+
+/** 登录 */
+export function loginApi(data: { username: string; password: string; tenantId?: string }) {
+  return request<TokenResult>({
+    url: '/v1/token/login',
+    method: 'post',
+    data
+  })
+}
+
+/** 获取当前用户信息 */
+export function getUserInfoApi() {
+  return request<any>({
+    url: '/system/users/me',
+    method: 'get'
+  })
+}
+
+/** 注销当前令牌 */
+export function logoutApi() {
+  return request<void>({
+    url: '/v1/token/logout',
+    method: 'post'
+  })
+}
+
 /**
  * 获取用户列表
  */
 export function getUserList(params: PageQuery) {
-  return request<PageResult>({
-    url: '/system/user/list',
+  // 后端返回 MyBatis-Plus Page（records/total/current/size），适配为前端分页结构
+  return request<any>({
+    url: '/system/users',
     method: 'get',
     params
-  })
+  }).then((res) => ({
+    rows: res?.records ?? [],
+    total: res?.total ?? 0,
+    pageNum: res?.current ?? params?.pageNum ?? 1,
+    pageSize: res?.size ?? params?.pageSize ?? 10
+  })) as Promise<PageResult>
 }
 
 /**
@@ -17,7 +56,7 @@ export function getUserList(params: PageQuery) {
  */
 export function getUserInfo(userId: number | string) {
   return request({
-    url: `/system/user/${userId}`,
+    url: `/system/users/${userId}`,
     method: 'get'
   })
 }
@@ -27,7 +66,7 @@ export function getUserInfo(userId: number | string) {
  */
 export function addUser(data: any) {
   return request({
-    url: '/system/user',
+    url: '/system/users',
     method: 'post',
     data
   })
@@ -38,7 +77,7 @@ export function addUser(data: any) {
  */
 export function updateUser(data: any) {
   return request({
-    url: '/system/user',
+    url: '/system/users',
     method: 'put',
     data
   })
@@ -49,7 +88,7 @@ export function updateUser(data: any) {
  */
 export function deleteUser(userId: number | string) {
   return request({
-    url: `/system/user/${userId}`,
+    url: `/system/users/${userId}`,
     method: 'delete'
   })
 }
@@ -59,9 +98,9 @@ export function deleteUser(userId: number | string) {
  */
 export function changeUserStatus(data: { userId: number | string; status: string }) {
   return request({
-    url: '/system/user/changeStatus',
+    url: `/system/users/${data.userId}/status`,
     method: 'put',
-    data
+    params: { status: data.status }
   })
 }
 
@@ -70,8 +109,8 @@ export function changeUserStatus(data: { userId: number | string; status: string
  */
 export function resetUserPwd(data: { userId: number | string; password: string }) {
   return request({
-    url: '/system/user/resetPwd',
+    url: `/system/users/${data.userId}/reset-password`,
     method: 'put',
-    data
+    params: { password: data.password }
   })
 }

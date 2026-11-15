@@ -22,9 +22,9 @@ public interface MenuMapper {
 
     SysMenu toEntity(SysMenuDTO dto);
 
-    @Mapping(target = "name", expression = "java(com.hutool.core.util.StrUtil.upperFirst(menu.getPath()))")
+    @Mapping(target = "name", expression = "java(cn.hutool.core.util.StrUtil.upperFirst(menu.getPath()))")
     @Mapping(target = "path", expression = "java(getRouterPath(menu))")
-    @Mapping(target = "component", expression = "java(com.hutool.core.util.StrUtil.isNotBlank(menu.getComponent()) ? menu.getComponent() : \"Layout\")")
+    @Mapping(target = "component", expression = "java(cn.hutool.core.util.StrUtil.isNotBlank(menu.getComponent()) ? menu.getComponent() : \"Layout\")")
     @Mapping(target = "hidden", expression = "java(menu.getVisible() == 1)")
     RouterVO toRouterVO(SysMenu menu);
 

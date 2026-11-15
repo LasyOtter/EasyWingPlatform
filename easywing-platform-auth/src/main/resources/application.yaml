@@ -75,5 +75,7 @@ easywing:
       access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:30m}
       refresh-token-ttl: ${JWT_REFRESH_TOKEN_TTL:7d}
       key-id: ${JWT_KEY_ID:easywing-key-1}
+      # 密钥对持久化路径（PEM）。多实例部署必须配置，否则重启后已签发令牌全部失效
+      # key-path: ${JWT_KEY_PATH:}
       roles-claim-name: roles
       tenant-id-claim-name: tenant_id

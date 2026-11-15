@@ -31,13 +31,13 @@
         
         <!-- Seata -->
         <dependency>
-            <groupId>io.seata</groupId>
+            <groupId>org.apache.seata</groupId>
             <artifactId>seata-spring-boot-starter</artifactId>
         </dependency>
         
         <!-- Seata All -->
         <dependency>
-            <groupId>io.seata</groupId>
+            <groupId>org.apache.seata</groupId>
             <artifactId>seata-all</artifactId>
         </dependency>
     </dependencies>

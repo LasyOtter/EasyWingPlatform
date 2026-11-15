@@ -218,7 +218,8 @@ public class GrayReleaseFilter implements GlobalFilter, Ordered {
             return ThreadLocalRandom.current().nextInt();
         }
         try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
+            // 仅用于一致性哈希分片，使用 SHA-256 避免 MD5 的弱算法风险
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] digest = md.digest(key.getBytes(StandardCharsets.UTF_8));
             return ((digest[0] & 0xFF) << 24) | 
                    ((digest[1] & 0xFF) << 16) | 

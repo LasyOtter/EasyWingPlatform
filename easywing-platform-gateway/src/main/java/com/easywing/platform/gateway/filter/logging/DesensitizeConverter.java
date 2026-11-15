@@ -48,7 +48,7 @@ public class DesensitizeConverter {
 
     private static final Logger log = LoggerFactory.getLogger(DesensitizeConverter.class);
 
-    private static final Pattern MOBILE_PATTERN = Pattern.compile("(\\d{3})\\d{4}(\\d{4})");
+    private static final Pattern MOBILE_PATTERN = Pattern.compile("(1[3-9]\\d)\\d{4}(\\d{4})");
     private static final Pattern ID_CARD_PATTERN = Pattern.compile("(\\d{6})\\d{8}(\\d{4})");
     private static final Pattern BANK_CARD_PATTERN = Pattern.compile("(\\d{4})\\d+(\\d{4})");
     private static final Pattern EMAIL_PATTERN = Pattern.compile("(\\w{2})\\w+(@\\w+\\.\\w+)");
@@ -126,8 +126,8 @@ public class DesensitizeConverter {
         
         String result = content;
         
-        result = MOBILE_PATTERN.matcher(result).replaceAll(MOBILE_REPLACEMENT);
         result = ID_CARD_PATTERN.matcher(result).replaceAll(ID_CARD_REPLACEMENT);
+        result = MOBILE_PATTERN.matcher(result).replaceAll(MOBILE_REPLACEMENT);
         result = BANK_CARD_PATTERN.matcher(result).replaceAll(BANK_CARD_REPLACEMENT);
         result = EMAIL_PATTERN.matcher(result).replaceAll(EMAIL_REPLACEMENT);
         
@@ -182,22 +182,22 @@ public class DesensitizeConverter {
         for (Map.Entry<String, Pattern> entry : fieldPatterns.entrySet()) {
             String field = entry.getKey();
             Pattern fieldPattern = Pattern.compile(
-                    "\"" + field + "\"\\s*:\\s*\"([^\"]+)\"",
+                    "\"(" + field + ")\"\\s*:\\s*\"([^\"]+)\"",
                     Pattern.CASE_INSENSITIVE
             );
             result = fieldPattern.matcher(result).replaceAll(
-                    "\"" + field + "\":\"******\""
+                    "\"$1\":\"******\""
             );
         }
         
         for (String sensitiveField : fieldTypes.keySet()) {
             if (!fieldPatterns.containsKey(sensitiveField)) {
                 Pattern fieldPattern = Pattern.compile(
-                        "\"" + sensitiveField + "\"\\s*:\\s*\"([^\"]+)\"",
+                        "\"(" + sensitiveField + ")\"\\s*:\\s*\"([^\"]+)\"",
                         Pattern.CASE_INSENSITIVE
                 );
                 result = fieldPattern.matcher(result).replaceAll(
-                        "\"" + sensitiveField + "\":\"******\""
+                        "\"$1\":\"******\""
                 );
             }
         }

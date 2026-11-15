@@ -18,10 +18,6 @@
     <description>企业级AI服务模块，支持多模型提供商、Agent、MCP，知识库和工具调用</description>
 
     <properties>
-        <langchain4j.version>0.35.0</langchain4j.version>
-        <tika.version>2.9.2</tika.version>
-        <vertx.version>4.5.8</vertx.version>
-        <commons-text.version>1.11.0</commons-text.version>
     </properties>
 
     <dependencies>
@@ -53,6 +49,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+
+        <!-- Spring WebSocket -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-websocket</artifactId>
         </dependency>
 
         <!-- Spring Data Redis -->
@@ -106,38 +108,6 @@
             <artifactId>jackson-dataformat-yaml</artifactId>
         </dependency>
 
-        <!-- Vert.x WebClient (for SSE) -->
-        <dependency>
-            <groupId>io.vertx</groupId>
-            <artifactId>vertx-web-client</artifactId>
-            <version>${vertx.version}</version>
-        </dependency>
-
-        <!-- LangChain4j (AI Integration) -->
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j</artifactId>
-            <version>${langchain4j.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-open-ai</artifactId>
-            <version>${langchain4j.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-anthropic</artifactId>
-            <version>${langchain4j.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-vertex-ai</artifactId>
-            <version>${langchain4j.version}</version>
-        </dependency>
-
         <!-- Milvus Vector Database (optional, for knowledge base) -->
         <!--
         <dependency>
@@ -146,13 +116,6 @@
             <version>${milvus.version}</version>
         </dependency>
         -->
-
-        <!-- Apache Tika (Document parsing) -->
-        <dependency>
-            <groupId>org.apache.tika</groupId>
-            <artifactId>tika-core</artifactId>
-            <version>${tika.version}</version>
-        </dependency>
 
         <!-- Commons Lang3 -->
         <dependency>
@@ -164,7 +127,12 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-text</artifactId>
-            <version>${commons-text.version}</version>
+        </dependency>
+
+        <!-- JSON Schema Validator -->
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
         </dependency>
 
         <!-- Lombok -->

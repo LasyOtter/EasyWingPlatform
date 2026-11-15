@@ -1,11 +1,8 @@
 package com.easywing.platform.auth.metrics;
 
-import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -38,20 +35,6 @@ public class AuthMetrics {
     public void recordTokenIssuance(Timer.Sample sample, String tokenType) {
         sample.stop(meterRegistry.timer("auth.token.issuance",
                 "token_type", tokenType));
-    }
-
-    @ConditionalOnBean(StringRedisTemplate.class)
-    public void registerActiveUsersGauge(StringRedisTemplate redisTemplate) {
-        Gauge.builder("auth.users.active",
-                () -> {
-                    try {
-                        return redisTemplate.keys("user:session:*").size();
-                    } catch (Exception e) {
-                        return 0L;
-                    }
-                })
-                .description("当前活跃用户数")
-                .register(meterRegistry);
     }
 
     private String maskUsername(String username) {

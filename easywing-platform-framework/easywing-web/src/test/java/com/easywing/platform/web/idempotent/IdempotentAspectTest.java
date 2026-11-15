@@ -98,6 +98,7 @@ class IdempotentAspectTest {
         when(methodSignature.getMethod()).thenReturn(getTestMethod());
         when(methodSignature.getParameterNames()).thenReturn(new String[]{"username"});
         when(joinPoint.getArgs()).thenReturn(new Object[]{"testuser"});
+        when(joinPoint.getTarget()).thenReturn(this);
         when(valueOperations.setIfAbsent(anyString(), anyString(), eq(30L), eq(TimeUnit.SECONDS)))
                 .thenReturn(false);
         when(valueOperations.get(anyString())).thenReturn("existing-lock");

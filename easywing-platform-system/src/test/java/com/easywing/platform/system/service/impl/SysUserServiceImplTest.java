@@ -40,6 +40,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -59,6 +62,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
  * @since 1.0.0
  */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class SysUserServiceImplTest {
 
     @Mock
@@ -114,6 +118,9 @@ class SysUserServiceImplTest {
         // 配置 UserProperties 默认值
         when(userProperties.getDefaultPassword()).thenReturn("Test@123456");
         when(userProperties.getMinPasswordLength()).thenReturn(8);
+        // 透传指标包装，确保被测逻辑真正执行
+        when(userMetrics.recordDbOperation(anyString(), any(Supplier.class)))
+                .thenAnswer(invocation -> ((Supplier<?>) invocation.getArgument(1)).get());
     }
 
     @Test
@@ -352,7 +359,7 @@ class SysUserServiceImplTest {
         // When & Then
         assertThatThrownBy(() -> userService.resetPassword(userId, weakPassword))
                 .isInstanceOf(BizException.class)
-                .hasMessageContaining("密码强度不足");
+                .hasMessageContaining("密码必须包含大小写字母、数字和特殊字符");
     }
 
     @Test
@@ -368,7 +375,7 @@ class SysUserServiceImplTest {
         // When & Then
         assertThatThrownBy(() -> userService.resetPassword(userId, reusedPassword))
                 .isInstanceOf(BizException.class)
-                .hasMessageContaining("近期已使用该密码");
+                .hasMessageContaining("近期已使用过该密码");
     }
 
     @Test

@@ -77,6 +77,6 @@ public class PasswordValidator {
      * @return 密码强度要求描述
      */
     public String getStrengthDescription(int minPasswordLength) {
-        return String.format("密码必须至少%d位，包含大小写字母、数字和特殊字符(@$!%*?&)", minPasswordLength);
+        return String.format("密码必须至少%d位，包含大小写字母、数字和特殊字符(@$!%%*?&)", minPasswordLength);
     }
 }

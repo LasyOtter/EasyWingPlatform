@@ -74,7 +74,15 @@ easywing:
         temperature: 0.7
         max-tokens: 4000
         enable-search: false
+
+    embedding-model:
+      qwen:
+        api-key: ${QWEN_API_KEY:your-api-key-here}
+        model-name: text-embedding-v3
+        base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
 ```
+
+> Qwen Embedding 通过 DashScope 的 OpenAI 兼容端点接入，无需额外依赖 langchain4j-dashscope。
 
 #### 2.4 Ollama 本地模型配置
 
@@ -318,6 +326,10 @@ public class ToolExample {
 | `easywing.ai.embedding-model.openai.api-key` | OpenAI API Key | - |
 | `easywing.ai.embedding-model.openai.model-name` | 模型名称 | `text-embedding-3-small` |
 | `easywing.ai.embedding-model.openai.dimensions` | 向量维度 | `1536` |
+| `easywing.ai.embedding-model.qwen.api-key` | DashScope API Key | - |
+| `easywing.ai.embedding-model.qwen.model-name` | 模型名称 | `text-embedding-v3` |
+| `easywing.ai.embedding-model.qwen.base-url` | DashScope OpenAI 兼容端点 | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| `easywing.ai.embedding-model.qwen.dimensions` | 向量维度（可选，仅部分模型支持） | - |
 | `easywing.ai.embedding-model.local.enabled` | 启用本地嵌入模型 | `false` |
 | `easywing.ai.embedding-model.local.model-name` | 本地模型名称 | `all-MiniLM-L6-v2` |
 
@@ -344,8 +356,7 @@ public class ToolExample {
 
 本项目使用的依赖版本：
 
-- **LangChain4j**: 1.12.1
-- **LangChain4j-Dashscope**: 0.36.2
+- **LangChain4j**: 1.23.0（全量 1.x，由平台 BOM 统一收敛）
 - **Spring Boot**: 自动适配
 
 ## 注意事项

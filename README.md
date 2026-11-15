@@ -72,15 +72,17 @@
 | 组件 | 版本 |
 |------|------|
 | Java | 21+ |
-| Spring Boot | 3.3.0 |
-| Spring Cloud | 2023.0.1 |
-| Spring Cloud Alibaba | 2023.0.1.0 |
-| Spring Security | 6.3.0 |
-| Nacos | 2.3.2 |
-| OpenTelemetry | 1.37.0 |
+| Spring Boot | 3.5.16 |
+| Spring Cloud | 2025.0.3 |
+| Spring Cloud Alibaba | 2025.0.0.0 |
+| Spring Security | 6.5.11 |
+| Nacos Client | 3.0.3 |
+| OpenTelemetry | 1.59.0 |
 | Resilience4j | 2.2.0 |
-| Seata | 2.0.0 |
+| Seata | 2.5.0 |
 | MyBatis-Plus | 3.5.6 |
+| Redisson | 3.52.0 |
+| Springdoc OpenAPI | 2.9.0 |
 
 ## 🚀 快速开始
 
@@ -151,7 +153,10 @@ EasyWingPlatform/
 │   ├── easywing-boot-starter-messaging/   # 消息驱动启动器
 │   ├── easywing-boot-starter-seata/       # Seata启动器
 │   ├── easywing-boot-starter-gray/        # 灰度发布启动器
+│   ├── easywing-boot-starter-ai/           # AI/LLM启动器(LangChain4j)
 │   └── easywing-boot-starter-virtual-thread/ # 虚拟线程启动器
+├── easywing-platform-ai/                  # AI服务(Agent/RAG/MCP)
+├── easywing-platform-system/              # 系统管理服务(用户/角色/权限/字典)
 ├── easywing-platform-gateway/             # API网关
 ├── easywing-platform-test/                # 测试支持
 │   └── easywing-testcontainers/           # Testcontainers

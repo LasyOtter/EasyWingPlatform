@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, FormInstance, FormRules } from 'element-plus'
-import { getCodeApi } from '@/api/system/user'
 import { useUserStore } from '@/store/modules/user'
 
 const router = useRouter()
@@ -11,36 +10,15 @@ const userStore = useUserStore()
 
 const loginFormRef = ref<FormInstance>()
 const loading = ref(false)
-const captchaLoading = ref(false)
-const codeUrl = ref('')
-const uuid = ref('')
 
 const loginForm = reactive({
   username: 'admin',
-  password: 'admin123',
-  code: '',
-  uuid: ''
+  password: 'admin123'
 })
 
 const rules: FormRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
-  code: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
-}
-
-// 获取验证码
-const getCaptcha = async () => {
-  try {
-    captchaLoading.value = true
-    const res: any = await getCodeApi()
-    codeUrl.value = res.img
-    uuid.value = res.uuid
-    loginForm.uuid = res.uuid
-  } catch (error) {
-    console.error('获取验证码失败:', error)
-  } finally {
-    captchaLoading.value = false
-  }
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
 // 登录
@@ -57,7 +35,6 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
         router.push(redirect)
       } catch (error) {
         ElMessage.error('登录失败')
-        getCaptcha()
       } finally {
         loading.value = false
       }
@@ -69,10 +46,6 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
 const handleReset = () => {
   loginFormRef.value?.resetFields()
 }
-
-onMounted(() => {
-  getCaptcha()
-})
 </script>
 
 <template>
@@ -125,31 +98,6 @@ onMounted(() => {
               />
             </el-form-item>
 
-            <el-form-item prop="code">
-              <el-input
-                v-model="loginForm.code"
-                placeholder="验证码"
-                prefix-icon="CircleCheck"
-                style="width: 60%"
-                clearable
-                @keyup.enter="handleLogin(loginFormRef)"
-              />
-              <div class="captcha">
-                <el-image
-                  v-if="codeUrl"
-                  :src="codeUrl"
-                  fit="contain"
-                  @click="getCaptcha"
-                >
-                  <template #error>
-                    <div class="image-slot">
-                      <el-icon><RefreshRight /></el-icon>
-                    </div>
-                  </template>
-                </el-image>
-              </div>
-            </el-form-item>
-
             <el-form-item>
               <el-button
                 type="primary"
@@ -163,7 +111,7 @@ onMounted(() => {
           </el-form>
 
           <div class="login-tip">
-            <span>默认账号：admin / admin123</span>
+            <span>默认账号：admin（密码见服务端日志，或设置 ADMIN_PASSWORD）</span>
           </div>
         </div>
       </div>

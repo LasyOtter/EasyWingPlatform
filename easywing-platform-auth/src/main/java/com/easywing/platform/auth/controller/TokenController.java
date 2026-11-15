@@ -27,6 +27,7 @@ import com.easywing.platform.web.version.ApiVersion;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -111,10 +112,13 @@ public class TokenController {
     @PostMapping("/revoke-all")
     @Operation(summary = "撤销所有Token", description = "撤销当前用户的所有令牌，包括所有设备登录的令牌")
     public ResponseEntity<Void> revokeAll(
-            @RequestHeader(value = HttpHeaders.X_USER_ID, required = false) String userId) {
-        if (StringUtils.hasText(userId)) {
-            tokenService.revokeAllTokens(userId);
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader) {
+        // 从令牌自身解析用户ID，不能信任客户端传入的 X-User-Id，否则可越权撤销他人会话
+        if (!StringUtils.hasText(authHeader) || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        String userId = tokenService.resolveUserId(authHeader.substring(7));
+        tokenService.revokeAllTokens(userId);
         return ResponseEntity.noContent().build();
     }
 }

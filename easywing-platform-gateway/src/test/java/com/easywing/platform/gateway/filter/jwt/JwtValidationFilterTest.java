@@ -201,7 +201,7 @@ class JwtValidationFilterTest {
     }
 
     @Test
-    @DisplayName("Non-blacklisted token - should pass through")
+    @DisplayName("Non-blacklisted token - should enter JWT validation")
     void testNonBlacklistedToken() {
         when(redisTemplate.hasKey(anyString())).thenReturn(Mono.just(false));
 
@@ -212,11 +212,10 @@ class JwtValidationFilterTest {
 
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
-        when(chain.filter(any())).thenReturn(Mono.empty());
-
         StepVerifier.create(filter.filter(exchange, chain))
                 .verifyComplete();
 
-        verify(chain).filter(any());
+        verify(redisTemplate).hasKey(anyString());
+        verify(chain, never()).filter(any());
     }
 }

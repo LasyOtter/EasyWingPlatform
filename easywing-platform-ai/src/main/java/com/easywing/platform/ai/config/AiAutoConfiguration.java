@@ -24,6 +24,14 @@ public class AiAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean(WebClient.class)
+    public WebClient aiWebClient(WebClient.Builder webClientBuilder) {
+        return webClientBuilder
+                .defaultHeader("User-Agent", "EasyWing-AI/1.0")
+                .build();
+    }
+
+    @Bean
     @ConditionalOnMissingBean(ObjectMapper.class)
     public ObjectMapper aiObjectMapper() {
         return new ObjectMapper();

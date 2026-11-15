@@ -25,6 +25,7 @@ import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
+import net.sf.jsqlparser.expression.operators.relational.ParenthesedExpressionList;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.Statement;
@@ -150,10 +151,10 @@ public class DataScopeSqlParser {
     }
 
     private DataScopeFilter buildInFilter(Column column, List<Long> values) {
-        ExpressionList expressionList = new ExpressionList();
-        expressionList.setExpressions(values.stream()
+        List<Expression> expressions = values.stream()
                 .map(value -> new JdbcParameter())
-                .collect(Collectors.toList()));
+                .collect(Collectors.toList());
+        ExpressionList expressionList = new ParenthesedExpressionList(expressions);
         return new DataScopeFilter(new InExpression(column, expressionList), new ArrayList<>(values));
     }
 

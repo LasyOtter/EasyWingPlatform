@@ -25,7 +25,6 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
@@ -48,7 +47,7 @@ public class GatewayAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnBean({ReactiveStringRedisTemplate.class, RedisRateLimiter.class})
+    @ConditionalOnBean(ReactiveStringRedisTemplate.class)
     @ConditionalOnProperty(prefix = "easywing.gateway.rate-limit", name = "enabled", havingValue = "true", matchIfMissing = true)
     public RateLimitFilter rateLimitFilter(GatewayProperties properties,
                                            ReactiveStringRedisTemplate redisTemplate,

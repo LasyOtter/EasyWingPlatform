@@ -299,7 +299,7 @@ class SecurityUtilsTest {
         // Given
         GrantedAuthority authority = new SimpleGrantedAuthority("ROLE_SUPER_ADMIN");
         Authentication auth = mock(Authentication.class);
-        when(auth.getAuthorities()).thenReturn(List.of(authority));
+        doReturn(List.of(authority)).when(auth).getAuthorities();
 
         SecurityContext context = mock(SecurityContext.class);
         when(context.getAuthentication()).thenReturn(auth);
@@ -318,7 +318,7 @@ class SecurityUtilsTest {
         // Given
         GrantedAuthority authority = new SimpleGrantedAuthority("ROLE_USER");
         Authentication auth = mock(Authentication.class);
-        when(auth.getAuthorities()).thenReturn(List.of(authority));
+        doReturn(List.of(authority)).when(auth).getAuthorities();
 
         SecurityContext context = mock(SecurityContext.class);
         when(context.getAuthentication()).thenReturn(auth);
@@ -386,7 +386,7 @@ class SecurityUtilsTest {
     void getClaim_Success() {
         // Given
         Jwt jwt = mock(Jwt.class);
-        when(jwt.getClaim("custom_claim", String.class)).thenReturn("custom_value");
+        when(jwt.getClaim("custom_claim")).thenReturn("custom_value");
 
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(jwt);
@@ -428,9 +428,7 @@ class SecurityUtilsTest {
 
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(jwt);
-        when(auth.getAuthorities()).thenReturn(
-                List.of(new SimpleGrantedAuthority("ROLE_USER"))
-        );
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_USER"))).when(auth).getAuthorities();
 
         SecurityContext context = mock(SecurityContext.class);
         when(context.getAuthentication()).thenReturn(auth);
@@ -461,9 +459,7 @@ class SecurityUtilsTest {
 
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(jwt);
-        when(auth.getAuthorities()).thenReturn(
-                List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))
-        );
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))).when(auth).getAuthorities();
 
         SecurityContext context = mock(SecurityContext.class);
         when(context.getAuthentication()).thenReturn(auth);

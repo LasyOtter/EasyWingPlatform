@@ -26,7 +26,9 @@ import com.easywing.platform.system.common.TestDataFactory;
 import com.easywing.platform.system.domain.dto.SysUserDTO;
 import com.easywing.platform.system.domain.vo.SysUserVO;
 import com.easywing.platform.system.service.SysUserService;
+import com.easywing.platform.web.exception.GlobalExceptionHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.context.annotation.Import;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,6 +36,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -44,6 +47,8 @@ import org.springframework.test.web.servlet.MockMvc;
  * @since 1.0.0
  */
 @WebMvcTest(SysUserController.class)
+@EnableMethodSecurity
+@Import(GlobalExceptionHandler.class)
 class SysUserControllerTest {
 
     @Autowired
@@ -157,8 +162,8 @@ class SysUserControllerTest {
                                 .content(objectMapper.writeValueAsString(userDTO))
                                 .with(jwt()
                                         .authorities(new SimpleGrantedAuthority("system:user:add"))))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("用户名已存在"));
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("用户名已存在"));
     }
 
     @Test
@@ -277,7 +282,7 @@ class SysUserControllerTest {
                                 .with(jwt()
                                         .authorities(new SimpleGrantedAuthority("system:user:edit"))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("用户ID不能为空"));
+                .andExpect(jsonPath("$.detail").value("用户ID不能为空"));
     }
 
     @Test

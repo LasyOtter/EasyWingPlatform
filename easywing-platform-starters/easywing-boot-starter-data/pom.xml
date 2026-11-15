@@ -22,6 +22,22 @@
             <groupId>com.easywing.platform</groupId>
             <artifactId>easywing-core</artifactId>
         </dependency>
+        <!-- 审计字段填充需要读取 Spring Security 上下文与请求头，均为可选依赖 -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- MyBatis-Plus -->
         <dependency>

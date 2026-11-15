@@ -16,7 +16,6 @@
 package com.easywing.platform.gateway.filter.ratelimit;
 
 import org.springframework.data.redis.core.script.RedisScript;
-import org.springframework.stereotype.Component;
 
 /**
  * Redis限流Lua脚本
@@ -32,7 +31,6 @@ import org.springframework.stereotype.Component;
  * @author EasyWing Team
  * @since 1.0.0
  */
-@Component
 public class RedisRateLimiter implements RedisScript<Long> {
 
     private static final String SCRIPT = """
