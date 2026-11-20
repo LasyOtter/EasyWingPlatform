@@ -242,27 +242,102 @@ public class GoogleAiProvider extends AbstractAiProvider {
         }).toList();
     }
 
+    /**
+     * 解析 Gemini generateContent 响应。
+     * <p>
+     * 文本在 {@code candidates[0].content.parts[].text}；
+     * 用量在 {@code usageMetadata.promptTokenCount} / {@code candidatesTokenCount}
+     * （驼峰命名，与 OpenAI 的下划线不同）；
+     * {@code finishReason} 取值 {@code STOP} / {@code MAX_TOKENS} / {@code SAFETY} 等。
+     */
     private ChatCompletionResponse parseResponse(String json) {
+        if (json == null || json.isEmpty()) {
+            return emptyResponse();
+        }
+        try {
+            JsonNode root = objectMapper.readTree(json);
+
+            JsonNode candidates = root.get("candidates");
+            if (candidates == null || !candidates.isArray() || candidates.isEmpty()) {
+                return emptyResponse();
+            }
+
+            JsonNode candidate = candidates.get(0);
+            StringBuilder content = new StringBuilder();
+            JsonNode parts = candidate.path("content").path("parts");
+            if (parts.isArray()) {
+                for (JsonNode part : parts) {
+                    if (part.has("text")) {
+                        content.append(part.get("text").asText());
+                    }
+                }
+            }
+
+            String finishReason = candidate.has("finishReason")
+                    ? candidate.get("finishReason").asText() : null;
+
+            int promptTokens = 0;
+            int completionTokens = 0;
+            JsonNode usage = root.get("usageMetadata");
+            if (usage != null) {
+                promptTokens = usage.path("promptTokenCount").asInt(0);
+                completionTokens = usage.path("candidatesTokenCount").asInt(0);
+            }
+
+            return ChatCompletionResponse.builder()
+                    .id("gemini-" + Instant.now().getEpochSecond())
+                    .object("chat.completion")
+                    .created(Instant.now().getEpochSecond())
+                    .model(root.has("modelVersion") ? root.get("modelVersion").asText() : "gemini")
+                    .choices(List.of(ChatCompletionResponse.Choice.builder()
+                            .index(0)
+                            .message(ChatMessage.builder()
+                                    .role("assistant")
+                                    .content(content.toString())
+                                    .build())
+                            .finishReason(mapFinishReason(finishReason))
+                            .build()))
+                    .usage(ChatCompletionResponse.Usage.builder()
+                            .promptTokens(promptTokens)
+                            .completionTokens(completionTokens)
+                            .totalTokens(promptTokens + completionTokens)
+                            .build())
+                    .build();
+        } catch (Exception e) {
+            log.error("Failed to parse Gemini response: {}", e.getMessage());
+            return emptyResponse();
+        }
+    }
+
+    /**
+     * Gemini finishReason 为大写，映射到 OpenAI finish_reason 语义。
+     */
+    private String mapFinishReason(String finishReason) {
+        if (finishReason == null) {
+            return "stop";
+        }
+        return switch (finishReason) {
+            case "MAX_TOKENS" -> "length";
+            case "STOP" -> "stop";
+            case "SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII" -> "content_filter";
+            case "FINISH_REASON_UNSPECIFIED" -> null;
+            default -> "stop";
+        };
+    }
+
+    private ChatCompletionResponse emptyResponse() {
         return ChatCompletionResponse.builder()
                 .id("gemini-" + Instant.now().getEpochSecond())
                 .object("chat.completion")
                 .created(Instant.now().getEpochSecond())
-                .model("gemini")
-                .choices(List.of(
-                        ChatCompletionResponse.Choice.builder()
-                                .index(0)
-                                .message(ChatMessage.builder()
-                                        .role("assistant")
-                                        .content("Response placeholder")
-                                        .build())
-                                .finishReason("stop")
-                                .build()
-                ))
-                .usage(ChatCompletionResponse.Usage.builder()
-                        .promptTokens(0)
-                        .completionTokens(0)
-                        .totalTokens(0)
-                        .build())
+                .choices(List.of(ChatCompletionResponse.Choice.builder()
+                        .index(0)
+                        .message(ChatMessage.builder()
+                                .role("assistant")
+                                .content("")
+                                .build())
+                        .finishReason("error")
+                        .build()))
                 .build();
     }
 }

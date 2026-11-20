@@ -6,15 +6,12 @@ import com.easywing.platform.ai.model.ChatCompletionResponse;
 import com.easywing.platform.ai.provider.AiProviderRegistry;
 import com.easywing.platform.ai.tool.ToolDefinition;
 import com.easywing.platform.ai.tool.ToolExecutor;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -50,10 +47,8 @@ public class ReactAgent {
             问题: {input}
             思考:""";
 
-    private static final Pattern THOUGHT_PATTERN = Pattern.compile("思考[:：]\\s*(.+?)(?=行动[:：]|最终答案[:：]|$)", Pattern.DOTALL);
-    private static final Pattern ACTION_PATTERN = Pattern.compile("行动[:：]\\s*([^\\n]+)");
-    private static final Pattern ACTION_INPUT_PATTERN = Pattern.compile("行动输入[:：]\\s*(.+?)(?=观察[:：]|思考[:：]|$)", Pattern.DOTALL);
-    private static final Pattern FINAL_ANSWER_PATTERN = Pattern.compile("最终答案[:：]\\s*(.+)", Pattern.DOTALL);
+    private final ReactParser parser;
+
 
     public ReactAgent(
             AiProviderRegistry providerRegistry,
@@ -62,6 +57,7 @@ public class ReactAgent {
         this.providerRegistry = providerRegistry;
         this.toolExecutor = toolExecutor;
         this.objectMapper = objectMapper;
+        this.parser = new ReactParser(objectMapper);
     }
 
     /**
@@ -200,49 +196,33 @@ public class ReactAgent {
                 .executionTimeMs(iterationTime)
                 .build();
 
-        // 检查是否是最终答案
-        Matcher finalAnswerMatcher = FINAL_ANSWER_PATTERN.matcher(llmResponse);
-        if (finalAnswerMatcher.find()) {
-            String finalAnswer = finalAnswerMatcher.group(1).trim();
-            iteration.setFinalAnswer(true);
-            iteration.setAnswer(finalAnswer);
-            iterations.add(iteration);
-
-            return Mono.just(new ParseResult(true, finalAnswer));
-        }
-
-        // 提取思考
-        Matcher thoughtMatcher = THOUGHT_PATTERN.matcher(llmResponse);
-        if (thoughtMatcher.find()) {
-            iteration.setThought(thoughtMatcher.group(1).trim());
-        }
-
-        // 提取行动
-        Matcher actionMatcher = ACTION_PATTERN.matcher(llmResponse);
-        if (!actionMatcher.find()) {
-            iteration.setError("无法解析行动");
+        final ReactParser.Parsed parsed;
+        try {
+            parsed = parser.parse(llmResponse);
+        } catch (ReactParser.ParseException e) {
+            // 明确报错：不把解析失败伪装成最终答案返回给用户
+            log.warn("ReAct 响应解析失败: {}", e.getMessage());
+            iteration.setError("无法解析模型响应: " + e.getMessage());
             iterations.add(iteration);
             return Mono.just(new ParseResult(true,
-                    "抱歉，无法理解如何执行该任务。"));
+                    "抱歉，无法理解如何执行该任务: " + e.getMessage()));
         }
 
-        String action = actionMatcher.group(1).trim();
-        iteration.setAction(action);
+        if (parsed.finalAnswerFound()) {
+            iteration.setThought(parsed.thought());
+            iteration.setFinalAnswer(true);
+            iteration.setAnswer(parsed.finalAnswer());
+            iterations.add(iteration);
 
-        // 提取行动输入
-        Matcher actionInputMatcher = ACTION_INPUT_PATTERN.matcher(llmResponse);
-        Map<String, Object> actionInput = new HashMap<>();
-        if (actionInputMatcher.find()) {
-            String actionInputStr = actionInputMatcher.group(1).trim();
-            try {
-                actionInput = objectMapper.readValue(actionInputStr,
-                        new TypeReference<Map<String, Object>>() {});
-            } catch (Exception e) {
-                log.warn("Failed to parse action input as JSON, using as text: {}", actionInputStr);
-                actionInput.put("input", actionInputStr);
-            }
+            return Mono.just(new ParseResult(true, parsed.finalAnswer()));
         }
-        iteration.setActionInput(actionInput);
+
+        iteration.setThought(parsed.thought());
+        iteration.setAction(parsed.action());
+        iteration.setActionInput(parsed.actionInput());
+
+        String action = parsed.action();
+        Map<String, Object> actionInput = parsed.actionInput();
 
         // 执行工具
         return toolExecutor.executeTool(action, actionInput)

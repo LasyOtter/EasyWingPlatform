@@ -5,6 +5,8 @@ import com.easywing.platform.ai.model.ChatCompletionRequest;
 import com.easywing.platform.ai.model.ChatCompletionResponse;
 import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.model.ModelInfo;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -23,6 +25,7 @@ public class AnthropicProvider extends AbstractAiProvider {
     private static final String PROVIDER_NAME = "anthropic";
     private static final String DEFAULT_BASE_URL = "https://api.anthropic.com/v1";
     private static final String API_VERSION = "2023-06-01";
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AnthropicProvider(WebClient webClient, AiProperties.AnthropicConfig config) {
         super(webClient, Map.of(
@@ -159,27 +162,97 @@ public class AnthropicProvider extends AbstractAiProvider {
         }).toList();
     }
 
+    /**
+     * 解析 Anthropic Messages API 响应。
+     * <p>
+     * 响应结构：{@code content} 为内容块数组，文本块是 {@code {"type":"text","text":"..."}}；
+     * 用量在 {@code usage.input_tokens} / {@code usage.output_tokens}；
+     * {@code stop_reason} 取值为 {@code end_turn} / {@code max_tokens} / {@code stop_sequence} / {@code tool_use}。
+     */
     private ChatCompletionResponse parseResponse(String json) {
+        if (json == null || json.isEmpty()) {
+            return emptyResponse();
+        }
+        try {
+            JsonNode root = objectMapper.readTree(json);
+
+            StringBuilder content = new StringBuilder();
+            JsonNode contentBlocks = root.get("content");
+            if (contentBlocks != null && contentBlocks.isArray()) {
+                for (JsonNode block : contentBlocks) {
+                    if (block.has("text")) {
+                        if (content.length() > 0) {
+                            content.append('\n');
+                        }
+                        content.append(block.get("text").asText());
+                    }
+                }
+            }
+
+            String stopReason = root.has("stop_reason") ? root.get("stop_reason").asText() : null;
+
+            ChatCompletionResponse.Usage usage = null;
+            JsonNode usageNode = root.get("usage");
+            if (usageNode != null) {
+                int inputTokens = usageNode.path("input_tokens").asInt(0);
+                int outputTokens = usageNode.path("output_tokens").asInt(0);
+                usage = ChatCompletionResponse.Usage.builder()
+                        .promptTokens(inputTokens)
+                        .completionTokens(outputTokens)
+                        .totalTokens(inputTokens + outputTokens)
+                        .build();
+            }
+
+            return ChatCompletionResponse.builder()
+                    .id(root.has("id") ? root.get("id").asText()
+                            : "msg-" + Instant.now().getEpochSecond())
+                    .object("chat.completion")
+                    .created(Instant.now().getEpochSecond())
+                    .model(root.has("model") ? root.get("model").asText() : null)
+                    .choices(List.of(ChatCompletionResponse.Choice.builder()
+                            .index(0)
+                            .message(ChatMessage.builder()
+                                    .role("assistant")
+                                    .content(content.toString())
+                                    .build())
+                            .finishReason(mapStopReason(stopReason))
+                            .build()))
+                    .usage(usage)
+                    .build();
+        } catch (Exception e) {
+            log.error("Failed to parse Anthropic response: {}", e.getMessage());
+            return emptyResponse();
+        }
+    }
+
+    /**
+     * 将 Anthropic 的 stop_reason 映射为 OpenAI finish_reason 语义。
+     */
+    private String mapStopReason(String stopReason) {
+        if (stopReason == null) {
+            return "stop";
+        }
+        return switch (stopReason) {
+            case "max_tokens" -> "length";
+            case "tool_use" -> "tool_calls";
+            case "stop_sequence", "end_turn" -> "stop";
+            default -> "stop";
+        };
+    }
+
+    private ChatCompletionResponse emptyResponse() {
         return ChatCompletionResponse.builder()
                 .id("msg-" + Instant.now().getEpochSecond())
                 .object("chat.completion")
                 .created(Instant.now().getEpochSecond())
-                .model("claude-3-5-sonnet")
-                .choices(List.of(
-                        ChatCompletionResponse.Choice.builder()
-                                .index(0)
-                                .message(ChatMessage.builder()
-                                        .role("assistant")
-                                        .content("Response placeholder")
-                                        .build())
-                                .finishReason("stop")
-                                .build()
-                ))
-                .usage(ChatCompletionResponse.Usage.builder()
-                        .promptTokens(0)
-                        .completionTokens(0)
-                        .totalTokens(0)
-                        .build())
+                .choices(List.of(ChatCompletionResponse.Choice.builder()
+                        .index(0)
+                        .message(ChatMessage.builder()
+                                .role("assistant")
+                                .content("")
+                                .build())
+                        .finishReason("error")
+                        .build()))
                 .build();
     }
 }

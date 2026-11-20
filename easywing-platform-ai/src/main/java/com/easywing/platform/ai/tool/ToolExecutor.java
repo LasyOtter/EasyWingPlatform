@@ -24,10 +24,17 @@ public class ToolExecutor {
     private final TimeLimiter timeLimiter;
     private final ToolParameterValidator validator;
 
-    public ToolExecutor(ToolRegistry registry, ToolParameterValidator validator) {
+    /**
+     * 可选的结果缓存：存在时 {@link #executeTool(String, Map)} 走缓存。
+     * 通过 ObjectProvider 注入，避免 ToolExecutor 与 ToolExecutionCache 循环依赖。
+     */
+    private final org.springframework.beans.factory.ObjectProvider<ToolExecutionCache> cacheProvider;
+
+    public ToolExecutor(ToolRegistry registry, ToolParameterValidator validator,
+                        org.springframework.beans.factory.ObjectProvider<ToolExecutionCache> cacheProvider) {
         this.registry = registry;
         this.validator = validator;
-
+        this.cacheProvider = cacheProvider;
         // 配置熔断器
         CircuitBreakerConfig circuitBreakerConfig = CircuitBreakerConfig.custom()
                 .failureRateThreshold(50)
@@ -44,9 +51,23 @@ public class ToolExecutor {
     }
 
     /**
-     * 执行工具
+     * 执行工具。
+     * <p>
+     * 存在 {@link ToolExecutionCache} 时走缓存路径，Agent 与 REST 共用同一入口，
+     * 避免同一工具在两条链路上行为不一致。
      */
     public Mono<Map<String, Object>> executeTool(String toolName, Map<String, Object> arguments) {
+        ToolExecutionCache cache = cacheProvider == null ? null : cacheProvider.getIfAvailable();
+        if (cache != null) {
+            return cache.executeCached(toolName, arguments);
+        }
+        return executeToolDirectly(toolName, arguments);
+    }
+
+    /**
+     * 直接执行工具（不经缓存）
+     */
+    public Mono<Map<String, Object>> executeToolDirectly(String toolName, Map<String, Object> arguments) {
         log.info("Executing tool: {} with arguments: {}", toolName, arguments);
 
         ToolDefinition toolDef = registry.get(toolName);
@@ -134,7 +155,7 @@ public class ToolExecutor {
     /**
      * 检查工具是否存在
      */
-    public boolean hasToolь(String toolName) {
+    public boolean hasTool(String toolName) {
         return registry.contains(toolName);
     }
 

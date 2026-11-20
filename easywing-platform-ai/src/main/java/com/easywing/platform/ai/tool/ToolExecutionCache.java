@@ -7,7 +7,9 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 工具执行缓存 - 缓存工具执行结果，避免重复调用
@@ -40,8 +42,10 @@ public class ToolExecutionCache {
         Map<String, Object> cached = cache.getIfPresent(key);
         if (cached != null) {
             log.debug("Cache hit for tool: {} with arguments: {}", toolName, arguments);
-            cached.put("fromCache", true);
-            return Mono.just(cached);
+            // 返回副本：缓存对象被后续修改会污染后续命中（历史上此处直接改缓存对象）
+            Map<String, Object> copy = new java.util.HashMap<>(cached);
+            copy.put("fromCache", true);
+            return Mono.just(copy);
         }
 
         // 缓存未命中，执行工具并缓存结果
@@ -56,13 +60,15 @@ public class ToolExecutionCache {
     }
 
     /**
-     * 判断工具结果是否可缓存
+     * 不可缓存的工具：结果随时间或外部状态变化。
+     * <p>
+     * {@code current_time} 每次调用结果不同；{@code http_request} 返回目标站点的实时数据，
+     * 缓存会让调用方拿到过期响应。其余工具按幂等性判断，默认参与缓存。
      */
+    private static final Set<String> NON_CACHEABLE_TOOLS = Set.of("current_time", "http_request");
+
     private boolean isCacheable(String toolName) {
-        // 某些工具的结果不应该被缓存，例如：
-        // - current_time (时间总是变化的)
-        // - http_request (可能返回实时数据)
-        return !toolName.equals("current_time");
+        return toolName != null && !NON_CACHEABLE_TOOLS.contains(toolName);
     }
 
     /**
