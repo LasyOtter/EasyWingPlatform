@@ -236,6 +236,8 @@ easywing:
 
 ## 📊 性能指标
 
+以下为经验参考值，仓库内未建立基准测试，非实测数据：
+
 | 操作 | 平均响应时间 | 说明 |
 |------|-------------|------|
 | 简单工具调用 | < 100ms | 如计算器、时间查询 |
@@ -247,8 +249,7 @@ easywing:
 ## 🎯 下一步
 
 - 查看完整文档: [AGENT_DEVELOPMENT.md](./AGENT_DEVELOPMENT.md)
-- 了解技能开发: [SKILL_DEVELOPMENT.md](./SKILL_DEVELOPMENT.md)
-- 集成到前端: [FRONTEND_INTEGRATION.md](./FRONTEND_INTEGRATION.md)
+- 待改进项清单: [improvement-tasks.md](./improvement-tasks.md)
 
 ## 💡 提示
 

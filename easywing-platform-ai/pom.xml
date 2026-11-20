@@ -38,6 +38,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
+        <!-- OAuth2 资源服务器：保护 AI REST 端点 -->
+        <dependency>
+            <groupId>com.easywing.platform</groupId>
+            <artifactId>easywing-boot-starter-security-oauth2</artifactId>
+        </dependency>
 
         <!-- Spring Boot Validation -->
         <dependency>
@@ -133,6 +138,13 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 生成配置项元数据，IDE 可提示 easywing.ai.* -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
 

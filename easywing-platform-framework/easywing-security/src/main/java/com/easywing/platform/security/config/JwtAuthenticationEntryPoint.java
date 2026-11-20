@@ -24,6 +24,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -41,9 +42,12 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
+    public void commence(HttpServletRequest request, HttpServletResponse response,
+                         AuthenticationException authException) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        // 显式声明 charset：容器默认可能是 ISO-8859-1，会导致中文 detail 丢失
         response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
 
         Map<String, Object> problem = new LinkedHashMap<>();
@@ -55,6 +59,8 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         problem.put("timestamp", Instant.now().toString());
         problem.put("instance", request.getRequestURI());
 
-        response.getWriter().write(objectMapper.writeValueAsString(problem));
+        // 直接写 UTF-8 字节，绕开 response.getWriter() 的平台默认编码
+        response.getOutputStream().write(
+                objectMapper.writeValueAsString(problem).getBytes(StandardCharsets.UTF_8));
     }
 }

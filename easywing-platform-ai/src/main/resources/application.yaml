@@ -37,17 +37,19 @@ easywing:
         maxTokens: 2048
 
     # Memory Configuration
+    # type=redis 需要可用 Redis；memory 仅用于本地开发（重启丢失，集群不共享）
     memory:
       enabled: true
-      type: redis
+      type: ${AI_MEMORY_TYPE:memory}
       maxMessages: 100
       ttlHours: 24
       summaryThreshold: 20
 
     # Session Configuration
+    # storageType=redis 需要可用 Redis；memory 仅用于本地开发
     session:
       enabled: true
-      storageType: redis
+      storageType: ${AI_SESSION_STORAGE:memory}
       defaultTtlSeconds: 86400
       maxConversationsPerUser: 100
 
@@ -86,8 +88,24 @@ easywing:
 
     # WebSocket Configuration
     websocket:
+      # 是否校验握手令牌。Spring Security 的 @EnableWebSecurity 只覆盖 servlet HTTP，
+      # 不拦截 WebSocket 握手，因此这里在握手阶段独立校验。
+      requireToken: true
       allowed-origins:
         - http://localhost:8080
+
+  # 资源服务器配置，与 system 服务保持同一前缀与形状
+  security:
+    public-paths:
+      - /actuator/**
+      - /api/v1/ai/health
+      - /swagger-ui/**
+      - /v3/api-docs/**
+    oauth2:
+      jwt:
+        jwk-set-uri: ${JWK_SET_URI:http://auth-service/.well-known/jwks.json}
+        authorities-claim-name: roles
+        username-claim-name: preferred_username
 
 # Server Configuration
 server:
@@ -101,7 +119,7 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
-    enabled: true
+  enabled: true
 
 # Logging
 logging:

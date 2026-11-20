@@ -15,6 +15,8 @@
  */
 package com.easywing.platform.oauth2.config;
 
+import com.easywing.platform.security.config.EasyWingSecurityProperties;
+import com.easywing.platform.security.config.JwtAuthenticationEntryPoint;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -46,8 +48,8 @@ import org.springframework.util.StringUtils;
 @AutoConfiguration
 @ConditionalOnClass(name = "org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken")
 @EnableWebSecurity
-@EnableConfigurationProperties(OAuth2Properties.class)
-@ConditionalOnProperty(prefix = "easywing.oauth2", name = "enabled", havingValue = "true", matchIfMissing = true)
+@EnableConfigurationProperties({OAuth2Properties.class, EasyWingSecurityProperties.class})
+@ConditionalOnProperty(prefix = "easywing.security", name = "enabled", havingValue = "true", matchIfMissing = true)
 @EnableMethodSecurity(prePostEnabled = true)
 public class OAuth2ResourceServerAutoConfiguration {
 
@@ -74,19 +76,26 @@ public class OAuth2ResourceServerAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtDecoder jwtDecoder,
-                                                   OAuth2Properties properties) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            JwtDecoder jwtDecoder,
+            OAuth2Properties properties,
+            EasyWingSecurityProperties securityProperties) throws Exception {
         log.info("EasyWing OAuth2 Resource Server SecurityFilterChain configured");
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .anyRequest().authenticated()
-                )
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers("/actuator/health", "/actuator/info").permitAll();
+                    auth.requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll();
+                    for (String path : securityProperties.getPublicPaths()) {
+                        auth.requestMatchers(path).permitAll();
+                    }
+                    auth.anyRequest().authenticated();
+                })
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder)
-                        .jwtAuthenticationConverter(jwtAuthenticationConverter(properties))));
+                        .jwtAuthenticationConverter(jwtAuthenticationConverter(properties)))
+                        .authenticationEntryPoint(new JwtAuthenticationEntryPoint()));
         return http.build();
     }
 

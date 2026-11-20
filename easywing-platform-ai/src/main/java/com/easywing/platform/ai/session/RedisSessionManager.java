@@ -3,6 +3,7 @@ package com.easywing.platform.ai.session;
 import com.easywing.platform.ai.config.AiProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
@@ -15,6 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
+@ConditionalOnProperty(prefix = "easywing.ai.session", name = "storage-type", havingValue = "redis")
 @Component
 public class RedisSessionManager implements SessionManager {
 

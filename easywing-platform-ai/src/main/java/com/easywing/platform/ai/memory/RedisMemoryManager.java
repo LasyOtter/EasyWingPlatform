@@ -5,6 +5,7 @@ import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.model.ConversationContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
+@ConditionalOnProperty(prefix = "easywing.ai.memory", name = "type", havingValue = "redis")
 @Component
 public class RedisMemoryManager implements MemoryManager {
 

@@ -32,6 +32,8 @@ public class AiProperties {
 
     private WebSocket websocket = new WebSocket();
 
+    private EmbeddingConfig embedding = new EmbeddingConfig();
+
     @Data
     public static class ProviderConfig {
         private boolean enabled = false;
@@ -118,8 +120,26 @@ public class AiProperties {
     @Data
     public static class WebSocket {
         /**
+         * 握手时是否校验 JWT。Spring Security 不拦截 WebSocket 握手，需独立校验。
+         * <p>
+         * 仅当 AI 服务部署在网关之后、且网关已完成 JWT 校验时可关闭。生产环境不应关闭。
+         */
+        private boolean requireToken = true;
+
+        /**
          * 允许的跨域来源，生产环境应配置为实际前端域名。
          */
         private List<String> allowedOrigins = List.of("http://localhost:8080");
+    }
+
+    /**
+     * Embedding 配置。复用 openai provider 的 apiKey / baseUrl 调用 embeddings 接口。
+     */
+    @Data
+    public static class EmbeddingConfig {
+        /**
+         * embedding 模型，默认 OpenAI text-embedding-3-small。
+         */
+        private String model = "text-embedding-3-small";
     }
 }

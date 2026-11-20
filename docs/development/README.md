@@ -288,9 +288,9 @@ mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xdebug -Xrunjdwp:transport=
 
 ## 📚 Additional Resources
 
-- [Testing Guide](./testing.md)
-- [API Development](./api.md)
-- [Coding Standards](./coding-standards.md)
+- [代码风格规范](../code-style-guide.md)
+- [API 版本管理](../api-versioning-guide.md)
+- [待改进项清单](../improvement-tasks.md)
 
 ---
 

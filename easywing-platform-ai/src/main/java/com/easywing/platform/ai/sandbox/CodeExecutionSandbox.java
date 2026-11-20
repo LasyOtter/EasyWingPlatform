@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -18,10 +19,21 @@ import java.util.concurrent.*;
 import jakarta.annotation.PreDestroy;
 
 /**
- * 代码执行沙箱 - 安全执行用户代码
- * 注意：这是简化实现，生产环境应使用 Docker 容器隔离
+ * 代码执行沙箱 - 在子进程中执行用户代码
+ * <p>
+ * <b>默认关闭。</b>当前实现为 {@link ProcessBuilder} 子进程隔离，没有容器边界：
+ * {@code maxMemoryMB} 只是声明值，无强制手段；{@code DANGEROUS_PATTERNS} 是字符串
+ * 黑名单，可被 base64/反射/拼接轻易绕过（见类内注释）。在公网可达的 AI 服务上，
+ * 该 Bean 等价于远程代码执行。
+ * <p>
+ * 启用条件：{@code easywing.ai.sandbox.enabled=true}，且仅当 AI 服务不直接暴露
+ * 给不可信调用方、或已用容器/沙箱替代本实现。
+ *
+ * @author EasyWing Team
+ * @since 1.0.0
  */
 @Slf4j
+@ConditionalOnProperty(prefix = "easywing.ai.sandbox", name = "enabled", havingValue = "true")
 @Service
 public class CodeExecutionSandbox {
 
@@ -177,9 +189,10 @@ public class CodeExecutionSandbox {
             // 写入代码文件
             Path codeFile = createCodeFile(tempDir, code, langConfig);
 
-            // 当配置限制网络/文件访问时，先做静态安全检查，拦截高风险代码
+            // 当配置限制网络/文件访问时，先做静态安全检查，拦截高风险代码。
+            // checkCodeSecurity 为纯内存计算，无需走响应式调度。
             if (!sandboxConfig.isAllowNetworkAccess() || !sandboxConfig.isAllowFileSystemAccess()) {
-                SecurityCheckResult security = checkCodeSecurity(code, langConfig.getLanguage()).block();
+                SecurityCheckResult security = checkCodeSecurityBlocking(code, langConfig.getLanguage());
                 if (security != null && !security.isSafe()) {
                     log.warn("Code blocked by sandbox security check: {}", security.getIssues());
                     return ExecutionResult.builder()
@@ -400,9 +413,17 @@ public class CodeExecutionSandbox {
     }
 
     /**
-     * 验证代码安全性
+     * 验证代码安全性（响应式包装）
      */
     public Mono<SecurityCheckResult> checkCodeSecurity(String code, String language) {
+        return Mono.just(checkCodeSecurityBlocking(code, language));
+    }
+
+
+    /**
+     * 同步执行安全检查（供已处于阻塞线程的调用方使用，避免无谓的响应式包装）。
+     */
+    public SecurityCheckResult checkCodeSecurityBlocking(String code, String language) {
         List<String> issues = new ArrayList<>();
 
         for (String pattern : DANGEROUS_PATTERNS) {
@@ -411,21 +432,23 @@ public class CodeExecutionSandbox {
             }
         }
 
-        // 检查无限循环风险
         if (code.contains("while True") || code.contains("while(true)")) {
             if (!code.contains("break") && !code.contains("return")) {
                 issues.add("疑似无限循环");
             }
         }
 
-        boolean safe = issues.isEmpty();
+        return buildSecurityResult(code, issues);
+    }
 
-        return Mono.just(SecurityCheckResult.builder()
+    private SecurityCheckResult buildSecurityResult(String code, List<String> issues) {
+        boolean safe = issues.isEmpty();
+        return SecurityCheckResult.builder()
                 .safe(safe)
                 .issues(issues)
                 .riskLevel(safe ? RiskLevel.LOW :
                         issues.size() > 2 ? RiskLevel.HIGH : RiskLevel.MEDIUM)
-                .build());
+                .build();
     }
 
     // ========== 数据类 ==========

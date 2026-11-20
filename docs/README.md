@@ -1,106 +1,56 @@
 # EasyWing Platform Documentation
 
-## 📚 Documentation Overview
+本目录收录 EasyWing Platform 的使用与开发文档。
 
-Welcome to the EasyWing Platform documentation. This directory contains comprehensive guides and references for understanding, developing, and deploying applications built on EasyWing Platform.
+## 快速入口
 
-## 📁 Directory Structure
+- 快速开始：[../README.md](../README.md)
+- 贡献指南：[../CONTRIBUTING.md](../CONTRIBUTING.md)
+- 安全说明：[../SECURITY.md](../SECURITY.md)
 
-```
-docs/
-├── architecture/     # Architecture design documents
-├── development/      # Development guides
-├── deployment/       # Deployment guides
-└── best-practices/   # Best practices and patterns
-```
+## 文档索引
 
-## 🚀 Quick Links
+### 使用与运维
+| 文档 | 说明 |
+|------|------|
+| [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md) | 部署检查清单 |
+| [NACOS3_UPGRADE.md](./NACOS3_UPGRADE.md) | Nacos 3 升级说明 |
+| [frontend-upgrade-guide.md](./frontend-upgrade-guide.md) | 前端升级指南 |
+| [api-versioning-guide.md](./api-versioning-guide.md) | API 版本管理指南 |
+| [analysis-report.md](./analysis-report.md) | 代码分析报告 |
+| [optimization-report.md](./optimization-report.md) | 优化报告 |
+| [quick-optimization-guide.md](./quick-optimization-guide.md) | 快速优化指南 |
+| [improvement-tasks.md](./improvement-tasks.md) | 待改进项清单 |
 
-### For Developers
-- [Getting Started](../README.md#-快速开始)
-- [Development Guide](./development/README.md)
-- [Contributing Guide](../CONTRIBUTING.md)
+### 开发
+| 文档 | 说明 |
+|------|------|
+| [code-style-guide.md](./code-style-guide.md) | 代码风格规范 |
+| [AGENT_QUICKSTART.md](./AGENT_QUICKSTART.md) | AI 模块快速上手 |
+| [AGENT_DEVELOPMENT.md](./AGENT_DEVELOPMENT.md) | AI 模块开发指南 |
 
-### For Architects
-- [Architecture Overview](./architecture/README.md)
-- [Design Decisions](./architecture/decisions/)
+### 子目录
+各子目录当前仅含 README 占位，尚无实质内容：
+- [architecture/](./architecture/README.md)
+- [development/](./development/README.md)
+- [deployment/](./deployment/README.md)（含 `alert-rules.yml`）
+- [best-practices/](./best-practices/README.md)
 
-### For DevOps
-- [Deployment Guide](./deployment/README.md)
-- [CI/CD Pipeline](./deployment/cicd/)
+## 非本项目文档
 
-### Reference
-- [Best Practices](./best-practices/README.md)
-- [API Documentation](./development/api/)
+以下文件为其他项目的需求/方案文档，**不属于 EasyWing Platform**，未纳入本索引：
 
-## 📖 Documentation Index
+- `LED中控平台建表DDL.md`、`LED中控平台方案.md`
+- `LoopForge-需求规格说明书.md`
+- `AID漫剧工坊_开发需求文档.md`
+- `LibreChat企业级AI对话平台_PRD.md`
+- `麦田多平台自媒体运营系统_开发需求文档.md`
 
-### Architecture
-| Document | Description |
-|----------|-------------|
-| [Architecture Overview](./architecture/README.md) | High-level system architecture |
-| [Module Design](./architecture/modules.md) | Core module design |
-| [Security Architecture](./architecture/security.md) | Security design and implementation |
+## 文档规范
 
-### Development
-| Document | Description |
-|----------|-------------|
-| [Development Setup](./development/README.md) | Local development environment setup |
-| [Coding Standards](./development/coding-standards.md) | Code style and conventions |
-| [Testing Guide](./development/testing.md) | Unit and integration testing |
-| [API Guide](./development/api.md) | REST API development guide |
-
-### Deployment
-| Document | Description |
-|----------|-------------|
-| [Deployment Overview](./deployment/README.md) | Deployment strategies |
-| [Docker Guide](./deployment/docker.md) | Container deployment |
-| [Kubernetes Guide](./deployment/kubernetes.md) | Kubernetes deployment |
-| [Native Image](./deployment/native-image.md) | GraalVM Native Image deployment |
-
-### Best Practices
-| Document | Description |
-|----------|-------------|
-| [Best Practices Overview](./best-practices/README.md) | General best practices |
-| [Performance Tuning](./best-practices/performance.md) | Performance optimization |
-| [Security Practices](./best-practices/security.md) | Security best practices |
-
-## 🔧 Documentation Standards
-
-### File Naming
-- Use lowercase with hyphens: `coding-standards.md`
-- Use descriptive names: `oauth2-implementation.md`
-
-### Document Structure
-```markdown
-# Title
-
-Brief description
-
-## Overview
-[Detailed explanation]
-
-## Usage
-[Code examples and usage patterns]
-
-## Reference
-[Related links and references]
-```
-
-### Code Examples
-- Always include language identifier in code blocks
-- Provide runnable examples when possible
-- Include comments for complex code
-
-## 📝 Contributing to Documentation
-
-We welcome documentation improvements! Please see our [Contributing Guide](../CONTRIBUTING.md) for details.
-
-### Documentation Style Guide
-1. Use clear, concise language
-2. Include code examples
-3. Provide diagrams where helpful
-4. Keep documents up-to-date
+- 文件名使用小写加连字符，如 `coding-standards.md`
+- 代码块必须标注语言
+- 尽量提供可运行示例
 
 ---
 

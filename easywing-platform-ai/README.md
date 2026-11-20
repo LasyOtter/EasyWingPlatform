@@ -277,21 +277,69 @@ easywing:
 `errorCode`、`timestamp`、`traceId`、`errors`。
 
 覆盖 `BizException`、`SystemException`、`ValidationException`、`@Valid` 参数校验、
-参数缺失 / 类型不匹配、请求体不可读、404、Resilience4j 限流熔断以及兜底异常。
-AI 服务不依赖 `easywing-web`，避免引入 Spring Security、Resilience4j 限流等
-与本服务无关的可选依赖；`traceId` 优先取请求头 `X-Trace-Id`。
+参数缺失 / 类型不匹配、请求体不可读、404、`AccessDeniedException` 以及兜底异常。
+未认证请求由 Spring Security 的 `JwtAuthenticationEntryPoint` 直接返回
+`401 application/problem+json`（`errorCode=AUTH001`），`traceId` 优先取请求头 `X-Trace-Id`。
 
-## 实验性功能
+## 安全
 
-以下能力已注册为 Spring Bean 或提供 API，但尚未接入主执行链路，属于实验性质，生产使用需自行验证：
+### 认证
 
-- 高级 Agent：`PlanningAgent`、`SelfReflectionAgent`、`TaskDecompositionAgent`、`EnhancedFunctionCallingAgent`
-- 成本 / 优化：`CostOptimizationEngine`、`BatchOptimizationEngine`、`PromptOptimizer`、`ToolRecommender`
-- 记忆 / 会话：`LongTermMemoryManager`、`RedisMemoryManager`、`RedisSessionManager`、`ContextCompressor`
-- 多模态 / 沙箱：`MultiModalService`、`CodeExecutionSandbox`（ProcessBuilder 实现，非容器隔离）
-- 其他：`MonitoringDashboard`、`ErrorRecoveryService`、`AgentTemplateLibrary`、`ABTestingFramework`、`McpClient` / `McpServer`、`AgentCommunicationBus`
+服务引入 `easywing-boot-starter-security-oauth2`，作为 OAuth2 资源服务器校验 JWT。
+配置前缀与 `system` 服务一致：
 
-其中部分实现为简化 / 模拟版本（如 `EmbeddingService`、多模态处理器），接入生产前需替换为真实实现。
+```yaml
+easywing:
+  security:
+    public-paths:
+      - /actuator/**
+      - /api/v1/ai/health
+      - /swagger-ui/**
+      - /v3/api-docs/**
+    oauth2:
+      jwt:
+        jwk-set-uri: ${JWK_SET_URI:http://auth-service/.well-known/jwks.json}
+        authorities-claim-name: roles
+        username-claim-name: preferred_username
+```
+
+除 `public-paths` 外的全部 `/api/v1/ai/**` 端点都需要 `Authorization: Bearer <token>`。
+
+### WebSocket
+
+`/ws/agent` 的握手请求**不经过** Spring Security 过滤器链，由
+`WebSocketTokenInterceptor` 在握手阶段独立校验 JWT（`easywing.ai.websocket.require-token`
+默认 `true`）。浏览器端无法设置自定义请求头，令牌通过查询参数传入：
+
+```javascript
+const ws = new WebSocket(`ws://localhost:8082/ws/agent?token=${accessToken}`);
+```
+
+### 直连风险
+
+服务默认监听 `8082`。生产部署应通过网关（`/api/v1/ai/**` 路由）暴露，
+避免将 `8082` 直接暴露给不可信网络。
+
+## 未接入的组件
+
+以下类已注册为 Spring Bean，但**没有任何调用方与 API 暴露**（全仓引用计数为 0，仅自身定义）。
+保留供后续接入，接入前不应依赖其行为：
+
+`PlanningAgent`、`SelfReflectionAgent`、`TaskDecompositionAgent`、`EnhancedFunctionCallingAgent`、
+`CostOptimizationEngine`、`BatchOptimizationEngine`、`PromptOptimizer`、`ToolRecommender`、
+`LongTermMemoryManager`、`ContextCompressor`、`MultiModalService`、`MonitoringDashboard`、
+`ErrorRecoveryService`、`AgentTemplateLibrary`、`ABTestingFramework`、`McpClient` / `McpServer`、
+`AgentCommunicationBus`（合计约 6,200 行）
+
+注意 `FunctionCallingAgent` 不在此列：它被 `AgentExecutor` 注入并在工具模式中使用。
+
+`CodeExecutionSandbox` 为 `@ConditionalOnProperty(easywing.ai.sandbox.enabled)`，**默认不注册**。
+其实现为 `ProcessBuilder` 子进程隔离，无容器边界，字符串黑名单可被 base64 / 反射绕过，
+启用前必须自行评估风险。
+
+`EmbeddingService` 在配置 OpenAI API Key 时调用真实 `/v1/embeddings`；未配置时退化为
+**确定性随机向量**（无语义，RAG 检索结果不可用，启动时打印 WARN）。
+`MultiModalService` 的图像/音频/文档处理器仍返回模拟数据。
 
 ## License
 

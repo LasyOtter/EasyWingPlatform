@@ -60,6 +60,12 @@ spring:
             - Path=/api/orders/**
           filters:
             - StripPrefix=1
+        - id: ai-service
+          uri: lb://ai-service
+          predicates:
+            - Path=/api/v1/ai/**
+          filters:
+            - StripPrefix=0
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
         - name: Retry
@@ -128,6 +134,7 @@ easywing:
         - /api/v1/token/refresh
         - /api/health
         - /health
+        - /api/v1/ai/health
       user-id-claim-name: sub
       username-claim-name: preferred_username
       roles-claim-name: roles

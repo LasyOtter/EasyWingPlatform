@@ -14,16 +14,21 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final AgentWebSocketHandler agentWebSocketHandler;
+    private final WebSocketTokenInterceptor tokenInterceptor;
     private final AiProperties properties;
 
-    public WebSocketConfig(AgentWebSocketHandler agentWebSocketHandler, AiProperties properties) {
+    public WebSocketConfig(AgentWebSocketHandler agentWebSocketHandler,
+                           WebSocketTokenInterceptor tokenInterceptor,
+                           AiProperties properties) {
         this.agentWebSocketHandler = agentWebSocketHandler;
+        this.tokenInterceptor = tokenInterceptor;
         this.properties = properties;
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(agentWebSocketHandler, "/ws/agent")
+                .addInterceptors(tokenInterceptor)
                 .setAllowedOrigins(properties.getWebsocket().getAllowedOrigins()
                         .toArray(new String[0]));
     }

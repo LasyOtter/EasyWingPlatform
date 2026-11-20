@@ -7,8 +7,7 @@
 ### 必备能力 (9大核心能力)
 
 1. **云原生支持**
-   - GraalVM Native Image 支持
-   - CRaC (Coordinated Restore at Checkpoint) 支持
+   - GraalVM Native Image 支持（native profile）
    - Java 21+ 虚拟线程支持
 
 2. **OpenTelemetry可观测性**
@@ -54,17 +53,17 @@
    - 动态路由
    - 限流熔断
 
-### 推荐能力 (10大增强能力)
+### 推荐能力
 
-- MyBatis-Plus数据访问
+- MyBatis-Plus 数据访问
 - 动态数据源
-- 多级缓存 (Redis + Caffeine)
-- 消息驱动 (RocketMQ/Kafka)
-- gRPC支持
+- 多级缓存（Redis + Caffeine）
+- 消息驱动（RocketMQ / Kafka / RabbitMQ adapter）
 - SpringDoc OpenAPI 3.1
-- Maven Archetype脚手架
-- 完整示例项目
-- Docker Compose开发环境
+- 完整示例项目（user / order service）
+- Docker Compose 开发环境
+
+> 未实现：Maven Archetype 脚手架、gRPC starter。README 早期版本曾列出，代码库中无对应模块。
 
 ## 📦 技术栈
 
@@ -124,10 +123,16 @@ mvn spring-boot:run
 
 - API Gateway: http://localhost:8080
 - User Service: http://localhost:8081
+- AI Service: http://localhost:8082 （`/api/v1/ai/**`，经网关需 JWT）
 - Swagger UI: http://localhost:8081/swagger-ui.html
 - Nacos Console: http://localhost:8848/nacos
 - Grafana: http://localhost:3000
 - Jaeger: http://localhost:16686
+
+AI 服务除 `/api/v1/ai/health`、`/actuator/**`、`/swagger-ui/**`、`/v3/api-docs/**`
+外均需 `Authorization: Bearer <token>`。WebSocket `/ws/agent` 由
+`WebSocketTokenInterceptor` 在握手阶段独立校验（Spring Security 不拦截握手）。
+生产环境请勿将 8082 直接暴露，应经网关路由。
 
 ## 📁 项目结构
 
@@ -235,6 +240,8 @@ EasyWingPlatform/
 ```
 
 ## 📊 性能指标
+
+以下为设计目标，**未在仓库内建立基准测试或测量流水线**，不应视为实测值：
 
 | 指标 | JVM模式 | Native模式 |
 |------|---------|------------|

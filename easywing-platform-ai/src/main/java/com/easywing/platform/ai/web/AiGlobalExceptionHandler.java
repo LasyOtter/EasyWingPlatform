@@ -210,6 +210,21 @@ public class AiGlobalExceptionHandler {
     }
 
     /**
+     * 处理权限不足（{@code @PreAuthorize} 校验失败）。
+     * <p>
+     * 未认证请求由 Spring Security 的过滤器链在进入控制器前拦截，
+     * 不会到达 {@code @RestControllerAdvice}；此处只覆盖方法级授权失败。
+     */
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ProblemDetail> handleAccessDeniedException(
+            org.springframework.security.access.AccessDeniedException ex, HttpServletRequest request) {
+        log.warn("Access denied: {}", ex.getMessage());
+        return build(HttpStatus.FORBIDDEN.value(), "Forbidden", "无权访问该资源",
+                ErrorCode.ACCESS_DENIED, request, null);
+    }
+
+
+    /**
      * 处理所有未预期的异常
      */
     @ExceptionHandler(Exception.class)

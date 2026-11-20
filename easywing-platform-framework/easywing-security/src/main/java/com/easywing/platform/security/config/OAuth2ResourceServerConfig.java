@@ -16,15 +16,14 @@
 package com.easywing.platform.security.config;
 
 import com.easywing.platform.security.converter.JwtAuthConverter;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.security.SecurityProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -40,14 +39,22 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * OAuth2.1资源服务器安全配置
+ * OAuth2.1资源服务器安全配置（框架内置实现）
  * <p>
- * 支持JWT和不透明令牌两种模式
+ * 支持 JWT 和不透明令牌两种模式。
+ * <p>
+ * <b>不参与自动装配。</b> starter
+ * {@code easywing-boot-starter-security-oauth2} 提供功能等价、且与认证服务
+ * claim 约定一致的实现（权限前缀为空，匹配 {@code roles} claim）。两者同时自动
+ * 装配会注册同名 {@code securityFilterChain} 导致上下文启动失败。
+ * <p>
+ * 本配置供需要 {@code ROLE_} 前缀或自定义 {@code public-paths} 语义的场景
+ * 通过 {@code @Import} 显式启用。
  *
  * @author EasyWing Team
  * @since 1.0.0
  */
-@AutoConfiguration
+@Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
 @EnableConfigurationProperties(EasyWingSecurityProperties.class)
 @ConditionalOnProperty(prefix = "easywing.security", name = "enabled", havingValue = "true", matchIfMissing = true)

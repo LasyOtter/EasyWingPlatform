@@ -21,3 +21,20 @@ easywing:
 
     skill:
       enabled: false
+
+    websocket:
+      # 单元测试不校验握手令牌
+      requireToken: false
+
+  security:
+    public-paths:
+      - /actuator/**
+      - /api/v1/ai/health
+      - /swagger-ui/**
+      - /v3/api-docs/**
+    oauth2:
+      jwt:
+        # 测试用公钥地址，仅校验配置绑定，不做真实网络请求
+        jwk-set-uri: ${TEST_JWK_SET_URI:http://localhost:8085/.well-known/jwks.json}
+        authorities-claim-name: roles
+        username-claim-name: preferred_username

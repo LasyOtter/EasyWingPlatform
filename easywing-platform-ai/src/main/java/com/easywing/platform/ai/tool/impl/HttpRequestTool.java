@@ -118,6 +118,8 @@ public class HttpRequestTool implements AiTool {
             requestSpec.bodyValue(body);
         }
 
+        // 不跟随重定向：目标地址的二次解析绕过了 isPublicHost 校验，会造成 SSRF。
+        // 3xx 原样返回给调用方，由调用方决定是否再次请求。
         return requestSpec.exchangeToMono(response -> buildResponse(response, method, url))
                 .timeout(Duration.ofSeconds(TIMEOUT_SECONDS))
                 .onErrorResume(e -> {
@@ -154,7 +156,10 @@ public class HttpRequestTool implements AiTool {
     }
 
     /**
-     * 校验目标主机是否为可访问的公网地址，防止 SSRF
+     * 校验目标主机是否为可访问的公网地址，防止 SSRF。
+     * <p>
+     * 仅按 IP 判定，不依赖主机名字符串黑名单：{@code 2130706433}、{@code 0x7f000001}
+     * 这类写法会被 {@link InetAddress} 规范化后命中内网判定。
      */
     private boolean isPublicHost(String host) {
         String normalized = host.toLowerCase(Locale.ROOT);
@@ -167,9 +172,7 @@ public class HttpRequestTool implements AiTool {
                 return false;
             }
             for (InetAddress address : addresses) {
-                if (address.isLoopbackAddress() || address.isAnyLocalAddress()
-                        || address.isSiteLocalAddress() || address.isLinkLocalAddress()
-                        || address.isMulticastAddress()) {
+                if (isBlockedAddress(address)) {
                     return false;
                 }
             }
@@ -177,6 +180,48 @@ public class HttpRequestTool implements AiTool {
         } catch (UnknownHostException e) {
             return false;
         }
+    }
+
+    /**
+     * 判定单个地址是否属于不可访问范围。
+     * <p>
+     * 除常规内网/环回/链路本地外，额外覆盖 IPv4 映射的 IPv6 地址与 IPv6 唯一本地地址
+     * （{@code fc00::/7}），避免通过 IPv6 形式绕过 IPv4 判定。
+     */
+    boolean isBlockedAddress(InetAddress address) {
+        if (address.isLoopbackAddress() || address.isAnyLocalAddress()
+                || address.isSiteLocalAddress() || address.isLinkLocalAddress()
+                || address.isMulticastAddress()) {
+            return true;
+        }
+        if (address instanceof java.net.Inet6Address ipv6) {
+            byte[] raw = ipv6.getAddress();
+            // fc00::/7 唯一本地地址
+            if ((raw[0] & 0xFE) == 0xFC) {
+                return true;
+            }
+        }
+        // IPv4-mapped IPv6（::ffff:127.0.0.1）需按内层 IPv4 复判
+        if (address instanceof java.net.Inet6Address) {
+            byte[] raw = address.getAddress();
+            boolean mapped = true;
+            for (int i = 0; i < 10; i++) {
+                if (raw[i] != 0) {
+                    mapped = false;
+                    break;
+                }
+            }
+            if (mapped && raw[10] == (byte) 0xFF && raw[11] == (byte) 0xFF) {
+                byte[] v4 = new byte[]{raw[12], raw[13], raw[14], raw[15]};
+                try {
+                    return isBlockedAddress(InetAddress.getByAddress(v4));
+                } catch (UnknownHostException e) {
+                    // getByAddress 只对长度 != 4 抛异常，此处长度固定为 4
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static final class BodyContent {

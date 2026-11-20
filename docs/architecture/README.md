@@ -113,7 +113,7 @@ Security components:
 
 ## 📋 Architecture Decisions
 
-See [Architecture Decision Records (ADR)](./decisions/) for major architectural decisions.
+尚未建立 ADR（Architecture Decision Records）目录；重大决策目前记录在代码注释与提交信息中。
 
 ## 🔄 Data Flow
 
