@@ -48,11 +48,18 @@ export function validatePort(port: number | string): boolean {
 
 /**
  * 验证密码强度
- * 至少包含大写字母、小写字母、数字、特殊字符中的三种，长度8-30位
+ * 至少包含大写字母、小写字母、数字、特殊字符中的三种，长度 8-30 位
  */
 export function validatePassword(password: string): boolean {
-  const reg = /^(?![a-zA-Z]+$)(?![A-Z0-9]+$)(?![A-Z!@#$%^&*]+$)(?![a-z0-9!@#$%^&*]+$)(?![a-zA-Z0-9]+$)[a-zA-Z0-9!@#$%^&*]{8,30}$/
-  return reg.test(password)
+  if (!/^[a-zA-Z0-9!@#$%^&*]{8,30}$/.test(password)) {
+    return false
+  }
+  let categories = 0
+  if (/[a-z]/.test(password)) categories++
+  if (/[A-Z]/.test(password)) categories++
+  if (/[0-9]/.test(password)) categories++
+  if (/[!@#$%^&*]/.test(password)) categories++
+  return categories >= 3
 }
 
 /**

@@ -22,7 +22,14 @@ import java.time.Duration;
 import java.util.List;
 
 @Data
-@ConfigurationProperties(prefix = "easywing.ai")
+/**
+ * LangChain4j 启动器配置。
+ * <p>
+ * 前缀独立为 {@code easywing.langchain4j}：AI 服务模块的
+ * {@code com.easywing.platform.ai.config.AiProperties} 使用 {@code easywing.ai}，
+ * 两者同名字段（agent / embedding）语义不同，共用前缀会导致配置互相干扰。
+ */
+@ConfigurationProperties(prefix = "easywing.langchain4j")
 public class AiProperties {
 
     private boolean enabled = true;

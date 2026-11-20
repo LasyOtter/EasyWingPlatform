@@ -15,10 +15,10 @@ class AiAutoConfigurationTest {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withUserConfiguration(TestConfig.class)
             .withPropertyValues(
-                    "easywing.ai.chat-model.enabled=false",
-                    "easywing.ai.embedding-model.enabled=false",
-                    "easywing.ai.rag.enabled=false",
-                    "easywing.ai.agent.enabled=false"
+                    "easywing.langchain4j.chat-model.enabled=false",
+                    "easywing.langchain4j.embedding-model.enabled=false",
+                    "easywing.langchain4j.rag.enabled=false",
+                    "easywing.langchain4j.agent.enabled=false"
             );
 
     @Test
