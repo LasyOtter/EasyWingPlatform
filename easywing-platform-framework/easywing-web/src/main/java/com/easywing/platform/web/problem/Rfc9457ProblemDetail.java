@@ -152,6 +152,19 @@ public class Rfc9457ProblemDetail {
     }
 
     /**
+     * 构建 type URI
+     * <p>
+     * 统一使用 {@value #TYPE_BASE_URI} 作为前缀，后接 errorCode。
+     * 网关（WebFlux）与无法引用本类的模块应调用此方法，避免各自拼出不同的 type。
+     *
+     * @param errorCode 应用错误码，可为 {@code null}
+     * @return type URI；errorCode 为空时返回 {@code https://api.easywing.io/errors/}
+     */
+    public static URI buildType(String errorCode) {
+        return URI.create(TYPE_BASE_URI + (errorCode == null ? "" : errorCode));
+    }
+
+    /**
      * 从异常创建ProblemDetail
      */
     public static Rfc9457ProblemDetail fromException(Throwable ex, HttpStatus status) {

@@ -16,6 +16,8 @@
 package com.easywing.platform.auth.service;
 
 import com.easywing.platform.auth.domain.AuthUser;
+import com.easywing.platform.core.exception.BizException;
+import com.easywing.platform.core.exception.ErrorCode;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,7 +51,7 @@ public class UserDetailsService {
     public AuthUser loadByUsername(String username) {
         AuthUser user = usersByUsername.get(username);
         if (user == null) {
-            throw new IllegalArgumentException("User not found: " + username);
+            throw new BizException(ErrorCode.INVALID_CREDENTIALS, "用户名或密码错误");
         }
         return user;
     }
@@ -57,7 +59,7 @@ public class UserDetailsService {
     public AuthUser loadById(String userId) {
         AuthUser user = usersById.get(userId);
         if (user == null) {
-            throw new IllegalArgumentException("User not found by id: " + userId);
+            throw new BizException(ErrorCode.INVALID_CREDENTIALS, "用户名或密码错误");
         }
         return user;
     }

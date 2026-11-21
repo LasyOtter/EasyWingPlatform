@@ -24,6 +24,45 @@
       <artifactId>easywing-core</artifactId>
     </dependency>
 
+    <!-- EasyWing Web：复用平台统一的 RFC 9457 Problem Details 模型与全局异常处理，
+         避免在服务内重复实现异常映射 -->
+    <dependency>
+      <groupId>com.easywing.platform</groupId>
+      <artifactId>easywing-web</artifactId>
+      <exclusions>
+        <!-- AI 服务不启用资源服务器与限流切面，去掉框架中的可选依赖传递。
+             注意：不能排除 spring-security-core / oauth2-jose，
+             GlobalExceptionHandler 的方法签名引用了 AuthenticationException 与
+             AccessDeniedException，排除后会导致 Bean 内省阶段 NoClassDefFoundError。 -->
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-aop</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.github.resilience4j</groupId>
+          <artifactId>resilience4j-ratelimiter</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.github.resilience4j</groupId>
+          <artifactId>resilience4j-circuitbreaker</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <!-- GlobalExceptionHandler 方法签名引用的最小安全依赖（仅编译/内省所需） -->
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-oauth2-jose</artifactId>
+    </dependency>
+
     <!-- Spring Boot Web -->
     <dependency>
       <groupId>org.springframework.boot</groupId>

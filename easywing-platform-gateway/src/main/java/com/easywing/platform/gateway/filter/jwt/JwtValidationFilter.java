@@ -16,9 +16,11 @@
 package com.easywing.platform.gateway.filter.jwt;
 
 import com.easywing.platform.core.constant.HttpHeaders;
+import com.easywing.platform.core.exception.ErrorCode;
 import com.easywing.platform.core.exception.TokenBlacklistedException;
 import com.easywing.platform.gateway.constants.CacheConstants;
 import com.easywing.platform.gateway.constants.GatewayConstants;
+import com.easywing.platform.gateway.error.ProblemDetailSupport;
 import com.easywing.platform.gateway.properties.GatewayProperties;
 import com.easywing.platform.gateway.properties.JwtProperties;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -327,9 +329,8 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
     }
 
     private Mono<Void> unauthorized(ServerWebExchange exchange, String message) {
-        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-        exchange.getResponse().getHeaders().add("X-Error-Message", message);
-        return exchange.getResponse().setComplete();
+        return ProblemDetailSupport.writeUnauthorized(
+                exchange, "Unauthorized", message, ErrorCode.UNAUTHORIZED, exchange.getResponse());
     }
 
     private void initJwkSet() {

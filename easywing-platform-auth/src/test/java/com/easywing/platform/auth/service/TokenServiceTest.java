@@ -25,6 +25,8 @@ import com.easywing.platform.auth.config.AuthProperties;
 import com.easywing.platform.auth.domain.AuthUser;
 import com.easywing.platform.auth.dto.TokenResponse;
 import com.easywing.platform.auth.metrics.AuthMetrics;
+import com.easywing.platform.core.exception.BizException;
+import com.easywing.platform.core.exception.ErrorCode;
 import com.nimbusds.jose.jwk.RSAKey;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -142,19 +144,20 @@ class TokenServiceTest {
         TokenResponse initial = tokenService.issueTokenPair(user);
         when(redisTemplate.hasKey(anyString())).thenReturn(true);
 
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class, () -> tokenService.refreshTokenPair(initial.getRefreshToken()));
+        BizException exception = assertThrows(
+                BizException.class, () -> tokenService.refreshTokenPair(initial.getRefreshToken()));
 
-        assertEquals("Invalid or expired refresh token", exception.getMessage());
+        assertEquals(ErrorCode.TOKEN_INVALID, exception.getErrorCode());
+        assertEquals("刷新令牌已被吊销", exception.getMessage());
     }
 
     @Test
     @DisplayName("Refresh token pair - malformed refresh token should be rejected")
     void testRefreshTokenPairRejectsMalformedToken() {
-        IllegalArgumentException exception =
-                assertThrows(IllegalArgumentException.class, () -> tokenService.refreshTokenPair("not-a-jwt"));
+        BizException exception =
+                assertThrows(BizException.class, () -> tokenService.refreshTokenPair("not-a-jwt"));
 
-        assertEquals("Invalid token", exception.getMessage());
+        assertEquals(ErrorCode.TOKEN_INVALID, exception.getErrorCode());
     }
 
     @Test
@@ -189,6 +192,6 @@ class TokenServiceTest {
     @Test
     @DisplayName("UserDetailsService - unknown user throws exception")
     void testLoadUnknownUser() {
-        assertThrows(IllegalArgumentException.class, () -> userDetailsService.loadByUsername("unknown"));
+        assertThrows(BizException.class, () -> userDetailsService.loadByUsername("unknown"));
     }
 }

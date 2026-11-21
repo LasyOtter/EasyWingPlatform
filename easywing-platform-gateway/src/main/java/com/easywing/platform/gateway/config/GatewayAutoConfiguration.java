@@ -21,6 +21,8 @@ import com.easywing.platform.gateway.filter.logging.LoggingFilter;
 import com.easywing.platform.gateway.filter.ratelimit.RateLimitFilter;
 import com.easywing.platform.gateway.filter.ratelimit.RedisRateLimiter;
 import com.easywing.platform.gateway.properties.GatewayProperties;
+import com.easywing.platform.gateway.util.JsonCodec;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -67,6 +69,23 @@ public class GatewayAutoConfiguration {
     @Bean
     public RedisScript<Long> rateLimitScript() {
         return new RedisRateLimiter();
+    }
+
+    /**
+     * 初始化错误响应使用的 JSON 序列化器，复用容器的 ObjectMapper
+     */
+    @Bean
+    public JsonCodecInitializer jsonCodecInitializer(ObjectMapper objectMapper) {
+        return new JsonCodecInitializer(objectMapper);
+    }
+
+    /**
+     * {@link JsonCodec} 初始化器，保证静态序列化器在首次写入前完成注入
+     */
+    public static class JsonCodecInitializer {
+        public JsonCodecInitializer(ObjectMapper objectMapper) {
+            JsonCodec.init(objectMapper);
+        }
     }
 
     @Bean

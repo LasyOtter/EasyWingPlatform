@@ -20,8 +20,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+import com.easywing.platform.core.exception.ErrorCode;
 import com.easywing.platform.gateway.properties.GatewayProperties;
 import com.easywing.platform.gateway.properties.JwtProperties;
+import com.easywing.platform.gateway.util.JsonCodec;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,6 +62,11 @@ class JwtValidationFilterTest {
     private GatewayProperties properties;
 
     @BeforeEach
+    void initCodec() {
+        JsonCodec.init(new ObjectMapper());
+    }
+
+    @org.junit.jupiter.api.BeforeEach
     void setUp() {
         properties = new GatewayProperties();
         JwtProperties jwtProperties = properties.getJwt();

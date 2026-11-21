@@ -18,6 +18,7 @@ package com.easywing.platform.gateway.filter.ratelimit;
 import com.easywing.platform.core.constant.HttpHeaders;
 import com.easywing.platform.gateway.constants.CacheConstants;
 import com.easywing.platform.gateway.constants.GatewayConstants;
+import com.easywing.platform.gateway.error.ProblemDetailSupport;
 import com.easywing.platform.gateway.properties.GatewayProperties;
 import com.easywing.platform.gateway.properties.RateLimitProperties;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -184,11 +185,8 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
     }
 
     private Mono<Void> tooManyRequests(ServerWebExchange exchange) {
-        ServerHttpResponse response = exchange.getResponse();
-        response.setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
-        response.getHeaders().add("Content-Type", "application/json");
-        String body = "{\"error\":\"rate_limit_exceeded\",\"message\":\"Too many requests\"}";
-        return response.writeWith(Mono.just(response.bufferFactory().wrap(body.getBytes())));
+        return ProblemDetailSupport.writeTooManyRequests(
+                exchange, "请求过于频繁，请稍后重试", exchange.getResponse());
     }
 
     @Override
