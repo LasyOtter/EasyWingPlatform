@@ -2,14 +2,12 @@ package com.easywing.platform.ai.tool;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import java.time.Duration;
+import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
-
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * 工具执行缓存 - 缓存工具执行结果，避免重复调用
@@ -50,13 +48,12 @@ public class ToolExecutionCache {
 
         // 缓存未命中，执行工具并缓存结果
         log.debug("Cache miss for tool: {}, executing...", toolName);
-        return toolExecutor.executeTool(toolName, arguments)
-                .doOnSuccess(result -> {
-                    if (Boolean.TRUE.equals(result.get("success")) && isCacheable(toolName)) {
-                        cache.put(key, result);
-                        log.debug("Cached result for tool: {}", toolName);
-                    }
-                });
+        return toolExecutor.executeTool(toolName, arguments).doOnSuccess(result -> {
+            if (Boolean.TRUE.equals(result.get("success")) && isCacheable(toolName)) {
+                cache.put(key, result);
+                log.debug("Cached result for tool: {}", toolName);
+            }
+        });
     }
 
     /**
@@ -99,7 +96,6 @@ public class ToolExecutionCache {
                 "missCount", stats.missCount(),
                 "hitRate", stats.hitRate(),
                 "evictionCount", stats.evictionCount(),
-                "size", cache.estimatedSize()
-        );
+                "size", cache.estimatedSize());
     }
 }

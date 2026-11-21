@@ -17,9 +17,10 @@ public class WebSocketConfig implements WebSocketConfigurer {
     private final WebSocketTokenInterceptor tokenInterceptor;
     private final AiProperties properties;
 
-    public WebSocketConfig(AgentWebSocketHandler agentWebSocketHandler,
-                           WebSocketTokenInterceptor tokenInterceptor,
-                           AiProperties properties) {
+    public WebSocketConfig(
+            AgentWebSocketHandler agentWebSocketHandler,
+            WebSocketTokenInterceptor tokenInterceptor,
+            AiProperties properties) {
         this.agentWebSocketHandler = agentWebSocketHandler;
         this.tokenInterceptor = tokenInterceptor;
         this.properties = properties;
@@ -29,7 +30,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(agentWebSocketHandler, "/ws/agent")
                 .addInterceptors(tokenInterceptor)
-                .setAllowedOrigins(properties.getWebsocket().getAllowedOrigins()
-                        .toArray(new String[0]));
+                .setAllowedOrigins(properties.getWebsocket().getAllowedOrigins().toArray(new String[0]));
     }
 }

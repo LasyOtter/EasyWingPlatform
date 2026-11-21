@@ -2,8 +2,6 @@ package com.easywing.platform.ai.sandbox;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.easywing.platform.ai.config.AiProperties;
-import com.easywing.platform.ai.sandbox.CodeExecutionSandbox.ExecutionMode;
 import com.easywing.platform.ai.sandbox.CodeExecutionSandbox.ExecutionResult;
 import com.easywing.platform.ai.sandbox.CodeExecutionSandbox.RiskLevel;
 import com.easywing.platform.ai.sandbox.CodeExecutionSandbox.SandboxConfig;
@@ -13,7 +11,7 @@ import reactor.test.StepVerifier;
 
 class CodeExecutionSandboxTest {
 
-    private final CodeExecutionSandbox sandbox = new CodeExecutionSandbox(new AiProperties());
+    private final CodeExecutionSandbox sandbox = new CodeExecutionSandbox();
 
     @Test
     void unsupportedLanguageReturnsError() {
@@ -52,8 +50,7 @@ class CodeExecutionSandboxTest {
 
     @Test
     void processModeBlocksDangerousCode() {
-        SandboxConfig config =
-                SandboxConfig.builder().mode(ExecutionMode.PROCESS).build();
+        SandboxConfig config = SandboxConfig.builder().build();
 
         ExecutionResult result = sandbox.executeCode("import os\nos.system('ls')", "python", null, config)
                 .block();

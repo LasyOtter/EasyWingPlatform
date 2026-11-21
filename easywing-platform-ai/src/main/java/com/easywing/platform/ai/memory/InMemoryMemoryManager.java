@@ -2,15 +2,13 @@ package com.easywing.platform.ai.memory;
 
 import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.model.ConversationContext;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
-
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
 /**
  * 记忆管理器内存实现
@@ -24,8 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Component
-@ConditionalOnProperty(prefix = "easywing.ai.memory", name = "type",
-        havingValue = "memory", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "easywing.ai.memory", name = "type", havingValue = "memory", matchIfMissing = true)
 public class InMemoryMemoryManager implements MemoryManager {
 
     private final ConcurrentHashMap<String, ConversationContext> contexts = new ConcurrentHashMap<>();
@@ -33,8 +30,7 @@ public class InMemoryMemoryManager implements MemoryManager {
 
     public InMemoryMemoryManager(com.easywing.platform.ai.config.AiProperties properties) {
         this.maxMessages = properties.getMemory().getMaxMessages();
-        log.warn("AI 记忆使用内存存储（easywing.ai.memory.type=memory，maxMessages={}）："
-                + "重启即丢失，集群下不共享，禁止用于生产", maxMessages);
+        log.warn("AI 记忆使用内存存储（easywing.ai.memory.type=memory，maxMessages={}）：" + "重启即丢失，集群下不共享，禁止用于生产", maxMessages);
     }
 
     @Override
@@ -68,13 +64,12 @@ public class InMemoryMemoryManager implements MemoryManager {
 
     @Override
     public Mono<ConversationContext> addMessage(String conversationId, ChatMessage message) {
-        return getContext(conversationId)
-                .flatMap(context -> {
-                    context.getMessages().add(message);
-                    context.setMessageCount(context.getMessages().size());
-                    context.setUpdatedAt(Instant.now().toEpochMilli());
-                    return saveContext(context);
-                });
+        return getContext(conversationId).flatMap(context -> {
+            context.getMessages().add(message);
+            context.setMessageCount(context.getMessages().size());
+            context.setUpdatedAt(Instant.now().toEpochMilli());
+            return saveContext(context);
+        });
     }
 
     /**

@@ -18,7 +18,6 @@ package com.easywing.platform.gateway.error;
 import com.easywing.platform.core.exception.ErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.web.reactive.error.ErrorWebFluxAutoConfiguration;
 import org.springframework.boot.web.reactive.error.ErrorAttributes;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.core.annotation.Order;
@@ -60,7 +59,11 @@ public class GatewayErrorWebExceptionHandler implements ErrorWebExceptionHandler
 
         HttpStatus status = resolveStatus(ex);
         return ProblemDetailSupport.write(
-                exchange, status, status.getReasonPhrase(), "网关请求处理失败，请稍后重试", ErrorCode.SYSTEM_ERROR,
+                exchange,
+                status,
+                status.getReasonPhrase(),
+                "网关请求处理失败，请稍后重试",
+                ErrorCode.SYSTEM_ERROR,
                 exchange.getResponse());
     }
 

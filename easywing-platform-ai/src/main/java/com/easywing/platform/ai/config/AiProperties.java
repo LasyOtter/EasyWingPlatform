@@ -25,8 +25,6 @@ public class AiProperties {
 
     private KnowledgeBaseConfig knowledgeBase = new KnowledgeBaseConfig();
 
-    private EmbeddingConfig embedding = new EmbeddingConfig();
-
     private SandboxSettings sandbox = new SandboxSettings();
 
     private AgentConfig agent = new AgentConfig();
@@ -181,16 +179,5 @@ public class AiProperties {
          * 允许的跨域来源，生产环境应配置为实际前端域名。
          */
         private List<String> allowedOrigins = List.of("http://localhost:8080");
-    }
-
-    /**
-     * Embedding 配置。复用 openai provider 的 apiKey / baseUrl 调用 embeddings 接口。
-     */
-    @Data
-    public static class EmbeddingConfig {
-        /**
-         * embedding 模型，默认 OpenAI text-embedding-3-small。
-         */
-        private String model = "text-embedding-3-small";
     }
 }

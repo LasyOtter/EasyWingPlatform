@@ -7,17 +7,16 @@ import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.model.ModelInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 public class AnthropicProvider extends AbstractAiProvider {
@@ -28,10 +27,13 @@ public class AnthropicProvider extends AbstractAiProvider {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AnthropicProvider(WebClient webClient, AiProperties.AnthropicConfig config) {
-        super(webClient, Map.of(
-                "apiKey", config.getApiKey(),
-                "baseUrl", config.getBaseUrl() != null ? config.getBaseUrl() : DEFAULT_BASE_URL
-        ));
+        super(
+                webClient,
+                Map.of(
+                        "apiKey",
+                        config.getApiKey(),
+                        "baseUrl",
+                        config.getBaseUrl() != null ? config.getBaseUrl() : DEFAULT_BASE_URL));
     }
 
     @Override
@@ -46,20 +48,18 @@ public class AnthropicProvider extends AbstractAiProvider {
 
     @Override
     public List<ModelInfo> getSupportedModels() {
-        return List.of(
-                ModelInfo.builder()
-                        .id(AnthropicModels.CLAUDE_3_5_SONNET)
-                        .provider(PROVIDER_NAME)
-                        .name("Claude 3.5 Sonnet")
-                        .contextWindow(200000)
-                        .supportsStreaming(true)
-                        .supportsTools(true)
-                        .supportsVision(true)
-                        .supportsThinking(true)
-                        .inputCostPer1MTokens(3.0)
-                        .outputCostPer1MTokens(15.0)
-                        .build()
-        );
+        return List.of(ModelInfo.builder()
+                .id(AnthropicModels.CLAUDE_3_5_SONNET)
+                .provider(PROVIDER_NAME)
+                .name("Claude 3.5 Sonnet")
+                .contextWindow(200000)
+                .supportsStreaming(true)
+                .supportsTools(true)
+                .supportsVision(true)
+                .supportsThinking(true)
+                .inputCostPer1MTokens(3.0)
+                .outputCostPer1MTokens(15.0)
+                .build());
     }
 
     @Override
@@ -68,8 +68,7 @@ public class AnthropicProvider extends AbstractAiProvider {
                 AnthropicModels.CLAUDE_3_5_SONNET,
                 AnthropicModels.CLAUDE_3_OPUS,
                 AnthropicModels.CLAUDE_3_SONNET,
-                AnthropicModels.CLAUDE_3_HAiku
-        );
+                AnthropicModels.CLAUDE_3_HAiku);
     }
 
     @Override
@@ -100,13 +99,11 @@ public class AnthropicProvider extends AbstractAiProvider {
         body.put("max_tokens", maxTokens);
 
         if (request.isThinkingEnabled() && request.getThinkingBudgetTokens() != null) {
-            body.put("thinking", Map.of(
-                    "type", "enabled",
-                    "budget_tokens", request.getThinkingBudgetTokens()
-            ));
+            body.put("thinking", Map.of("type", "enabled", "budget_tokens", request.getThinkingBudgetTokens()));
         }
 
-        return webClient.post()
+        return webClient
+                .post()
                 .uri(url)
                 .header("x-api-key", getApiKey())
                 .header("anthropic-version", API_VERSION)
@@ -131,7 +128,8 @@ public class AnthropicProvider extends AbstractAiProvider {
         body.put("max_tokens", 1);
         body.put("messages", List.of(Map.of("role", "user", "content", "hi")));
 
-        return webClient.post()
+        return webClient
+                .post()
                 .uri(getApiBaseUrl() + "/messages")
                 .header("x-api-key", getApiKey())
                 .header("anthropic-version", API_VERSION)
@@ -145,21 +143,23 @@ public class AnthropicProvider extends AbstractAiProvider {
 
     private List<Map<String, Object>> convertMessagesToAnthropicFormat(List<ChatMessage> messages) {
         if (messages == null) return List.of();
-        return messages.stream().map(msg -> {
-            Map<String, Object> message = new HashMap<>();
-            String role = msg.getRole();
-            if ("user".equals(role)) {
-                message.put("role", "user");
-            } else if ("assistant".equals(role)) {
-                message.put("role", "assistant");
-            } else {
-                message.put("role", role);
-            }
-            if (msg.getContent() != null) {
-                message.put("content", msg.getContent());
-            }
-            return message;
-        }).toList();
+        return messages.stream()
+                .map(msg -> {
+                    Map<String, Object> message = new HashMap<>();
+                    String role = msg.getRole();
+                    if ("user".equals(role)) {
+                        message.put("role", "user");
+                    } else if ("assistant".equals(role)) {
+                        message.put("role", "assistant");
+                    } else {
+                        message.put("role", role);
+                    }
+                    if (msg.getContent() != null) {
+                        message.put("content", msg.getContent());
+                    }
+                    return message;
+                })
+                .toList();
     }
 
     /**
@@ -189,7 +189,8 @@ public class AnthropicProvider extends AbstractAiProvider {
                 }
             }
 
-            String stopReason = root.has("stop_reason") ? root.get("stop_reason").asText() : null;
+            String stopReason =
+                    root.has("stop_reason") ? root.get("stop_reason").asText() : null;
 
             ChatCompletionResponse.Usage usage = null;
             JsonNode usageNode = root.get("usage");
@@ -204,8 +205,10 @@ public class AnthropicProvider extends AbstractAiProvider {
             }
 
             return ChatCompletionResponse.builder()
-                    .id(root.has("id") ? root.get("id").asText()
-                            : "msg-" + Instant.now().getEpochSecond())
+                    .id(
+                            root.has("id")
+                                    ? root.get("id").asText()
+                                    : "msg-" + Instant.now().getEpochSecond())
                     .object("chat.completion")
                     .created(Instant.now().getEpochSecond())
                     .model(root.has("model") ? root.get("model").asText() : null)

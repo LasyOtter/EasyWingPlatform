@@ -19,15 +19,14 @@ import com.easywing.platform.core.constant.HttpHeaders;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.http.MediaType;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.web.AuthenticationEntryPoint;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.AuthenticationEntryPoint;
 
 /**
  * JWT认证入口点
@@ -42,8 +41,9 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public void commence(HttpServletRequest request, HttpServletResponse response,
-                         AuthenticationException authException) throws IOException {
+    public void commence(
+            HttpServletRequest request, HttpServletResponse response, AuthenticationException authException)
+            throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         // 显式声明 charset：容器默认可能是 ISO-8859-1，会导致中文 detail 丢失
         response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
@@ -60,7 +60,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         problem.put("instance", request.getRequestURI());
 
         // 直接写 UTF-8 字节，绕开 response.getWriter() 的平台默认编码
-        response.getOutputStream().write(
-                objectMapper.writeValueAsString(problem).getBytes(StandardCharsets.UTF_8));
+        response.getOutputStream()
+                .write(objectMapper.writeValueAsString(problem).getBytes(StandardCharsets.UTF_8));
     }
 }

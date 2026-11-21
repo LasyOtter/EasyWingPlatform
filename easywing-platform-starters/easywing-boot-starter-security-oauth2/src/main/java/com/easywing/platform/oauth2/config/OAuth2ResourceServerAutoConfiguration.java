@@ -24,8 +24,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -68,10 +68,10 @@ public class OAuth2ResourceServerAutoConfiguration {
         }
         if (StringUtils.hasText(properties.getIssuerUri())) {
             log.info("JWT decoder using issuer-uri: {}", properties.getIssuerUri());
-            return NimbusJwtDecoder.withIssuerLocation(properties.getIssuerUri()).build();
+            return NimbusJwtDecoder.withIssuerLocation(properties.getIssuerUri())
+                    .build();
         }
-        throw new IllegalStateException(
-                "easywing.security.oauth2.jwt.jwk-set-uri or issuer-uri must be configured");
+        throw new IllegalStateException("easywing.security.oauth2.jwt.jwk-set-uri or issuer-uri must be configured");
     }
 
     @Bean
@@ -80,10 +80,10 @@ public class OAuth2ResourceServerAutoConfiguration {
             HttpSecurity http,
             JwtDecoder jwtDecoder,
             OAuth2Properties properties,
-            EasyWingSecurityProperties securityProperties) throws Exception {
+            EasyWingSecurityProperties securityProperties)
+            throws Exception {
         log.info("EasyWing OAuth2 Resource Server SecurityFilterChain configured");
-        http
-                .csrf(AbstractHttpConfigurer::disable)
+        http.csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/actuator/health", "/actuator/info").permitAll();
@@ -94,7 +94,7 @@ public class OAuth2ResourceServerAutoConfiguration {
                     auth.anyRequest().authenticated();
                 })
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder)
-                        .jwtAuthenticationConverter(jwtAuthenticationConverter(properties)))
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter(properties)))
                         .authenticationEntryPoint(new JwtAuthenticationEntryPoint()));
         return http.build();
     }

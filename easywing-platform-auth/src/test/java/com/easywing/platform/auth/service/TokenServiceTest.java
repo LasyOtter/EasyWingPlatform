@@ -144,8 +144,8 @@ class TokenServiceTest {
         TokenResponse initial = tokenService.issueTokenPair(user);
         when(redisTemplate.hasKey(anyString())).thenReturn(true);
 
-        BizException exception = assertThrows(
-                BizException.class, () -> tokenService.refreshTokenPair(initial.getRefreshToken()));
+        BizException exception =
+                assertThrows(BizException.class, () -> tokenService.refreshTokenPair(initial.getRefreshToken()));
 
         assertEquals(ErrorCode.TOKEN_INVALID, exception.getErrorCode());
         assertEquals("刷新令牌已被吊销", exception.getMessage());
@@ -154,8 +154,7 @@ class TokenServiceTest {
     @Test
     @DisplayName("Refresh token pair - malformed refresh token should be rejected")
     void testRefreshTokenPairRejectsMalformedToken() {
-        BizException exception =
-                assertThrows(BizException.class, () -> tokenService.refreshTokenPair("not-a-jwt"));
+        BizException exception = assertThrows(BizException.class, () -> tokenService.refreshTokenPair("not-a-jwt"));
 
         assertEquals(ErrorCode.TOKEN_INVALID, exception.getErrorCode());
     }

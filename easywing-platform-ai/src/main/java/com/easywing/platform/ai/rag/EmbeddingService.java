@@ -3,6 +3,12 @@ package com.easywing.platform.ai.rag;
 import com.easywing.platform.ai.config.AiProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -11,13 +17,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Embedding 服务 - 生成文本向量
@@ -84,10 +83,7 @@ public class EmbeddingService {
         if (texts == null || texts.isEmpty()) {
             return Mono.just(new float[0][]);
         }
-        return Flux.fromIterable(texts)
-                .flatMap(this::embed)
-                .collectList()
-                .map(list -> list.toArray(new float[0][]));
+        return Flux.fromIterable(texts).flatMap(this::embed).collectList().map(list -> list.toArray(new float[0][]));
     }
 
     // ==================== 远程 embedding ====================
@@ -98,8 +94,8 @@ public class EmbeddingService {
     }
 
     private String embeddingModel() {
-        String model = properties.getEmbedding() != null
-                ? properties.getEmbedding().getModel() : null;
+        String model =
+                properties.getEmbedding() != null ? properties.getEmbedding().getModel() : null;
         return StringUtils.hasText(model) ? model : DEFAULT_EMBEDDING_MODEL;
     }
 
@@ -108,14 +104,14 @@ public class EmbeddingService {
      */
     private Mono<float[]> callRemoteEmbedding(String text) {
         AiProperties.ProviderConfig openai = properties.getProviders().get("openai");
-        String baseUrl = StringUtils.hasText(openai.getBaseUrl())
-                ? openai.getBaseUrl() : "https://api.openai.com/v1";
+        String baseUrl = StringUtils.hasText(openai.getBaseUrl()) ? openai.getBaseUrl() : "https://api.openai.com/v1";
 
         Map<String, Object> body = new HashMap<>();
         body.put("model", embeddingModel());
         body.put("input", text);
 
-        return webClientBuilder.build()
+        return webClientBuilder
+                .build()
                 .post()
                 .uri(baseUrl + "/embeddings")
                 .header("Authorization", "Bearer " + openai.getApiKey())

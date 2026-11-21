@@ -1,16 +1,15 @@
 package com.easywing.platform.ai.provider;
 
-import com.easywing.platform.ai.config.AiProperties;
-import com.easywing.platform.ai.model.ChatCompletionResponse;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.web.reactive.function.client.WebClient;
-
-import java.lang.reflect.Method;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.easywing.platform.ai.config.AiProperties;
+import com.easywing.platform.ai.model.ChatCompletionResponse;
+import java.lang.reflect.Method;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.web.reactive.function.client.WebClient;
 
 /**
  * Provider 响应解析测试
@@ -46,7 +45,8 @@ class AiProviderParseTest {
     @Test
     @DisplayName("Anthropic: 解析 content 文本块与 usage")
     void parsesAnthropicContentAndUsage() throws Exception {
-        String json = """
+        String json =
+                """
                 {
                   "id": "msg_01ABC",
                   "model": "claude-3-5-sonnet-20241022",
@@ -74,7 +74,8 @@ class AiProviderParseTest {
     @Test
     @DisplayName("Anthropic: max_tokens 映射为 length")
     void mapsAnthropicMaxTokens() throws Exception {
-        String json = """
+        String json =
+                """
                 {"id":"m1","stop_reason":"max_tokens","content":[{"type":"text","text":"hi"}],
                  "usage":{"input_tokens":1,"output_tokens":2}}
                 """;
@@ -85,7 +86,8 @@ class AiProviderParseTest {
     @Test
     @DisplayName("Anthropic: tool_use 映射为 tool_calls")
     void mapsAnthropicToolUse() throws Exception {
-        String json = """
+        String json =
+                """
                 {"id":"m1","stop_reason":"tool_use","content":[{"type":"text","text":"hi"}]}
                 """;
 
@@ -119,7 +121,8 @@ class AiProviderParseTest {
     @Test
     @DisplayName("Gemini: 解析 candidates.parts 与 usageMetadata（驼峰字段）")
     void parsesGeminiContentAndUsage() throws Exception {
-        String json = """
+        String json =
+                """
                 {
                   "candidates": [
                     {
@@ -149,7 +152,8 @@ class AiProviderParseTest {
     @Test
     @DisplayName("Gemini: MAX_TOKENS 映射为 length")
     void mapsGeminiMaxTokens() throws Exception {
-        String json = """
+        String json =
+                """
                 {"candidates":[{"content":{"parts":[{"text":"x"}]},"finishReason":"MAX_TOKENS"}]}
                 """;
 
@@ -159,7 +163,8 @@ class AiProviderParseTest {
     @Test
     @DisplayName("Gemini: SAFETY 映射为 content_filter")
     void mapsGeminiSafety() throws Exception {
-        String json = """
+        String json =
+                """
                 {"candidates":[{"content":{"parts":[{"text":""}]},"finishReason":"SAFETY"}]}
                 """;
 

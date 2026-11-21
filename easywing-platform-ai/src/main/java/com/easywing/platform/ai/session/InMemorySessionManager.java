@@ -1,16 +1,14 @@
 package com.easywing.platform.ai.session;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
 /**
  * 会话管理器内存实现
@@ -23,15 +21,17 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Component
-@ConditionalOnProperty(prefix = "easywing.ai.session", name = "storage-type",
-        havingValue = "memory", matchIfMissing = true)
+@ConditionalOnProperty(
+        prefix = "easywing.ai.session",
+        name = "storage-type",
+        havingValue = "memory",
+        matchIfMissing = true)
 public class InMemorySessionManager implements SessionManager {
 
     private final ConcurrentHashMap<String, ConversationSession> sessions = new ConcurrentHashMap<>();
 
     public InMemorySessionManager() {
-        log.warn("AI 会话使用内存存储（easywing.ai.session.storage-type=memory）："
-                + "重启即丢失，集群下不共享，禁止用于生产");
+        log.warn("AI 会话使用内存存储（easywing.ai.session.storage-type=memory）：" + "重启即丢失，集群下不共享，禁止用于生产");
     }
 
     @Override
@@ -60,7 +60,8 @@ public class InMemorySessionManager implements SessionManager {
     public Mono<List<ConversationSession>> getUserSessions(String userId) {
         List<ConversationSession> result = sessions.values().stream()
                 .filter(s -> userId != null && userId.equals(s.getUserId()))
-                .sorted(Comparator.comparing(ConversationSession::getLastActiveAt).reversed())
+                .sorted(Comparator.comparing(ConversationSession::getLastActiveAt)
+                        .reversed())
                 .toList();
         return Mono.just(result);
     }

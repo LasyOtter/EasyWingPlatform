@@ -40,23 +40,28 @@ class ProblemDetailSupportTest {
 
     @Test
     void writeUsesProblemJsonContentTypeAndGivenStatus() {
-        MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/x").build());
+        MockServerWebExchange exchange =
+                MockServerWebExchange.from(MockServerHttpRequest.get("/api/x").build());
         ServerHttpResponse response = exchange.getResponse();
 
         StepVerifier.create(ProblemDetailSupport.write(
-                        exchange, HttpStatus.BAD_REQUEST, "Validation Error", "参数错误",
-                        ErrorCode.VALIDATION_ERROR, response))
+                        exchange,
+                        HttpStatus.BAD_REQUEST,
+                        "Validation Error",
+                        "参数错误",
+                        ErrorCode.VALIDATION_ERROR,
+                        response))
                 .verifyComplete();
 
-        assertThat(response.getHeaders().getContentType().toString())
-                .isEqualTo(HttpHeaders.APPLICATION_PROBLEM_JSON);
+        assertThat(response.getHeaders().getContentType().toString()).isEqualTo(HttpHeaders.APPLICATION_PROBLEM_JSON);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         verify(response).writeWith(any());
     }
 
     @Test
     void writeTooManyRequestsSetsRetryAfterHeader() {
-        MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/x").build());
+        MockServerWebExchange exchange =
+                MockServerWebExchange.from(MockServerHttpRequest.get("/api/x").build());
         ServerHttpResponse response = exchange.getResponse();
 
         StepVerifier.create(ProblemDetailSupport.writeTooManyRequests(exchange, "请求过于频繁", response))
@@ -68,7 +73,8 @@ class ProblemDetailSupportTest {
 
     @Test
     void writeUnauthorizedSetsWwwAuthenticateHeader() {
-        MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/x").build());
+        MockServerWebExchange exchange =
+                MockServerWebExchange.from(MockServerHttpRequest.get("/api/x").build());
         ServerHttpResponse response = exchange.getResponse();
 
         StepVerifier.create(ProblemDetailSupport.writeUnauthorized(
@@ -83,14 +89,14 @@ class ProblemDetailSupportTest {
     void buildTypeMatchesEasyWingWebConvention() {
         assertThat(ProblemDetailSupport.buildType(ErrorCode.SYSTEM_ERROR).toString())
                 .isEqualTo("https://api.easywing.io/errors/SYS001");
-        assertThat(ProblemDetailSupport.buildType(null).toString())
-                .isEqualTo("https://api.easywing.io/errors/");
+        assertThat(ProblemDetailSupport.buildType(null).toString()).isEqualTo("https://api.easywing.io/errors/");
     }
 
     @Test
     void traceIdIsPropagatedToResponseBody() {
-        MockServerWebExchange exchange = MockServerWebExchange.from(
-                MockServerHttpRequest.get("/api/x").header(HttpHeaders.X_TRACE_ID, "trace-abc").build());
+        MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/x")
+                .header(HttpHeaders.X_TRACE_ID, "trace-abc")
+                .build());
 
         // 直接验证内部 traceId 解析：构造同样的请求头，确认能取到
         assertThat(exchange.getRequest().getHeaders().getFirst(HttpHeaders.X_TRACE_ID))
@@ -98,8 +104,12 @@ class ProblemDetailSupportTest {
 
         ServerHttpResponse response = exchange.getResponse();
         StepVerifier.create(ProblemDetailSupport.write(
-                        exchange, HttpStatus.BAD_REQUEST, "Validation Error", "参数错误",
-                        ErrorCode.VALIDATION_ERROR, response))
+                        exchange,
+                        HttpStatus.BAD_REQUEST,
+                        "Validation Error",
+                        "参数错误",
+                        ErrorCode.VALIDATION_ERROR,
+                        response))
                 .verifyComplete();
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);

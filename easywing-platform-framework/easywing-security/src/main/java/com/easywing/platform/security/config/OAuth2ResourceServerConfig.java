@@ -16,6 +16,8 @@
 package com.easywing.platform.security.config;
 
 import com.easywing.platform.security.converter.JwtAuthConverter;
+import java.util.Arrays;
+import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -34,9 +36,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * OAuth2.1资源服务器安全配置（框架内置实现）
@@ -77,8 +76,7 @@ public class OAuth2ResourceServerConfig {
                 // 禁用HTTP Basic
                 .httpBasic(AbstractHttpConfigurer::disable)
                 // 配置会话管理：无状态
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // 配置CORS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 // 配置授权规则
@@ -91,10 +89,9 @@ public class OAuth2ResourceServerConfig {
                     authorize.anyRequest().authenticated();
                 })
                 // 配置OAuth2资源服务器
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
-                        .authenticationEntryPoint(new JwtAuthenticationEntryPoint())
-                );
+                .oauth2ResourceServer(
+                        oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                                .authenticationEntryPoint(new JwtAuthenticationEntryPoint()));
 
         return http.build();
     }
@@ -109,7 +106,8 @@ public class OAuth2ResourceServerConfig {
 
         JwtAuthenticationConverter authenticationConverter = new JwtAuthenticationConverter();
         authenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
-        authenticationConverter.setPrincipalClaimName(securityProperties.getOauth2().getJwt().getUsernameClaimName());
+        authenticationConverter.setPrincipalClaimName(
+                securityProperties.getOauth2().getJwt().getUsernameClaimName());
 
         return authenticationConverter;
     }

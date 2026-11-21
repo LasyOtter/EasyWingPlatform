@@ -1,6 +1,20 @@
 package com.easywing.platform.ai.websocket;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.easywing.platform.ai.config.AiProperties;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,21 +29,6 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidationException;
 import org.springframework.web.socket.WebSocketHandler;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 /**
  * {@link WebSocketTokenInterceptor} 单元测试
@@ -52,9 +51,11 @@ class WebSocketTokenInterceptorTest {
         handler = mock(WebSocketHandler.class);
     }
 
-    private record Handshake(ServerHttpRequest request, MockHttpServletResponse raw,
-                            ServerHttpResponse response, Map<String, Object> attrs) {
-    }
+    private record Handshake(
+            ServerHttpRequest request,
+            MockHttpServletResponse raw,
+            ServerHttpResponse response,
+            Map<String, Object> attrs) {}
 
     private Handshake handshake(String uri, String authHeader) {
         int q = uri.indexOf('?');
@@ -67,8 +68,8 @@ class WebSocketTokenInterceptorTest {
             servlet.addHeader(HttpHeaders.AUTHORIZATION, authHeader);
         }
         MockHttpServletResponse raw = new MockHttpServletResponse();
-        return new Handshake(new ServletServerHttpRequest(servlet), raw,
-                new ServletServerHttpResponse(raw), new HashMap<>());
+        return new Handshake(
+                new ServletServerHttpRequest(servlet), raw, new ServletServerHttpResponse(raw), new HashMap<>());
     }
 
     private boolean proceed(Handshake h) {
@@ -89,8 +90,9 @@ class WebSocketTokenInterceptorTest {
     @DisplayName("无效令牌时拒绝握手")
     void rejectsInvalidToken() {
         properties.getWebsocket().setRequireToken(true);
-        when(jwtDecoder.decode(anyString())).thenThrow(
-                new JwtValidationException("bad token",
+        when(jwtDecoder.decode(anyString()))
+                .thenThrow(new JwtValidationException(
+                        "bad token",
                         List.of(new org.springframework.security.oauth2.core.OAuth2Error("invalid_token"))));
         Handshake h = handshake("/ws/agent?token=abc", null);
 
@@ -103,7 +105,10 @@ class WebSocketTokenInterceptorTest {
     void acceptsValidToken() {
         properties.getWebsocket().setRequireToken(true);
         when(jwtDecoder.decode("abc"))
-                .thenReturn(Jwt.withTokenValue("abc").header("alg", "none").subject("user-1").build());
+                .thenReturn(Jwt.withTokenValue("abc")
+                        .header("alg", "none")
+                        .subject("user-1")
+                        .build());
         Handshake h = handshake("/ws/agent?token=abc", null);
 
         assertTrue(proceed(h));
@@ -115,7 +120,10 @@ class WebSocketTokenInterceptorTest {
     void prefersAuthorizationHeader() {
         properties.getWebsocket().setRequireToken(true);
         when(jwtDecoder.decode("header-token"))
-                .thenReturn(Jwt.withTokenValue("header-token").header("alg", "none").subject("u").build());
+                .thenReturn(Jwt.withTokenValue("header-token")
+                        .header("alg", "none")
+                        .subject("u")
+                        .build());
         Handshake h = handshake("/ws/agent?token=query-token", "Bearer header-token");
 
         assertTrue(proceed(h));

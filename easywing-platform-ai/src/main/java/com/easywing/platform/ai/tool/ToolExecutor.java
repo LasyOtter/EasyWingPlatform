@@ -29,8 +29,10 @@ public class ToolExecutor {
      */
     private final org.springframework.beans.factory.ObjectProvider<ToolExecutionCache> cacheProvider;
 
-    public ToolExecutor(ToolRegistry registry, ToolParameterValidator validator,
-                        org.springframework.beans.factory.ObjectProvider<ToolExecutionCache> cacheProvider) {
+    public ToolExecutor(
+            ToolRegistry registry,
+            ToolParameterValidator validator,
+            org.springframework.beans.factory.ObjectProvider<ToolExecutionCache> cacheProvider) {
         this.registry = registry;
         this.validator = validator;
         this.cacheProvider = cacheProvider;

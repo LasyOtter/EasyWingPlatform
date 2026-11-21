@@ -1,17 +1,16 @@
 package com.easywing.platform.ai.rag;
 
-import com.easywing.platform.ai.config.AiProperties;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.web.reactive.function.client.WebClient;
-
-import java.lang.reflect.Method;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.easywing.platform.ai.config.AiProperties;
+import java.lang.reflect.Method;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.web.reactive.function.client.WebClient;
 
 /**
  * {@link EmbeddingService} 测试
@@ -58,7 +57,9 @@ class EmbeddingServiceTest {
     @Test
     @DisplayName("null 文本抛异常")
     void nullTextRejected() {
-        assertThrows(IllegalArgumentException.class, () -> fallbackService.embed(null).block());
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> fallbackService.embed(null).block());
     }
 
     @Test
@@ -75,7 +76,8 @@ class EmbeddingServiceTest {
     @Test
     @DisplayName("批量 embedding 保持顺序与维度")
     void batchPreservesOrder() {
-        float[][] batch = fallbackService.embedBatch(java.util.List.of("a", "b", "c")).block();
+        float[][] batch =
+                fallbackService.embedBatch(java.util.List.of("a", "b", "c")).block();
 
         assertEquals(3, batch.length);
         assertEquals(batch[0].length, batch[1].length);
@@ -114,8 +116,7 @@ class EmbeddingServiceTest {
         Method m = EmbeddingService.class.getDeclaredMethod("parseEmbedding", String.class);
         m.setAccessible(true);
 
-        Exception e = assertThrows(Exception.class,
-                () -> m.invoke(fallbackService, "{\"data\":[]}"));
+        Exception e = assertThrows(Exception.class, () -> m.invoke(fallbackService, "{\"data\":[]}"));
         assertTrue(e.getCause() != null || e instanceof IllegalStateException);
     }
 

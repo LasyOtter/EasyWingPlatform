@@ -23,9 +23,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.easywing.platform.auth.config.AuthSecurityConfig;
 import com.easywing.platform.auth.domain.AuthUser;
-import com.easywing.platform.auth.exception.AuthExceptionHandler;
 import com.easywing.platform.auth.dto.LoginRequest;
 import com.easywing.platform.auth.dto.TokenResponse;
+import com.easywing.platform.auth.exception.AuthExceptionHandler;
 import com.easywing.platform.auth.service.TokenService;
 import com.easywing.platform.auth.service.UserDetailsService;
 import com.easywing.platform.web.exception.GlobalExceptionHandler;

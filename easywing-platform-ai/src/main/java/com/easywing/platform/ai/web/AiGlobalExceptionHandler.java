@@ -8,6 +8,10 @@ import com.easywing.platform.core.exception.ValidationException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import java.net.URI;
+import java.time.Instant;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -28,11 +32,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
-
-import java.net.URI;
-import java.time.Instant;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * AI 服务全局异常处理器
@@ -66,8 +65,13 @@ public class AiGlobalExceptionHandler {
     @ExceptionHandler(SystemException.class)
     public ResponseEntity<ProblemDetail> handleSystemException(SystemException ex, HttpServletRequest request) {
         log.error("System exception occurred: {}", ex.getMessage(), ex);
-        return build(HttpStatus.INTERNAL_SERVER_ERROR.value(), "System Error",
-                ErrorCode.getMessage(ErrorCode.SYSTEM_ERROR), ex.getErrorCode(), request, null);
+        return build(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "System Error",
+                ErrorCode.getMessage(ErrorCode.SYSTEM_ERROR),
+                ex.getErrorCode(),
+                request,
+                null);
     }
 
     /**
@@ -79,8 +83,13 @@ public class AiGlobalExceptionHandler {
         List<ValidationError> errors = ex.getErrors().stream()
                 .map(error -> new ValidationError(error.field(), error.message(), null, null))
                 .collect(Collectors.toList());
-        return build(HttpStatus.BAD_REQUEST.value(), "Validation Error", ex.getMessage(),
-                ErrorCode.VALIDATION_ERROR, request, errors);
+        return build(
+                HttpStatus.BAD_REQUEST.value(),
+                "Validation Error",
+                ex.getMessage(),
+                ErrorCode.VALIDATION_ERROR,
+                request,
+                errors);
     }
 
     /**
@@ -93,8 +102,13 @@ public class AiGlobalExceptionHandler {
         List<ValidationError> errors = ex.getBindingResult().getFieldErrors().stream()
                 .map(this::toFieldError)
                 .collect(Collectors.toList());
-        return build(HttpStatus.BAD_REQUEST.value(), "Validation Error", "请求参数验证失败",
-                ErrorCode.VALIDATION_ERROR, request, errors);
+        return build(
+                HttpStatus.BAD_REQUEST.value(),
+                "Validation Error",
+                "请求参数验证失败",
+                ErrorCode.VALIDATION_ERROR,
+                request,
+                errors);
     }
 
     /**
@@ -106,8 +120,13 @@ public class AiGlobalExceptionHandler {
         List<ValidationError> errors = ex.getBindingResult().getFieldErrors().stream()
                 .map(this::toFieldError)
                 .collect(Collectors.toList());
-        return build(HttpStatus.BAD_REQUEST.value(), "Validation Error", "请求参数绑定失败",
-                ErrorCode.VALIDATION_ERROR, request, errors);
+        return build(
+                HttpStatus.BAD_REQUEST.value(),
+                "Validation Error",
+                "请求参数绑定失败",
+                ErrorCode.VALIDATION_ERROR,
+                request,
+                errors);
     }
 
     /**
@@ -117,11 +136,15 @@ public class AiGlobalExceptionHandler {
     public ResponseEntity<ProblemDetail> handleConstraintViolationException(
             ConstraintViolationException ex, HttpServletRequest request) {
         log.warn("Constraint violation: {}", ex.getMessage());
-        List<ValidationError> errors = ex.getConstraintViolations().stream()
-                .map(this::toFieldError)
-                .collect(Collectors.toList());
-        return build(HttpStatus.BAD_REQUEST.value(), "Validation Error", "请求参数验证失败",
-                ErrorCode.VALIDATION_ERROR, request, errors);
+        List<ValidationError> errors =
+                ex.getConstraintViolations().stream().map(this::toFieldError).collect(Collectors.toList());
+        return build(
+                HttpStatus.BAD_REQUEST.value(),
+                "Validation Error",
+                "请求参数验证失败",
+                ErrorCode.VALIDATION_ERROR,
+                request,
+                errors);
     }
 
     /**
@@ -132,9 +155,13 @@ public class AiGlobalExceptionHandler {
             MissingServletRequestParameterException ex, HttpServletRequest request) {
         log.warn("Missing request parameter: {}", ex.getParameterName());
         List<ValidationError> errors = List.of(new ValidationError(ex.getParameterName(), "参数不能为空", null, null));
-        return build(HttpStatus.BAD_REQUEST.value(), "Missing Parameter",
+        return build(
+                HttpStatus.BAD_REQUEST.value(),
+                "Missing Parameter",
                 String.format("缺少必要参数: %s", ex.getParameterName()),
-                ErrorCode.MISSING_PARAMETER, request, errors);
+                ErrorCode.MISSING_PARAMETER,
+                request,
+                errors);
     }
 
     /**
@@ -143,11 +170,14 @@ public class AiGlobalExceptionHandler {
     @ExceptionHandler({MethodArgumentTypeMismatchException.class, TypeMismatchException.class})
     public ResponseEntity<ProblemDetail> handleTypeMismatchException(Exception ex, HttpServletRequest request) {
         log.warn("Type mismatch: {}", ex.getMessage());
-        String paramName = ex instanceof MethodArgumentTypeMismatchException mismatch
-                ? mismatch.getName()
-                : "unknown";
-        return build(HttpStatus.BAD_REQUEST.value(), "Invalid Parameter Type",
-                String.format("参数类型不正确: %s", paramName), ErrorCode.INVALID_FORMAT, request, null);
+        String paramName = ex instanceof MethodArgumentTypeMismatchException mismatch ? mismatch.getName() : "unknown";
+        return build(
+                HttpStatus.BAD_REQUEST.value(),
+                "Invalid Parameter Type",
+                String.format("参数类型不正确: %s", paramName),
+                ErrorCode.INVALID_FORMAT,
+                request,
+                null);
     }
 
     /**
@@ -157,8 +187,13 @@ public class AiGlobalExceptionHandler {
     public ResponseEntity<ProblemDetail> handleHttpMessageNotReadableException(
             HttpMessageNotReadableException ex, HttpServletRequest request) {
         log.warn("HTTP message not readable: {}", ex.getMessage());
-        return build(HttpStatus.BAD_REQUEST.value(), "Invalid Request Body", "请求体格式不正确",
-                ErrorCode.INVALID_FORMAT, request, null);
+        return build(
+                HttpStatus.BAD_REQUEST.value(),
+                "Invalid Request Body",
+                "请求体格式不正确",
+                ErrorCode.INVALID_FORMAT,
+                request,
+                null);
     }
 
     /**
@@ -168,9 +203,13 @@ public class AiGlobalExceptionHandler {
     public ResponseEntity<ProblemDetail> handleHttpRequestMethodNotSupportedException(
             HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
         log.warn("HTTP method not supported: {}", ex.getMethod());
-        return build(HttpStatus.METHOD_NOT_ALLOWED.value(), "Method Not Allowed",
+        return build(
+                HttpStatus.METHOD_NOT_ALLOWED.value(),
+                "Method Not Allowed",
                 String.format("不支持的HTTP方法: %s", ex.getMethod()),
-                ErrorCode.VALIDATION_ERROR, request, null);
+                ErrorCode.VALIDATION_ERROR,
+                request,
+                null);
     }
 
     /**
@@ -180,9 +219,13 @@ public class AiGlobalExceptionHandler {
     public ResponseEntity<ProblemDetail> handleHttpMediaTypeNotSupportedException(
             HttpMediaTypeNotSupportedException ex, HttpServletRequest request) {
         log.warn("Media type not supported: {}", ex.getContentType());
-        return build(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(), "Unsupported Media Type",
+        return build(
+                HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(),
+                "Unsupported Media Type",
                 String.format("不支持的媒体类型: %s", ex.getContentType()),
-                ErrorCode.INVALID_FORMAT, request, null);
+                ErrorCode.INVALID_FORMAT,
+                request,
+                null);
     }
 
     /**
@@ -192,8 +235,8 @@ public class AiGlobalExceptionHandler {
     public ResponseEntity<ProblemDetail> handleNoHandlerFoundException(
             NoHandlerFoundException ex, HttpServletRequest request) {
         log.warn("No handler found: {} {}", ex.getHttpMethod(), ex.getRequestURL());
-        return build(HttpStatus.NOT_FOUND.value(), "Not Found", "请求的资源不存在",
-                ErrorCode.RESOURCE_NOT_FOUND, request, null);
+        return build(
+                HttpStatus.NOT_FOUND.value(), "Not Found", "请求的资源不存在", ErrorCode.RESOURCE_NOT_FOUND, request, null);
     }
 
     /**
@@ -205,8 +248,13 @@ public class AiGlobalExceptionHandler {
         log.warn("Error response: {}", ex.getMessage());
         ProblemDetail body = ex.getBody();
         Object errorCode = body.getProperties().get("errorCode");
-        return build(ex.getStatusCode().value(), body.getTitle(), body.getDetail(),
-                errorCode instanceof String code ? code : ErrorCode.SYSTEM_ERROR, request, null);
+        return build(
+                ex.getStatusCode().value(),
+                body.getTitle(),
+                body.getDetail(),
+                errorCode instanceof String code ? code : ErrorCode.SYSTEM_ERROR,
+                request,
+                null);
     }
 
     /**
@@ -219,10 +267,8 @@ public class AiGlobalExceptionHandler {
     public ResponseEntity<ProblemDetail> handleAccessDeniedException(
             org.springframework.security.access.AccessDeniedException ex, HttpServletRequest request) {
         log.warn("Access denied: {}", ex.getMessage());
-        return build(HttpStatus.FORBIDDEN.value(), "Forbidden", "无权访问该资源",
-                ErrorCode.ACCESS_DENIED, request, null);
+        return build(HttpStatus.FORBIDDEN.value(), "Forbidden", "无权访问该资源", ErrorCode.ACCESS_DENIED, request, null);
     }
-
 
     /**
      * 处理所有未预期的异常
@@ -230,18 +276,30 @@ public class AiGlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleException(Exception ex, HttpServletRequest request) {
         String traceId = getTraceId(request);
-        log.error("Unexpected system error [traceId={}] from IP {}: {}",
-                traceId, getClientIp(request), ex.getMessage(), ex);
+        log.error(
+                "Unexpected system error [traceId={}] from IP {}: {}",
+                traceId,
+                getClientIp(request),
+                ex.getMessage(),
+                ex);
 
-        String detail = traceId != null
-                ? "系统发生未知错误，请联系管理员 [traceId=" + traceId + "]"
-                : "系统发生未知错误，请联系管理员";
-        return build(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Internal Server Error",
-                detail, ErrorCode.SYSTEM_ERROR, request, null);
+        String detail = traceId != null ? "系统发生未知错误，请联系管理员 [traceId=" + traceId + "]" : "系统发生未知错误，请联系管理员";
+        return build(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Internal Server Error",
+                detail,
+                ErrorCode.SYSTEM_ERROR,
+                request,
+                null);
     }
 
-    private ResponseEntity<ProblemDetail> build(int status, String title, String detail, String errorCode,
-                                               HttpServletRequest request, List<ValidationError> errors) {
+    private ResponseEntity<ProblemDetail> build(
+            int status,
+            String title,
+            String detail,
+            String errorCode,
+            HttpServletRequest request,
+            List<ValidationError> errors) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.valueOf(status), detail);
         problem.setTitle(title);
         problem.setType(URI.create("https://api.easywing.io/errors/" + errorCode));
@@ -261,17 +319,26 @@ public class AiGlobalExceptionHandler {
     }
 
     private ValidationError toFieldError(FieldError fieldError) {
-        return new ValidationError(fieldError.getField(), fieldError.getDefaultMessage(),
-                fieldError.getRejectedValue(), fieldError.getCode());
+        return new ValidationError(
+                fieldError.getField(),
+                fieldError.getDefaultMessage(),
+                fieldError.getRejectedValue(),
+                fieldError.getCode());
     }
 
     private ValidationError toFieldError(ConstraintViolation<?> violation) {
         String propertyPath = violation.getPropertyPath().toString();
-        String fieldName = propertyPath.contains(".")
-                ? propertyPath.substring(propertyPath.lastIndexOf('.') + 1)
-                : propertyPath;
-        return new ValidationError(fieldName, violation.getMessage(), violation.getInvalidValue(),
-                violation.getConstraintDescriptor().getAnnotation().annotationType().getSimpleName());
+        String fieldName =
+                propertyPath.contains(".") ? propertyPath.substring(propertyPath.lastIndexOf('.') + 1) : propertyPath;
+        return new ValidationError(
+                fieldName,
+                violation.getMessage(),
+                violation.getInvalidValue(),
+                violation
+                        .getConstraintDescriptor()
+                        .getAnnotation()
+                        .annotationType()
+                        .getSimpleName());
     }
 
     private String getTraceId(HttpServletRequest request) {
@@ -297,6 +364,5 @@ public class AiGlobalExceptionHandler {
     /**
      * 校验错误明细
      */
-    public record ValidationError(String field, String message, Object rejectedValue, String code) {
-    }
+    public record ValidationError(String field, String message, Object rejectedValue, String code) {}
 }

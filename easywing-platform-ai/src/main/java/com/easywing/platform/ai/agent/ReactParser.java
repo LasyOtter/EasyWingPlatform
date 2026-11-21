@@ -2,7 +2,6 @@ package com.easywing.platform.ai.agent;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -34,23 +33,22 @@ final class ReactParser {
     private static final String SUFFIX = "(?:\\*\\*)?";
 
     private static final Pattern THOUGHT = Pattern.compile(
-            PREFIX + "(?:思考|Thought)[:：]" + SUFFIX + "\\s*(.+?)"
-                    + "(?=" + PREFIX + "(?:行动|Action|最终答案|Observation|Final Answer)[:：]|$)",
+            PREFIX + "(?:思考|Thought)[:：]" + SUFFIX + "\\s*(.+?)" + "(?=" + PREFIX
+                    + "(?:行动|Action|最终答案|Observation|Final Answer)[:：]|$)",
             Pattern.DOTALL);
 
-    private static final Pattern ACTION = Pattern.compile(
-            PREFIX + "(?:行动|Action)[:：]" + SUFFIX + "\\s*([^\\n]+)");
+    private static final Pattern ACTION = Pattern.compile(PREFIX + "(?:行动|Action)[:：]" + SUFFIX + "\\s*([^\\n]+)");
 
     private static final Pattern ACTION_INPUT = Pattern.compile(
-            PREFIX + "(?:行动输入|Action Input)[:：]" + SUFFIX + "\\s*(.+?)"
-                    + "(?=" + PREFIX + "(?:观察|Observation|思考|Thought|最终答案|Final Answer)[:：]|$)",
+            PREFIX + "(?:行动输入|Action Input)[:：]" + SUFFIX + "\\s*(.+?)" + "(?=" + PREFIX
+                    + "(?:观察|Observation|思考|Thought|最终答案|Final Answer)[:：]|$)",
             Pattern.DOTALL);
 
-    private static final Pattern FINAL_ANSWER = Pattern.compile(
-            PREFIX + "(?:最终答案|Final Answer)[:：]" + SUFFIX + "\\s*(.+)", Pattern.DOTALL);
+    private static final Pattern FINAL_ANSWER =
+            Pattern.compile(PREFIX + "(?:最终答案|Final Answer)[:：]" + SUFFIX + "\\s*(.+)", Pattern.DOTALL);
 
-    private static final Pattern CODE_FENCE = Pattern.compile(
-            "^\\s*```[a-zA-Z]*\\s*\\n?(.*)\\n?```\\s*$", Pattern.DOTALL);
+    private static final Pattern CODE_FENCE =
+            Pattern.compile("^\\s*```[a-zA-Z]*\\s*\\n?(.*)\\n?```\\s*$", Pattern.DOTALL);
 
     private final ObjectMapper objectMapper;
 
@@ -104,8 +102,7 @@ final class ReactParser {
         }
         String raw = stripCodeFence(m.group(1).trim());
         try {
-            return objectMapper.readValue(raw, new TypeReference<Map<String, Object>>() {
-            });
+            return objectMapper.readValue(raw, new TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
             Map<String, Object> fallback = new HashMap<>();
             fallback.put("input", raw);
@@ -124,8 +121,12 @@ final class ReactParser {
     /**
      * 解析结果
      */
-    record Parsed(String thought, String action, Map<String, Object> actionInput,
-                  String finalAnswer, boolean finalAnswerFound) {
+    record Parsed(
+            String thought,
+            String action,
+            Map<String, Object> actionInput,
+            String finalAnswer,
+            boolean finalAnswerFound) {
 
         static Parsed action(String thought, String action, Map<String, Object> actionInput) {
             return new Parsed(thought, action, actionInput, null, false);

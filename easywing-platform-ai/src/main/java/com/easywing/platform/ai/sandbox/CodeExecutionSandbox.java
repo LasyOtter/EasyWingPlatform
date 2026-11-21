@@ -1,5 +1,12 @@
 package com.easywing.platform.ai.sandbox;
 
+import jakarta.annotation.PreDestroy;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,14 +16,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
-import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.*;
-import jakarta.annotation.PreDestroy;
 
 /**
  * 代码执行沙箱 - 在子进程中执行用户代码
@@ -48,14 +47,33 @@ public class CodeExecutionSandbox {
      * 生产环境必须使用容器隔离并配置网络/文件系统策略。
      */
     private static final List<String> DANGEROUS_PATTERNS = List.of(
-            "exec(", "eval(", "__import__", "importlib", "getattr(", "setattr(",
-            "os.system", "os.popen", "subprocess", "child_process",
-            "import os", "require('fs')", "require(\"fs\")",
-            "import socket", "require('net')", "urllib", "requests.",
-            "http.client", "ctypes", "multiprocessing", "fork(",
-            "Runtime.getRuntime", "ProcessBuilder", "java.io", "java.nio.file",
-            "Files.", "System.exit"
-    );
+            "exec(",
+            "eval(",
+            "__import__",
+            "importlib",
+            "getattr(",
+            "setattr(",
+            "os.system",
+            "os.popen",
+            "subprocess",
+            "child_process",
+            "import os",
+            "require('fs')",
+            "require(\"fs\")",
+            "import socket",
+            "require('net')",
+            "urllib",
+            "requests.",
+            "http.client",
+            "ctypes",
+            "multiprocessing",
+            "fork(",
+            "Runtime.getRuntime",
+            "ProcessBuilder",
+            "java.io",
+            "java.nio.file",
+            "Files.",
+            "System.exit");
 
     public CodeExecutionSandbox() {
         this.executorService = Executors.newFixedThreadPool(4, runnable -> {
@@ -65,9 +83,9 @@ public class CodeExecutionSandbox {
         });
         this.languageConfigs = initializeLanguageConfigs();
         this.config = SandboxConfig.builder()
-                .maxExecutionTime(10000)        // 10秒
-                .maxMemoryMB(512)               // 512MB
-                .maxOutputSize(10 * 1024)       // 10KB
+                .maxExecutionTime(10000) // 10秒
+                .maxMemoryMB(512) // 512MB
+                .maxOutputSize(10 * 1024) // 10KB
                 .allowNetworkAccess(false)
                 .allowFileSystemAccess(false)
                 .build();
@@ -88,40 +106,48 @@ public class CodeExecutionSandbox {
         Map<String, LanguageConfig> configs = new HashMap<>();
 
         // Python
-        configs.put("python", LanguageConfig.builder()
-                .language("python")
-                .fileExtension(".py")
-                .compileCommand(null) // 解释型语言
-                .executeCommand(List.of("python", "{file}"))
-                .timeoutMultiplier(1.0)
-                .build());
+        configs.put(
+                "python",
+                LanguageConfig.builder()
+                        .language("python")
+                        .fileExtension(".py")
+                        .compileCommand(null) // 解释型语言
+                        .executeCommand(List.of("python", "{file}"))
+                        .timeoutMultiplier(1.0)
+                        .build());
 
         // JavaScript (Node.js)
-        configs.put("javascript", LanguageConfig.builder()
-                .language("javascript")
-                .fileExtension(".js")
-                .compileCommand(null)
-                .executeCommand(List.of("node", "{file}"))
-                .timeoutMultiplier(1.0)
-                .build());
+        configs.put(
+                "javascript",
+                LanguageConfig.builder()
+                        .language("javascript")
+                        .fileExtension(".js")
+                        .compileCommand(null)
+                        .executeCommand(List.of("node", "{file}"))
+                        .timeoutMultiplier(1.0)
+                        .build());
 
         // Java
-        configs.put("java", LanguageConfig.builder()
-                .language("java")
-                .fileExtension(".java")
-                .compileCommand(List.of("javac", "{file}"))
-                .executeCommand(List.of("java", "-cp", "{dir}", "Main"))
-                .timeoutMultiplier(1.5)
-                .build());
+        configs.put(
+                "java",
+                LanguageConfig.builder()
+                        .language("java")
+                        .fileExtension(".java")
+                        .compileCommand(List.of("javac", "{file}"))
+                        .executeCommand(List.of("java", "-cp", "{dir}", "Main"))
+                        .timeoutMultiplier(1.5)
+                        .build());
 
         // Go
-        configs.put("go", LanguageConfig.builder()
-                .language("go")
-                .fileExtension(".go")
-                .compileCommand(List.of("go", "build", "-o", "{output}", "{file}"))
-                .executeCommand(List.of("{output}"))
-                .timeoutMultiplier(1.2)
-                .build());
+        configs.put(
+                "go",
+                LanguageConfig.builder()
+                        .language("go")
+                        .fileExtension(".go")
+                        .compileCommand(List.of("go", "build", "-o", "{output}", "{file}"))
+                        .executeCommand(List.of("{output}"))
+                        .timeoutMultiplier(1.2)
+                        .build());
 
         return configs;
     }
@@ -129,10 +155,7 @@ public class CodeExecutionSandbox {
     /**
      * 执行代码
      */
-    public Mono<ExecutionResult> executeCode(
-            String code,
-            String language,
-            String input) {
+    public Mono<ExecutionResult> executeCode(String code, String language, String input) {
 
         return executeCode(code, language, input, config);
     }
@@ -140,11 +163,7 @@ public class CodeExecutionSandbox {
     /**
      * 执行代码（带配置）
      */
-    public Mono<ExecutionResult> executeCode(
-            String code,
-            String language,
-            String input,
-            SandboxConfig customConfig) {
+    public Mono<ExecutionResult> executeCode(String code, String language, String input, SandboxConfig customConfig) {
 
         LanguageConfig langConfig = languageConfigs.get(language.toLowerCase());
         if (langConfig == null) {
@@ -156,14 +175,12 @@ public class CodeExecutionSandbox {
         return Mono.fromCallable(() -> executeInSandbox(code, langConfig, input, customConfig))
                 .subscribeOn(Schedulers.boundedElastic())
                 .timeout(Duration.ofMillis(
-                        (long) (customConfig.getMaxExecutionTime() * langConfig.getTimeoutMultiplier())
-                ))
+                        (long) (customConfig.getMaxExecutionTime() * langConfig.getTimeoutMultiplier())))
                 .onErrorResume(TimeoutException.class, e -> {
                     log.warn("Code execution timeout");
                     return Mono.just(ExecutionResult.builder()
                             .success(false)
-                            .error("Execution timeout: exceeded " +
-                                    customConfig.getMaxExecutionTime() + "ms")
+                            .error("Execution timeout: exceeded " + customConfig.getMaxExecutionTime() + "ms")
                             .executionTime(customConfig.getMaxExecutionTime())
                             .build());
                 });
@@ -173,10 +190,7 @@ public class CodeExecutionSandbox {
      * 在沙箱中执行
      */
     private ExecutionResult executeInSandbox(
-            String code,
-            LanguageConfig langConfig,
-            String input,
-            SandboxConfig sandboxConfig) {
+            String code, LanguageConfig langConfig, String input, SandboxConfig sandboxConfig) {
 
         Path tempDir = null;
         long startTime = System.currentTimeMillis();
@@ -246,8 +260,7 @@ public class CodeExecutionSandbox {
     /**
      * 创建代码文件
      */
-    private Path createCodeFile(Path dir, String code, LanguageConfig config)
-            throws IOException {
+    private Path createCodeFile(Path dir, String code, LanguageConfig config) throws IOException {
 
         String fileName = "Main" + config.getFileExtension();
         Path file = dir.resolve(fileName);
@@ -258,10 +271,8 @@ public class CodeExecutionSandbox {
     /**
      * 编译代码
      */
-    private ExecutionOutput compile(
-            Path codeFile,
-            LanguageConfig config,
-            SandboxConfig sandboxConfig) throws Exception {
+    private ExecutionOutput compile(Path codeFile, LanguageConfig config, SandboxConfig sandboxConfig)
+            throws Exception {
 
         List<String> command = buildCommand(config.getCompileCommand(), codeFile, codeFile.getParent());
         return executeCommand(command, codeFile.getParent(), null, sandboxConfig);
@@ -271,11 +282,8 @@ public class CodeExecutionSandbox {
      * 执行代码
      */
     private ExecutionOutput execute(
-            Path dir,
-            Path codeFile,
-            LanguageConfig config,
-            String input,
-            SandboxConfig sandboxConfig) throws Exception {
+            Path dir, Path codeFile, LanguageConfig config, String input, SandboxConfig sandboxConfig)
+            throws Exception {
 
         List<String> command = buildCommand(config.getExecuteCommand(), codeFile, dir);
         return executeCommand(command, dir, input, sandboxConfig);
@@ -290,8 +298,7 @@ public class CodeExecutionSandbox {
         Path output = dir.resolve(isWindows() ? "main.exe" : "main");
         List<String> command = new ArrayList<>(template.size());
         for (String token : template) {
-            command.add(token
-                    .replace("{file}", codeFile.toString())
+            command.add(token.replace("{file}", codeFile.toString())
                     .replace("{dir}", dir.toString())
                     .replace("{output}", output.toString()));
         }
@@ -306,10 +313,7 @@ public class CodeExecutionSandbox {
      * 执行命令
      */
     private ExecutionOutput executeCommand(
-            List<String> command,
-            Path workingDir,
-            String input,
-            SandboxConfig sandboxConfig) throws Exception {
+            List<String> command, Path workingDir, String input, SandboxConfig sandboxConfig) throws Exception {
 
         ProcessBuilder pb = new ProcessBuilder();
         pb.command(command);
@@ -341,10 +345,7 @@ public class CodeExecutionSandbox {
         });
 
         // 等待完成
-        boolean completed = process.waitFor(
-                sandboxConfig.getMaxExecutionTime(),
-                TimeUnit.MILLISECONDS
-        );
+        boolean completed = process.waitFor(sandboxConfig.getMaxExecutionTime(), TimeUnit.MILLISECONDS);
 
         if (!completed) {
             process.destroyForcibly();
@@ -368,8 +369,7 @@ public class CodeExecutionSandbox {
     /**
      * 读取流
      */
-    private void readStream(InputStream is, StringBuilder buffer, int maxSize)
-            throws IOException {
+    private void readStream(InputStream is, StringBuilder buffer, int maxSize) throws IOException {
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
             String line;
@@ -388,15 +388,13 @@ public class CodeExecutionSandbox {
      */
     private void cleanupDirectory(Path dir) {
         try {
-            Files.walk(dir)
-                    .sorted(Comparator.reverseOrder())
-                    .forEach(path -> {
-                        try {
-                            Files.delete(path);
-                        } catch (IOException e) {
-                            log.warn("Failed to delete: {}", path, e);
-                        }
-                    });
+            Files.walk(dir).sorted(Comparator.reverseOrder()).forEach(path -> {
+                try {
+                    Files.delete(path);
+                } catch (IOException e) {
+                    log.warn("Failed to delete: {}", path, e);
+                }
+            });
         } catch (IOException e) {
             log.warn("Failed to cleanup directory: {}", dir, e);
         }
@@ -418,7 +416,6 @@ public class CodeExecutionSandbox {
     public Mono<SecurityCheckResult> checkCodeSecurity(String code, String language) {
         return Mono.just(checkCodeSecurityBlocking(code, language));
     }
-
 
     /**
      * 同步执行安全检查（供已处于阻塞线程的调用方使用，避免无谓的响应式包装）。
@@ -446,8 +443,7 @@ public class CodeExecutionSandbox {
         return SecurityCheckResult.builder()
                 .safe(safe)
                 .issues(issues)
-                .riskLevel(safe ? RiskLevel.LOW :
-                        issues.size() > 2 ? RiskLevel.HIGH : RiskLevel.MEDIUM)
+                .riskLevel(safe ? RiskLevel.LOW : issues.size() > 2 ? RiskLevel.HIGH : RiskLevel.MEDIUM)
                 .build();
     }
 
@@ -459,13 +455,17 @@ public class CodeExecutionSandbox {
     @AllArgsConstructor
     public static class SandboxConfig {
         @Builder.Default
-        private long maxExecutionTime = 10000;  // 毫秒
+        private long maxExecutionTime = 10000; // 毫秒
+
         @Builder.Default
-        private int maxMemoryMB = 512;          // MB
+        private int maxMemoryMB = 512; // MB
+
         @Builder.Default
-        private int maxOutputSize = 10240;      // 字节
+        private int maxOutputSize = 10240; // 字节
+
         @Builder.Default
         private boolean allowNetworkAccess = false;
+
         @Builder.Default
         private boolean allowFileSystemAccess = false;
     }
@@ -517,6 +517,9 @@ public class CodeExecutionSandbox {
     }
 
     public enum RiskLevel {
-        LOW, MEDIUM, HIGH, CRITICAL
+        LOW,
+        MEDIUM,
+        HIGH,
+        CRITICAL
     }
 }

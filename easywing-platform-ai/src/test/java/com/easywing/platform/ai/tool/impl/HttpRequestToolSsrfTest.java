@@ -1,15 +1,14 @@
 package com.easywing.platform.ai.tool.impl;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.web.reactive.function.client.WebClient;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.InetAddress;
 import java.net.URI;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.web.reactive.function.client.WebClient;
 
 /**
  * {@link HttpRequestTool} SSRF 防护测试
@@ -27,9 +26,9 @@ class HttpRequestToolSsrfTest {
     @Test
     @DisplayName("IPv4 环回与私网地址被拦截")
     void blocksPrivateIPv4() throws Exception {
-        for (String host : new String[]{
-                "127.0.0.1", "10.0.0.1", "172.16.0.1", "192.168.1.1",
-                "169.254.169.254", "0.0.0.0", "224.0.0.1"}) {
+        for (String host : new String[] {
+            "127.0.0.1", "10.0.0.1", "172.16.0.1", "192.168.1.1", "169.254.169.254", "0.0.0.0", "224.0.0.1"
+        }) {
             assertTrue(blocked(host), host + " 应被拦截");
         }
     }
@@ -71,8 +70,7 @@ class HttpRequestToolSsrfTest {
         Map<String, Object> result = tool.execute(args).block();
 
         assertFalse((Boolean) result.get("success"));
-        assertTrue(String.valueOf(result.get("error")).contains("目标地址不允许访问"),
-                "实际错误: " + result.get("error"));
+        assertTrue(String.valueOf(result.get("error")).contains("目标地址不允许访问"), "实际错误: " + result.get("error"));
     }
 
     @Test
@@ -87,7 +85,8 @@ class HttpRequestToolSsrfTest {
     @Test
     @DisplayName("非 http/https 协议被拒绝")
     void rejectsNonHttpScheme() {
-        Map<String, Object> result = tool.execute(Map.of("url", "file:///etc/passwd")).block();
+        Map<String, Object> result =
+                tool.execute(Map.of("url", "file:///etc/passwd")).block();
         assertFalse((Boolean) result.get("success"));
     }
 
