@@ -16,12 +16,11 @@
 package com.easywing.platform.gateway.error;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
 
 import com.easywing.platform.core.constant.HttpHeaders;
 import com.easywing.platform.core.exception.ErrorCode;
 import com.easywing.platform.gateway.util.JsonCodec;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -33,16 +32,33 @@ import reactor.test.StepVerifier;
 
 class ProblemDetailSupportTest {
 
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     @BeforeAll
     static void initCodec() {
-        JsonCodec.init(new ObjectMapper());
+        JsonCodec.init(MAPPER);
+    }
+
+    /**
+     * 读取 {@code write} 写入响应体的 JSON，避免对非 mock 的 {@code MockServerHttpResponse} 做 Mockito 校验。
+     */
+    private static JsonNode bodyOf(MockServerWebExchange exchange) {
+        return exchange.getResponse()
+                .getBodyAsString()
+                .map(json -> {
+                    try {
+                        return MAPPER.readTree(json);
+                    } catch (Exception e) {
+                        throw new IllegalStateException("响应体不是合法 JSON: " + json, e);
+                    }
+                })
+                .block();
     }
 
     @Test
     void writeUsesProblemJsonContentTypeAndGivenStatus() {
         MockServerWebExchange exchange =
                 MockServerWebExchange.from(MockServerHttpRequest.get("/api/x").build());
-        ServerHttpResponse response = exchange.getResponse();
 
         StepVerifier.create(ProblemDetailSupport.write(
                         exchange,
@@ -50,12 +66,21 @@ class ProblemDetailSupportTest {
                         "Validation Error",
                         "参数错误",
                         ErrorCode.VALIDATION_ERROR,
-                        response))
+                        exchange.getResponse()))
                 .verifyComplete();
 
-        assertThat(response.getHeaders().getContentType().toString()).isEqualTo(HttpHeaders.APPLICATION_PROBLEM_JSON);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        verify(response).writeWith(any());
+        assertThat(exchange.getResponse().getHeaders().getContentType().toString())
+                .isEqualTo(HttpHeaders.APPLICATION_PROBLEM_JSON);
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        JsonNode body = bodyOf(exchange);
+        assertThat(body.path("title").asText()).isEqualTo("Validation Error");
+        assertThat(body.path("detail").asText()).isEqualTo("参数错误");
+        assertThat(body.path("status").asInt()).isEqualTo(400);
+        assertThat(body.path("errorCode").asText()).isEqualTo(ErrorCode.VALIDATION_ERROR);
+        assertThat(body.path("type").asText())
+                .isEqualTo("https://api.easywing.io/errors/" + ErrorCode.VALIDATION_ERROR);
+        assertThat(body.path("instance").asText()).isEqualTo("/api/x");
     }
 
     @Test
@@ -98,21 +123,20 @@ class ProblemDetailSupportTest {
                 .header(HttpHeaders.X_TRACE_ID, "trace-abc")
                 .build());
 
-        // 直接验证内部 traceId 解析：构造同样的请求头，确认能取到
+        // 请求头携带的 traceId 应透传到响应体
         assertThat(exchange.getRequest().getHeaders().getFirst(HttpHeaders.X_TRACE_ID))
                 .isEqualTo("trace-abc");
 
-        ServerHttpResponse response = exchange.getResponse();
         StepVerifier.create(ProblemDetailSupport.write(
                         exchange,
                         HttpStatus.BAD_REQUEST,
                         "Validation Error",
                         "参数错误",
                         ErrorCode.VALIDATION_ERROR,
-                        response))
+                        exchange.getResponse()))
                 .verifyComplete();
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        verify(response).writeWith(any());
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(bodyOf(exchange).path("traceId").asText()).isEqualTo("trace-abc");
     }
 }

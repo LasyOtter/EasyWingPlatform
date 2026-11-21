@@ -187,7 +187,7 @@ class JwtValidationFilterTest {
         StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
 
         assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
-        assertEquals("Token已注销", exchange.getResponse().getHeaders().getFirst("X-Error-Message"));
+        assertEquals("Token已注销", errorDetail(exchange));
     }
 
     @Test
@@ -221,8 +221,22 @@ class JwtValidationFilterTest {
         StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
 
         assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
-        assertEquals("Token格式错误", exchange.getResponse().getHeaders().getFirst("X-Error-Message"));
+        assertEquals("Token格式错误", errorDetail(exchange));
         verify(chain, never()).filter(any());
+    }
+
+    /**
+     * 从 RFC 9457 响应体读取 {@code detail}。RFC 9457 重构后错误文案不再走 {@code X-Error-Message} 响应头。
+     */
+    private static String errorDetail(MockServerWebExchange exchange) {
+        try {
+            return new ObjectMapper()
+                    .readTree(exchange.getResponse().getBodyAsString().block())
+                    .get("detail")
+                    .asText();
+        } catch (Exception e) {
+            throw new IllegalStateException("响应体不是合法 JSON", e);
+        }
     }
 
     @Test
