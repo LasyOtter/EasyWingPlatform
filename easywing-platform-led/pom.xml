@@ -121,6 +121,12 @@
       <artifactId>uia-message</artifactId>
       <version>${uia-message.version}</version>
       <optional>true</optional>
+      <exclusions>
+        <exclusion>
+          <groupId>org.uia.solution</groupId>
+          <artifactId>uia-utils</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>uia</groupId>

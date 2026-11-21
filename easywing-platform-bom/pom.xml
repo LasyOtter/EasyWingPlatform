@@ -60,7 +60,7 @@
         <commons-lang3.version>3.14.0</commons-lang3.version>
         <commons-collections4.version>4.4</commons-collections4.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
-        <lombok.version>1.18.30</lombok.version>
+        <lombok.version>1.18.42</lombok.version>
         
         <!-- ==================== 测试框架版本 ==================== -->
         <testcontainers.version>1.19.7</testcontainers.version>
