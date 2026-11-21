@@ -45,6 +45,12 @@ spring:
             - Path=/api/system/**
           filters:
             - StripPrefix=0
+        - id: led-service
+          uri: lb://led-service
+          predicates:
+            - Path=/api/led/**
+          filters:
+            - StripPrefix=0
         - id: ai-service
           uri: lb://ai-service
           predicates:

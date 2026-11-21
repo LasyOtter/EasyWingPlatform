@@ -120,6 +120,34 @@ services:
     networks:
       - easywing-network
 
+  # EasyWing LED Service
+  led-service:
+    build:
+      context: .
+      dockerfile: easywing-platform-led/Dockerfile
+    image: easywing/led-service:1.0.0
+    container_name: easywing-led-service
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      NACOS_SERVER_ADDR: nacos:8848
+      NACOS_DISCOVERY_ENABLED: "true"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MYSQL_HOST: mysql
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root123456
+      LED_BASE_DIR: /app
+      JWK_SET_URI: ${JWK_SET_URI:-http://auth-service:8085/.well-known/jwks.json}
+    ports:
+      - "8084:8084"
+    depends_on:
+      - mysql
+      - redis
+      - auth-service
+    networks:
+      - easywing-network
+
   # EasyWing AI Service
   ai-service:
     build:

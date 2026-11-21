@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-EasyWing Platform 是基于 Spring Boot 3.5 / Java 21 的企业级微服务框架，采用 Maven 多模块结构。包含自研框架层（framework + starters）、四个可运行服务（gateway / auth / system / ai）、示例服务（samples）以及 Vue 3 前端（easywing-ui）。
+EasyWing Platform 是基于 Spring Boot 3.5 / Java 21 的企业级微服务框架，采用 Maven 多模块结构。包含自研框架层（framework + starters）、五个可运行服务（gateway / auth / system / ai / led）、示例服务（samples）以及 Vue 3 前端（easywing-ui）。
 
 ## 常用命令
 
@@ -90,6 +90,7 @@ easywing-platform-gateway/     API 网关（Spring Cloud Gateway，WebFlux 响�
 easywing-platform-auth/        认证服务（RS256 JWT 签发/刷新/注销 + JWKS）
 easywing-platform-system/      系统管理服务（用户/角色/菜单/部门/岗位/字典/日志）
 easywing-platform-ai/          AI 服务（LangChain4j Agent/RAG/MCP/多模态）
+easywing-platform-led/         LED 显示服务（多厂商控制卡适配、节目下发、内码刷新）
 easywing-platform-samples/     示例：sample-user-service、sample-order-service
 easywing-ui/                   Vue 3 + Element Plus + Vite 前端
 ```
@@ -120,13 +121,14 @@ easywing-ui/                   Vue 3 + Element Plus + Vite 前端
 | starter-gray | `easywing.gray` | **关闭** | 需显式 `enabled=true` |
 | starter-seata | `easywing.seata` | **关闭** | `matchIfMissing = false` |
 | starter-virtual-thread | `spring.threads.virtual` | 开启 | 注意前缀是 `spring.*` 而非 `easywing.*` |
-| starter-ai | `easywing.ai` | 开启 | 子开关 `easywing.ai.agent`（**默认关闭**）、`chat-model`、`embedding-model`、`rag`；`chat-model` 下按 `openai`/`deepseek`/`qwen`/`ollama` 的 `api-key`/`base-url` 条件创建 `ChatModel` |
+| starter-ai | `easywing.ai` | 开启 | 子开关 `easywing.ai.agent`（**默认关闭**）、`chat-model`、`embedding-model`、`rag`；`chat-model` 下按 `openai`/`deepseek`/`qwen`/`ollama` 的 `api-key`/`base-url` 条件创建 `ChatModel`。注意 `AiProperties` 的 `@ConfigurationProperties` 前缀是 `easywing.langchain4j`，与上面的条件注解前缀 `easywing.ai.*` **不一致**——条件装配读 `easywing.ai.*`，实际属性值读 `easywing.langchain4j.*` |
+| led 服务 | `easywing.led` | 开启 | `file-config-enabled` 控制是否加载 YAML 三层配置；`base-dir` 解析 SDK dll 相对路径。数据同时落库（`led_screen` 等三表，Flyway 管理） |
 
 **新增 starter 检查清单**：① 建 `AutoConfiguration.imports`；② 类级 `@AutoConfiguration` + 条件注解；③ `@ConfigurationProperties` 类配合 `@EnableConfigurationProperties`；④ Bean 加 `@ConditionalOnMissingBean`；⑤ 在 BOM 中登记版本（如引入新依赖）。
 
 ### 请求处理与错误规范
 
-**端口**：Gateway `8080`、System `8083`、Auth `8085`、AI `8082`、User 示例 `8081`。
+**端口**：Gateway `8080`、System `8083`、Auth `8085`、AI `8082`、LED `8084`、User 示例 `8081`。
 
 **统一错误格式**：所有服务返回 RFC 9457 Problem Details（`Content-Type: application/problem+json`），标准字段 `type`/`title`/`status`/`detail`/`instance`，扩展字段 `errorCode`/`timestamp`/`traceId`/`errors`。`type` 默认形如 `https://api.easywing.io/errors/<errorCode>`。
 
@@ -168,6 +170,21 @@ Auth 服务用 RS256 签发 JWT，暴露 `/.well-known/jwks.json`（`JwkSetContr
 
 `easywing-platform-ai` 集成 LangChain4j，包结构按能力域划分（`agent/`、`tool/`、`skill/`、`rag/`、`multiagent/`、`mcp/`、`memory/`、`session/`、`multimodal/`、`sandbox/`、`cost/`、`provider/`、`websocket/`）。REST 入口集中在 `gateway/AiGatewayController`（`/api/v1/ai/**`），流式接口返回 `Flux`。Provider 通过 `AiProviderRegistry` 路由，配置属性见 `AiProperties` 与 `application-example.yml`。
 
+### LED 显示服务
+
+`easywing-platform-led` 把独立 LED 显示控制系统迁入平台，统一为「多厂商 SDK 适配 + 节目下发 + 内码实时刷新」三层。
+
+- **SDK 适配**（`sdk/`）：`SdkRegistry` 按 `effectiveProvider` 选择实现，`LedSdk` 用 `default` 方法做能力分级（如 `supportsNeimaRefresh()`）。三套实现：
+  - `sdk/vision/VisionSdk` — 灵信 1.0.8，`lv_led_64.dll`，句柄式下发管线（`ProgramBuilder`）。
+  - `sdk/listen/ListenSdk` — 灵信五代 V2014，`ListenPlayDll.dll`，会话句柄模型（`beginSession` → `deployOne` → `SendControl` → `EndSend`）；V2014 无 `ProgramSwitch` 导出，`switchProgram` 退化为重发节目，`supportsNeimaRefresh()` 为 `false`。
+  - `sdk/onbon/OnbonSdk` — 仰邦 bx06 纯 Java SDK（无 JNI），TCP 5005，支持内码刷新（`true`）。
+  - `com/listenvision/*`、`cn/com/listentech/*` 是**原包名**的 JNI 本地声明（dll 未随仓库分发），加载路径由 `-Dledsystem.listen.dll` 或 `easywing.led.base-dir` 解析。
+- **配置**（`config/`）：`ConfigLoader` 解析三层 YAML（`config/led.yml` + `config/screens/*.yml` + `config/refresh/*.yml`），`LedConfigProperties` 承接 `easywing.led.*`。屏与刷新配置**同时**落在 `led_screen` / `led_refresh_binding` 表，由 `LedScreenRegistry` 索引，两者通过 `screenId` 关联。
+- **数据源**（`datasource/`）：SPI 注册表 + 命名源，类型 `jdbc`/`http`/`counter`/`now`/`static`/`script`，失败冷却限流（阈值 3 次 / 冷却 60s）。**`script` 在 JDK 21 不可用**（Nashorn 已移除，`getEngineByName("js")` 返回 null），`BuiltinSources.ScriptSource` 会在构造时抛 `DataSourceException`。
+- **刷新引擎**（`engine/LedEngine`）：`RefreshSource` 渲染模板 → `ProgramBuilder.neimaFrame` 拼 `%disp` 帧 → SDK 下发。注意 `neimaFrame` 只拼接 `RefreshContext#renderText` 的返回值，**模板套用发生在 `RefreshSource` 层**，改协议时别在 `neimaFrame` 里重复套模板。
+- **REST**：`/api/led/**`（网关路由已配），权限 `led:screen:*`；`GET /api/led/status` 在 `easywing.security.public-paths` 放行。
+- **依赖注意**：onbon/uia/simple-xml/rxtx 是本地 `~/.m2` 安装的非公开 SDK，`pom.xml` 里已标 `<optional>true</optional>`，换机器构建前需重新 install。
+
 ## 代码风格
 
 - 遵循 Google Java Style（4 空格缩进、120 列、LF），由 Spotless（Palantir）+ Checkstyle 双重约束。
@@ -184,4 +201,5 @@ Conventional Commits：`<type>(<scope>): <subject>`。type 取 `feat|fix|docs|st
 
 - `AGENTS.md` 当前内容为外部记忆上下文快照，非项目规则来源；以本文件与 `README.md` 为准。
 - 根 `docker-compose.yml` 会构建并启动全部服务，本地开发若只需基础设施可用 `easywing-platform-samples/docker-compose.yml`。
+- MySQL 初始化脚本位于 `docker/mysql/init/`（挂载为 `/docker-entrypoint-initdb.d`），仅在数据卷首次创建时执行，只建库授权，表结构交给各服务 Flyway。
 - 密钥/生产配置通过环境变量注入（如 `NACOS_AUTH_TOKEN`、`OPENAI_API_KEY`、`ADMIN_PASSWORD`），不要把默认凭据提交到仓库。

@@ -73,7 +73,10 @@
 
         <!-- AI Service -->
         <module>easywing-platform-ai</module>
-        
+
+        <!-- LED Service -->
+        <module>easywing-platform-led</module>
+
         <!-- System Service -->
         <module>easywing-platform-system</module>
 
