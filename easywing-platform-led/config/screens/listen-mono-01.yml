@@ -1,0 +1,78 @@
+# 示例：五代单双色屏（V2014 / ListenPlayDll.dll，局域网 TCP）
+# provider=listen 走 V2014 会话句柄模型；内码区只能随整屏下发，不支持实时刷新。
+screen:
+  id: listen-mono-01
+  name: 五代单双色屏
+  ip: 192.168.1.78
+  width: 128
+  height: 32
+  colorType: 2             # 1 单色, 2 双基色, 3 三基色
+  grayLevel: 0
+  saveType: 0
+  ledType: 3               # 卡型号（V2014 controlType）
+  rgb: 0
+  connection: tcp          # tcp / serial
+  sdkProvider: listen      # 指定走 V2014 适配层
+
+  # 屏参/控制调参（可选）
+  tuning:
+    screenName: 单色屏01
+    baud: 115200
+    adjustTime: true       # 下发前校正控制器时间
+    powerOn: true          # true 开屏 / false 关屏
+    brightness: 8          # 1-16
+  scan:                    # 扫描/模组参数（可选）
+    moduleWidth: -1
+    columnDot: 0
+    scanStyle: 0           # 16扫 0 / P16扫 6 / P10扫 8
+    dataHeight: -1
+    dbColor: 1
+    decode: 0
+    oe: 1
+    da: 1
+    rgSwap: 0
+  brightnessTimer:         # 定时亮度，最多 3 组
+    - [6, 0, 22, 0, 10]    # 06:00-22:00 亮度 10
+  powerTimer:              # 定时开关机，最多 3 组
+    - [6, 0, 22, 0]
+  searchBroadcast: true
+  # searchIniPath: listen-search.ini
+
+programs:
+  - programNo: 0
+    playTime: 0
+    loopCount: 1
+    schedule:
+      enable: true
+      enableFlag: 7         # 1 日期 | 2 时间 | 4 星期
+      weekValue: 0x7f       # 全周
+      start: "2026-01-01 00:00:00"
+      end: "2030-12-31 23:59:59"
+    areas:
+      # 内码区（V2014 只能随整屏下发，无实时刷新）
+      - areaNo: 1
+        type: neima
+        rect: [0, 0, 128, 16]
+        content: 温度26℃
+        fontSize: 16
+        fontColor: "red"     # 1 红 2 绿 3 黄
+        inStyle: 0
+        speed: 10
+        delay: 0
+
+      # 数字时钟
+      - areaNo: 2
+        type: clock
+        rect: [0, 16, 128, 16]
+        font: { name: 宋体, size: 16, color: "green" }
+        show: [hour, minute, second]
+        timeFormat: 2
+
+      # 流动边框
+      - areaNo: 3
+        type: border
+        rect: [0, 0, 128, 32]
+        borderType: 0
+        borderColor: 255
+        borderStyle: 1
+        borderSpeed: 10

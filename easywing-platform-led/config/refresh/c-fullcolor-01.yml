@@ -1,0 +1,80 @@
+# 内码区实时刷新配置（对应屏 c-fullcolor-01.yml）
+#
+# 协议（6.3 节）：%disp + 区域编号 + 颜色符号 + 特效(0-9) + 内容
+#   区域编号：内码区在节目中的「添加顺序」从 0 起，按 ASCII 递增 0-9 : ; ... O
+#   颜色符号：:红 ;绿 <黄 =紫 >蓝 ?淡 @白
+#   特效：0自动 1翻页 2连续左移 3左移(停留) 4连续下移 5下移(停留) 6闪烁 7连续上移 8上移(停留) 9飘雪
+#   同一屏的多个 binding 会拼成一帧一次下发
+# 前提：节目已下发且屏参/字库就绪
+
+interval: 30s
+
+bindings:
+  # 内码区 0（温度）：jdbc 数据源 sensor，取 name/value/unit 三个字段
+  - areaIndex: 0
+    color: red
+    effect: 0
+    source: sensor
+    template: 温度{value}{unit}
+
+  # 内码区 1（时间）：http 数据源 clock，取 data.hhmm
+  - areaIndex: 1
+    color: green
+    effect: 0
+    source: clock
+    template: 时间{hhmm}
+
+  # 内码区 2（PM2.5）：http 数据源 pm25，取 data.value
+  - areaIndex: 2
+    color: yellow
+    effect: 0
+    source: pm25
+    template: PM2.5={value}
+
+  # 内码区 3（公告）：http 数据源 noticeHttp，取 data 对象（title/level）
+  - areaIndex: 3
+    color: purple
+    effect: 3
+    source: noticeHttp
+    template: 【{level}】{title}
+
+  # ---- 多行数据源（HTTP 数组）：只取第一行渲染，可在模板里用 {no} {name} ----
+  # 内码区 4（排队）：http 数据源 queue，field=data 指向数组
+  - areaIndex: 4
+    color: blue
+    effect: 2
+    source: queue
+    template: 请{no}到{window}
+
+  # ---- 对照示例（注释保留，便于切换）----
+  # 内码区 0（温度）：jdbc 公告源，取 title/level
+  # - areaIndex: 0
+  #   color: red
+  #   effect: 0
+  #   source: notice
+  #   template: {value}
+
+  # 内码区 2（PM2.5）：jdbc 全量传感源，多行（只渲染第一行）
+  # - areaIndex: 2
+  #   color: yellow
+  #   effect: 0
+  #   source: sensorAll
+  #   template: {name}{value}{unit}
+
+  # 内码区 3（POST 回显）：http POST 数据源 echo
+  # - areaIndex: 3
+  #   color: purple
+  #   effect: 0
+  #   source: echo
+  #   template: 屏号={value}
+
+  # ---- 内建源写法（与命名数据源并存，供对照）----
+  # 内码区 0（温度）：counter 源，从 18.5 起每周期 +0.1，保留 1 位小数
+  # - areaIndex: 0
+  #   color: red
+  #   effect: 0
+  #   source: counter
+  #   counterStart: 18.5
+  #   counterStep: 0.1
+  #   counterDecimals: 1
+  #   template: 温度{value}℃

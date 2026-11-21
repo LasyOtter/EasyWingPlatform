@@ -1,0 +1,104 @@
+# LED 显示系统根配置
+sdk:
+  # SDK 实现：vision（1.0.8, lv_led_64.dll）/ listen（五代 V2014, ListenPlayDll.dll）
+  # 屏定义可用 sdkProvider 单独覆盖
+  provider: vision
+  # DLL 路径（相对工程根目录，或用绝对路径）
+  dllPath: sdk/lv_led_64.dll
+  # V2014 动态库路径（provider=listen 时生效）。
+  # 注意：ListenPlayDll.dll 依赖同目录的 ffmpeg（avutil-54 等 8 个）与 ListenTechMT.dll，
+  # 这些文件必须与 ListenPlayDll.dll 放在同一目录；ListenSdk 会按拓扑顺序自动预加载。
+  listenDllPath: sdk/ListenPlayDll.dll
+  # V2014 网络端口
+  listenPort: 10000
+  # 卡型号：0 T/A/U/XC/W, 1 E, 2 X, 3 C, 4 E5/E6/C8, 5 D2/D4/D6
+  # 屏定义里可单独覆盖 ledType
+  ledType: 3
+  # RGB 顺序，仅 C2M/C4M 有效：0 R->G->B ... 5 G->B->R
+  rgb: 0
+  # DLL 字符串编码（Windows 中文一般为 GBK/GB2312）
+  encoding: GBK
+
+system:
+  # 默认节目存储：0 flash(掉电不清除), 3 ram(掉电清除, 实时刷新建议)
+  defaultSaveType: 0
+  screensDir: config/screens
+  refreshDir: config/refresh
+  # 单屏下发失败是否继续其他屏
+  continueOnError: true
+  logLevel: INFO
+
+# ================= 命名数据源 =================
+# refresh/*.yml 的 binding.source 引用这里的名字。
+# 除 type 外的键都作为该数据源的参数；${VAR} / ${VAR:-默认} 支持环境变量。
+#
+# 密码统一走环境变量，示例默认值仅为本地联调：
+#   set LED_DB_PASSWORD=led123456   （Windows CMD）
+#   $env:LED_DB_PASSWORD="led123456" （PowerShell）
+sources:
+  # ---------- 关系型数据库（MySQL，密码走 ${LED_DB_PASSWORD}）----------
+  # 公告：取最新一条启用公告（title 作为 value，level 用于颜色）
+  notice:
+    type: jdbc
+    jdbcUrl: jdbc:mysql://127.0.0.1:3306/led?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8
+    username: led
+    password: ${LED_DB_PASSWORD:-led123456}
+    sql: SELECT title AS value, level, sort FROM notice WHERE enabled=1 ORDER BY sort LIMIT 1
+    timeoutSeconds: 5
+
+  # 传感：单行（温度）
+  sensor:
+    type: jdbc
+    jdbcUrl: jdbc:mysql://127.0.0.1:3306/led?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8
+    username: led
+    password: ${LED_DB_PASSWORD:-led123456}
+    sql: SELECT name, value, unit FROM sensor WHERE id = 1
+
+  # 传感全量：多行（用于轮播/遍历）
+  sensorAll:
+    type: jdbc
+    jdbcUrl: jdbc:mysql://127.0.0.1:3306/led?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8
+    username: led
+    password: ${LED_DB_PASSWORD:-led123456}
+    sql: SELECT name, value, unit FROM sensor ORDER BY id
+
+  # 排队：多行（HTTP 数组路径示例）
+  queue:
+    type: http
+    url: http://127.0.0.1:18080/api/queue/list
+    method: GET
+    field: data
+
+  # ---------- HTTP / REST（密码/令牌同样走环境变量）----------
+  pm25:
+    type: http
+    url: http://127.0.0.1:18080/api/pm25
+    method: GET
+    field: data.value
+    timeoutSeconds: 5
+
+  clock:
+    type: http
+    url: http://127.0.0.1:18080/api/time
+    method: GET
+    field: data.hhmm
+
+  # 公告（HTTP 版，与 jdbc 版对照；可用 headers 带令牌）
+  noticeHttp:
+    type: http
+    url: http://127.0.0.1:18080/api/notice/current
+    method: GET
+    field: data
+    headers:
+      Accept: application/json
+      X-Api-Token: ${LED_API_TOKEN:-dev-token}
+
+  # POST 示例：提交屏编号，回显校验链路
+  echo:
+    type: http
+    url: http://127.0.0.1:18080/api/echo
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: '{"screen":"c-fullcolor-01","ts":"2026-11-18T00:00:00"}'
+    field: echo.screen

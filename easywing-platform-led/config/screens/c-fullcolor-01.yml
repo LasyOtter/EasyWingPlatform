@@ -1,0 +1,117 @@
+# 示例：C 系列全彩屏（局域网 TCP）
+screen:
+  id: c-fullcolor-01
+  name: 大厅全彩屏
+  ip: 192.168.1.100        # 局域网填控制卡 IPv4
+  width: 256
+  height: 128
+  colorType: 3             # 1 单色, 2 双基色, 3 三基色(全彩)
+  grayLevel: 0             # C 系列(C2M/C4M/C2S/C4A)传 0
+  saveType: 3              # 实时刷新建议 ram
+  ledType: 3               # C 系列
+  rgb: 0
+  connection: tcp          # tcp / udp / serial / wan
+
+programs:
+  - programNo: 0
+    playTime: 0             # 0 不限
+    loopCount: 1
+    areas:
+      # 背景/底图
+      - areaNo: 1
+        type: image
+        rect: [0, 0, 256, 128]
+        layout: 0            # 0 背景区, 1 前景区
+        filePath: assets/bg.bmp
+        inStyle: 0
+        speed: 10
+        delay: 0
+
+      # 顶部标题（静态文本，左半屏，与右侧时钟不重叠）
+      - areaNo: 2
+        type: static
+        rect: [0, 0, 128, 32]
+        content: 欢迎光临
+        font: { name: 宋体, size: 24, color: "yellow", bold: true }
+        alignment: 2         # 2 水平居中
+        vcenter: 1           # 1 垂直居中
+        delay: 0
+
+      # 内码区 0：温度（左，与右侧公告并排不重叠）
+      - areaNo: 3
+        type: neima
+        rect: [0, 32, 128, 32]
+        content: 温度--℃
+        fontSize: 16
+        fontColor: "red"     # 或 BBGGRR 如 "0xff"
+        inStyle: 0
+        speed: 10
+        delay: 0
+        # neimaIndex: 0       # 留空按添加顺序自动分配
+
+      # 内码区 1：湿度（左，与右侧排队并排不重叠）
+      - areaNo: 4
+        type: neima
+        rect: [0, 64, 128, 32]
+        content: 湿度--%
+        fontSize: 16
+        fontColor: "green"
+        inStyle: 2
+        speed: 10
+        delay: 0
+
+      # 内码区 2：PM2.5（左下，与右侧二维码并排不重叠）
+      - areaNo: 5
+        type: neima
+        rect: [0, 96, 192, 32]
+        content: PM2.5=--
+        fontSize: 16
+        fontColor: "yellow"
+        inStyle: 0
+        speed: 10
+        delay: 0
+
+      # 内码区 3：公告（右上，与左侧标题/温度不重叠）
+      - areaNo: 8
+        type: neima
+        rect: [128, 32, 128, 32]
+        content: 【通知】--
+        fontSize: 16
+        fontColor: "purple"
+        inStyle: 0
+        speed: 10
+        delay: 0
+
+      # 内码区 4：排队（右中，与上方公告/下方二维码不重叠）
+      - areaNo: 9
+        type: neima
+        rect: [128, 64, 128, 32]
+        content: 请--到--
+        fontSize: 16
+        fontColor: "blue"
+        inStyle: 0
+        speed: 10
+        delay: 0
+
+      # 数字时钟
+      - areaNo: 6
+        type: clock
+        rect: [128, 0, 128, 32]
+        font: { name: 宋体, size: 16, color: "white" }
+        show: [hour, minute, second]
+        timeFormat: 2         # 0-6
+        multiLine: 0
+
+      # 二维码（仅新 C2M/C4M），与背景图层不冲突；坐标/尺寸需为 8 的倍数
+      - areaNo: 7
+        type: qrcode
+        rect: [192, 96, 64, 32]
+        lowVersion: 1
+        highVersion: 40
+        errLevel: 0
+        maskVersion: 0xff
+        blankPointNum: 4
+        baseCodeColor: 6
+        colorReverse: 0
+        defaultShow: 1
+        defaultCode: https://www.listenvision.cn
