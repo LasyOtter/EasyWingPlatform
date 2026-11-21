@@ -4,13 +4,12 @@ import com.easywing.platform.ai.model.ChatCompletionRequest;
 import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.provider.AiProviderRegistry;
 import com.easywing.platform.ai.tool.ToolExecutor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
 /**
  * Agent 执行器 - 支持简单对话和 ReAct 模式
@@ -77,16 +76,21 @@ public class AgentExecutor {
         }
 
         ChatCompletionRequest completionRequest = ChatCompletionRequest.builder()
-                .model(request.getConfig() != null && request.getConfig().getModel() != null ?
-                        request.getConfig().getModel() : "gpt-4o")
+                .model(
+                        request.getConfig() != null && request.getConfig().getModel() != null
+                                ? request.getConfig().getModel()
+                                : "gpt-4o")
                 .messages(messages)
                 .temperature(request.getConfig() != null ? request.getConfig().getTemperature() : 0.7)
                 .build();
 
         String finalAgentId = agentId;
-        String sessionId = request.getSessionId() != null ? request.getSessionId() : UUID.randomUUID().toString();
+        String sessionId = request.getSessionId() != null
+                ? request.getSessionId()
+                : UUID.randomUUID().toString();
 
-        return providerRegistry.chat(completionRequest)
+        return providerRegistry
+                .chat(completionRequest)
                 .map(response -> {
                     ChatMessage assistantMessage = null;
                     if (response.getChoices() != null && !response.getChoices().isEmpty()) {
@@ -123,10 +127,14 @@ public class AgentExecutor {
             if (prompt != null) {
                 // 简单启发式：包含特定关键词时使用工具
                 String lower = prompt.toLowerCase();
-                return lower.contains("计算") || lower.contains("查询") ||
-                       lower.contains("搜索") || lower.contains("时间") ||
-                       lower.contains("日期") || lower.contains("分析") ||
-                       lower.contains("处理") || lower.contains("请求");
+                return lower.contains("计算")
+                        || lower.contains("查询")
+                        || lower.contains("搜索")
+                        || lower.contains("时间")
+                        || lower.contains("日期")
+                        || lower.contains("分析")
+                        || lower.contains("处理")
+                        || lower.contains("请求");
             }
         }
 

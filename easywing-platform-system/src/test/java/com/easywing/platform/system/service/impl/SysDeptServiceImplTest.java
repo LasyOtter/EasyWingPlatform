@@ -26,7 +26,6 @@ import com.easywing.platform.system.domain.entity.SysDept;
 import com.easywing.platform.system.domain.vo.SysDeptVO;
 import com.easywing.platform.system.mapper.SysDeptMapper;
 import com.easywing.platform.system.mapper.struct.DeptMapper;
-import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

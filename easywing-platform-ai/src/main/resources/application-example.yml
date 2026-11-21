@@ -3,7 +3,16 @@
 # 应用基础配置
 spring:
   application:
-    name: easywing-platform-ai
+    name: ai-service
+
+  # Nacos 服务发现配置
+  cloud:
+    nacos:
+      discovery:
+        enabled: ${NACOS_DISCOVERY_ENABLED:false}
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
 
   # Redis 配置（用于记忆存储）
   data:
@@ -100,6 +109,24 @@ easywing:
       topK: 5                   # 检索 Top K 结果
       similarityThreshold: 0.7  # 相似度阈值
 
+    # Embedding 配置：调用 OpenAI 兼容 /embeddings 端点（OpenAI、DashScope 等）
+    embedding:
+      provider: openai                   # 对应 providers 中的 key
+      model: text-embedding-3-small     # embedding 模型
+      # apiKey: ${OPENAI_API_KEY:}       # 留空则使用 providers.openai.apiKey
+      # baseUrl: https://api.openai.com/v1
+      batchSize: 32                      # 单批最大输入文本数
+      dimension: 1536                    # 需与模型输出维度一致
+
+    # 代码沙箱配置
+    sandbox:
+      mode: process                      # process（开发）| docker（生产，容器隔离）
+      maxExecutionTime: 10000            # 毫秒
+      maxMemoryMB: 512                   # Docker 内存限额
+      maxOutputSize: 10240               # 单批输出上限（字节）
+      allowNetworkAccess: false          # 保持 false，防止 SSRF/外联
+      allowFileSystemAccess: false       # 保持 false，仅允许沙箱目录
+
     # API 网关配置
     gateway:
       enabled: true
@@ -128,7 +155,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,info,prometheus,metrics
   metrics:
     export:
       prometheus:

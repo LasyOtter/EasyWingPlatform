@@ -24,22 +24,29 @@ import com.easywing.platform.ai.skill.SkillRegistry;
 import com.easywing.platform.ai.tool.ParallelToolExecutor;
 import com.easywing.platform.ai.tool.ToolDefinition;
 import com.easywing.platform.ai.tool.ToolExecutor;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
 @Slf4j
 @RestController
+@Validated
 @RequestMapping("/api/v1/ai")
+@ApiVersion("v1")
 public class AiGatewayController {
 
     private final AiProviderRegistry providerRegistry;
@@ -87,22 +94,20 @@ public class AiGatewayController {
 
     @PostMapping("/chat/completions")
     public Mono<ResponseEntity<ChatCompletionResponse>> chatCompletions(
-            @RequestBody ChatCompletionRequest request) {
+            @Valid @RequestBody ChatCompletionRequest request) {
         log.info("Chat completions request: model={}", request.getModel());
-        return providerRegistry.chat(request)
-                .map(ResponseEntity::ok)
-                .onErrorResume(e -> {
-                    log.error("Chat completion failed", e);
-                    ChatCompletionResponse errorResponse = ChatCompletionResponse.builder()
-                            .choices(List.of(ChatCompletionResponse.Choice.builder()
-                                    .message(ChatMessage.builder()
-                                            .role("assistant")
-                                            .content("Error: " + e.getMessage())
-                                            .build())
-                                    .build()))
-                            .build();
-                    return Mono.just(ResponseEntity.internalServerError().body(errorResponse));
-                });
+        return providerRegistry.chat(request).map(ResponseEntity::ok).onErrorResume(e -> {
+            log.error("Chat completion failed", e);
+            ChatCompletionResponse errorResponse = ChatCompletionResponse.builder()
+                    .choices(List.of(ChatCompletionResponse.Choice.builder()
+                            .message(ChatMessage.builder()
+                                    .role("assistant")
+                                    .content("Error: " + e.getMessage())
+                                    .build())
+                            .build()))
+                    .build();
+            return Mono.just(ResponseEntity.internalServerError().body(errorResponse));
+        });
     }
 
     @GetMapping("/models")
@@ -120,7 +125,8 @@ public class AiGatewayController {
     @GetMapping("/models/{model}")
     public Mono<ResponseEntity<ModelInfo>> getModel(@PathVariable String model) {
         return Mono.fromCallable(() -> {
-            return providerRegistry.getProviderForModel(model)
+            return providerRegistry
+                    .getProviderForModel(model)
                     .map(provider -> ResponseEntity.ok(provider.getModelInfo(model)))
                     .orElse(ResponseEntity.notFound().build());
         });
@@ -132,8 +138,7 @@ public class AiGatewayController {
     }
 
     @PostMapping("/messages")
-    public Mono<ResponseEntity<ChatCompletionResponse>> createMessage(
-            @RequestBody MessageRequest request) {
+    public Mono<ResponseEntity<ChatCompletionResponse>> createMessage(@Valid @RequestBody MessageRequest request) {
         ChatCompletionRequest completionRequest = ChatCompletionRequest.builder()
                 .model(request.getModel())
                 .messages(request.getMessages())
@@ -147,42 +152,47 @@ public class AiGatewayController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class MessageRequest {
+        @NotBlank
         private String model;
+
+        @NotNull @NotEmpty
+        @Valid
         private List<ChatMessage> messages;
+
         private double temperature;
         private int maxTokens;
     }
 
     @PostMapping("/agent/execute")
-    public Mono<ResponseEntity<AgentResponse>> executeAgent(@RequestBody AgentRequest request) {
-        log.info("Agent execute request: agentId={}, prompt={}, useTools={}",
-                request.getAgentId(), request.getPrompt(),
+    public Mono<ResponseEntity<AgentResponse>> executeAgent(@Valid @RequestBody AgentRequest request) {
+        log.info(
+                "Agent execute request: agentId={}, prompt={}, useTools={}",
+                request.getAgentId(),
+                request.getPrompt(),
                 request.getConfig() != null && request.getConfig().getMaxToolCalls() > 0);
 
         if (request.getSessionId() == null) {
             request.setSessionId(UUID.randomUUID().toString());
         }
 
-        return agentExecutor.execute(request)
-                .map(ResponseEntity::ok)
-                .onErrorResume(e -> {
-                    log.error("Agent execution failed", e);
-                    return Mono.just(ResponseEntity.internalServerError().body(
-                            AgentResponse.builder()
-                                    .agentId(request.getAgentId())
-                                    .sessionId(request.getSessionId())
-                                    .completed(false)
-                                    .finishReason("error: " + e.getMessage())
-                                    .build()));
-                });
+        return agentExecutor.execute(request).map(ResponseEntity::ok).onErrorResume(e -> {
+            log.error("Agent execution failed", e);
+            return Mono.just(ResponseEntity.internalServerError()
+                    .body(AgentResponse.builder()
+                            .agentId(request.getAgentId())
+                            .sessionId(request.getSessionId())
+                            .completed(false)
+                            .finishReason("error: " + e.getMessage())
+                            .build()));
+        });
     }
 
     @GetMapping(value = "/agent/execute/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<org.springframework.http.codec.ServerSentEvent<AgentStreamEvent>> executeAgentStream(
-            @RequestParam String prompt,
+            @RequestParam @NotBlank String prompt,
             @RequestParam(required = false) String agentId,
             @RequestParam(required = false) String model,
-            @RequestParam(defaultValue = "10") int maxIterations) {
+            @RequestParam(defaultValue = "10") @Min(1) int maxIterations) {
 
         log.info("Streaming agent execute request: prompt={}", prompt);
 
@@ -197,7 +207,8 @@ public class AiGatewayController {
                         .build())
                 .build();
 
-        return streamingReactAgent.executeStream(request)
+        return streamingReactAgent
+                .executeStream(request)
                 .map(event -> org.springframework.http.codec.ServerSentEvent.<AgentStreamEvent>builder()
                         .event(event.getType().name())
                         .data(event)
@@ -221,8 +232,7 @@ public class AiGatewayController {
     }
 
     @GetMapping("/skills")
-    public Mono<ResponseEntity<List<AgentSkill>>> listSkills(
-            @RequestParam(required = false) String category) {
+    public Mono<ResponseEntity<List<AgentSkill>>> listSkills(@RequestParam(required = false) String category) {
         List<AgentSkill> skills;
         if (category != null && !category.isEmpty()) {
             skills = skillRegistry.getByCategory(category);
@@ -233,7 +243,7 @@ public class AiGatewayController {
     }
 
     @PostMapping("/skills")
-    public Mono<ResponseEntity<AgentSkill>> registerSkill(@RequestBody AgentSkill skill) {
+    public Mono<ResponseEntity<AgentSkill>> registerSkill(@Valid @RequestBody AgentSkill skill) {
         skillRegistry.register(skill);
         return Mono.just(ResponseEntity.ok(skill));
     }
@@ -246,8 +256,7 @@ public class AiGatewayController {
 
     @PostMapping("/skills/{skillName}/execute")
     public Mono<ResponseEntity<SkillExecuteResponse>> executeSkill(
-            @PathVariable String skillName,
-            @RequestBody SkillExecuteRequest request) {
+            @PathVariable String skillName, @Valid @RequestBody SkillExecuteRequest request) {
         log.info("Executing skill: {}", skillName);
 
         SkillContext context = SkillContext.builder()
@@ -257,22 +266,18 @@ public class AiGatewayController {
                 .parameters(request.getParameters())
                 .build();
 
-        return skillExecutionService.executeSkill(skillName, context)
+        return skillExecutionService
+                .executeSkill(skillName, context)
                 .map(result -> ResponseEntity.ok(new SkillExecuteResponse(
-                        result.isSuccess(),
-                        result.getData(),
-                        result.getMessage(),
-                        result.getError())))
+                        result.isSuccess(), result.getData(), result.getMessage(), result.getError())))
                 .onErrorResume(e -> {
                     log.error("Skill execution failed", e);
-                    return Mono.just(ResponseEntity.ok(
-                            new SkillExecuteResponse(false, null, null, e.getMessage())));
+                    return Mono.just(ResponseEntity.ok(new SkillExecuteResponse(false, null, null, e.getMessage())));
                 });
     }
 
     @PostMapping("/skills/chain")
-    public Mono<ResponseEntity<SkillExecuteResponse>> executeSkillChain(
-            @RequestBody SkillChainRequest request) {
+    public Mono<ResponseEntity<SkillExecuteResponse>> executeSkillChain(@Valid @RequestBody SkillChainRequest request) {
         log.info("Executing skill chain: {}", request.getSkillNames());
 
         SkillContext context = SkillContext.builder()
@@ -282,23 +287,19 @@ public class AiGatewayController {
                 .parameters(request.getParameters())
                 .build();
 
-        return skillExecutionService.executeSkillChain(request.getSkillNames(), context)
+        return skillExecutionService
+                .executeSkillChain(request.getSkillNames(), context)
                 .map(result -> ResponseEntity.ok(new SkillExecuteResponse(
-                        result.isSuccess(),
-                        result.getData(),
-                        result.getMessage(),
-                        result.getError())))
+                        result.isSuccess(), result.getData(), result.getMessage(), result.getError())))
                 .onErrorResume(e -> {
                     log.error("Skill chain execution failed", e);
-                    return Mono.just(ResponseEntity.ok(
-                            new SkillExecuteResponse(false, null, null, e.getMessage())));
+                    return Mono.just(ResponseEntity.ok(new SkillExecuteResponse(false, null, null, e.getMessage())));
                 });
     }
 
     @GetMapping("/skills/recommend")
     public Mono<ResponseEntity<List<AgentSkill>>> recommendSkills(
-            @RequestParam String input,
-            @RequestParam(defaultValue = "5") int limit) {
+            @RequestParam @NotBlank String input, @RequestParam(defaultValue = "5") @Min(1) int limit) {
         List<AgentSkill> recommendations = skillExecutionService.recommendSkills(input, limit);
         return Mono.just(ResponseEntity.ok(recommendations));
     }
@@ -306,27 +307,24 @@ public class AiGatewayController {
     // ========== RAG API ==========
 
     @PostMapping("/rag/query")
-    public Mono<ResponseEntity<RagService.RagResponse>> ragQuery(
-            @RequestBody RagService.RagRequest request) {
+    public Mono<ResponseEntity<RagService.RagResponse>> ragQuery(@Valid @RequestBody RagService.RagRequest request) {
         log.info("RAG query: {}", request.getQuery());
-        return ragService.query(request)
-                .map(ResponseEntity::ok);
+        return ragService.query(request).map(ResponseEntity::ok);
     }
 
     @PostMapping("/rag/documents")
-    public Mono<ResponseEntity<Map<String, Object>>> addDocuments(
-            @RequestBody List<RagService.Document> documents) {
+    public Mono<ResponseEntity<Map<String, Object>>> addDocuments(@Valid @RequestBody AddDocumentsRequest request) {
+        List<RagService.Document> documents = request.getDocuments();
         log.info("Adding {} documents to RAG", documents.size());
-        return ragService.addDocuments(documents)
-                .map(ids -> ResponseEntity.ok(Map.of(
-                        "addedCount", ids.size(),
-                        "documentIds", ids
-                )));
+        return ragService
+                .addDocuments(documents)
+                .map(ids -> ResponseEntity.ok(Map.of("addedCount", ids.size(), "documentIds", ids)));
     }
 
     @DeleteMapping("/rag/documents/{documentId}")
     public Mono<ResponseEntity<Void>> deleteDocument(@PathVariable String documentId) {
-        return ragService.deleteDocument(documentId)
+        return ragService
+                .deleteDocument(documentId)
                 .then(Mono.just(ResponseEntity.ok().<Void>build()));
     }
 
@@ -334,34 +332,30 @@ public class AiGatewayController {
 
     @PostMapping("/multiagent/sequential")
     public Mono<ResponseEntity<MultiAgentResponse>> sequentialCollaboration(
-            @RequestBody MultiAgentRequest request) {
-        log.info("Sequential collaboration with {} agents", request.getAgentIds().size());
-        return multiAgentService.sequentialCollaboration(request)
-                .map(ResponseEntity::ok);
+            @Valid @RequestBody MultiAgentRequest request) {
+        log.info(
+                "Sequential collaboration with {} agents", request.getAgentIds().size());
+        return multiAgentService.sequentialCollaboration(request).map(ResponseEntity::ok);
     }
 
     @PostMapping("/multiagent/parallel")
     public Mono<ResponseEntity<MultiAgentResponse>> parallelCollaboration(
-            @RequestBody MultiAgentRequest request) {
+            @Valid @RequestBody MultiAgentRequest request) {
         log.info("Parallel collaboration with {} agents", request.getAgentIds().size());
-        return multiAgentService.parallelCollaboration(request)
-                .map(ResponseEntity::ok);
+        return multiAgentService.parallelCollaboration(request).map(ResponseEntity::ok);
     }
 
     @PostMapping("/multiagent/debate")
-    public Mono<ResponseEntity<MultiAgentResponse>> debateCollaboration(
-            @RequestBody MultiAgentRequest request) {
+    public Mono<ResponseEntity<MultiAgentResponse>> debateCollaboration(@Valid @RequestBody MultiAgentRequest request) {
         log.info("Debate collaboration with {} agents", request.getAgentIds().size());
-        return multiAgentService.debateCollaboration(request)
-                .map(ResponseEntity::ok);
+        return multiAgentService.debateCollaboration(request).map(ResponseEntity::ok);
     }
 
     @PostMapping("/multiagent/hierarchical")
     public Mono<ResponseEntity<MultiAgentResponse>> hierarchicalCollaboration(
-            @RequestBody MultiAgentRequest request) {
+            @Valid @RequestBody MultiAgentRequest request) {
         log.info("Hierarchical collaboration");
-        return multiAgentService.hierarchicalCollaboration(request)
-                .map(ResponseEntity::ok);
+        return multiAgentService.hierarchicalCollaboration(request).map(ResponseEntity::ok);
     }
 
     // ========== Debug API ==========
@@ -373,24 +367,24 @@ public class AiGatewayController {
 
     @GetMapping("/debug/traces/{traceId}")
     public Mono<ResponseEntity<AgentTrace>> getTrace(@PathVariable String traceId) {
-        return Mono.just(debugService.getTrace(traceId)
+        return Mono.just(debugService
+                .getTrace(traceId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build()));
     }
 
     @GetMapping("/debug/traces/recent")
-    public Mono<ResponseEntity<List<AgentTrace>>> getRecentTraces(
-            @RequestParam(defaultValue = "10") int limit) {
+    public Mono<ResponseEntity<List<AgentTrace>>> getRecentTraces(@RequestParam(defaultValue = "10") int limit) {
         return Mono.just(ResponseEntity.ok(debugService.getRecentTraces(limit)));
     }
 
     @GetMapping("/debug/report/{traceId}")
-    public Mono<ResponseEntity<DebugService.DebugReport>> getDebugReport(
-            @PathVariable String traceId) {
+    public Mono<ResponseEntity<DebugService.DebugReport>> getDebugReport(@PathVariable String traceId) {
         DebugService.DebugReport report = debugService.generateReport(traceId);
-        return Mono.just(report != null ?
-                ResponseEntity.ok(report) :
-                ResponseEntity.notFound().build());
+        return Mono.just(
+                report != null
+                        ? ResponseEntity.ok(report)
+                        : ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/debug/traces/{traceId}")
@@ -412,8 +406,7 @@ public class AiGatewayController {
 
     @PostMapping("/tools/execute")
     public Mono<ResponseEntity<ToolExecuteResponse>> executeTool(
-            @RequestBody ToolExecuteRequest request,
-            @RequestParam(defaultValue = "false") boolean useCache) {
+            @Valid @RequestBody ToolExecuteRequest request, @RequestParam(defaultValue = "false") boolean useCache) {
         log.info("Tool execute request: toolName={}, useCache={}", request.getToolName(), useCache);
 
         Mono<Map<String, Object>> execution;
@@ -425,13 +418,11 @@ public class AiGatewayController {
 
         return execution
                 .map(result -> ResponseEntity.ok(new ToolExecuteResponse(true, result, null)))
-                .onErrorResume(e -> Mono.just(ResponseEntity.ok(
-                        new ToolExecuteResponse(false, null, e.getMessage()))));
+                .onErrorResume(e -> Mono.just(ResponseEntity.ok(new ToolExecuteResponse(false, null, e.getMessage()))));
     }
 
     @DeleteMapping("/tools/cache")
-    public Mono<ResponseEntity<Map<String, Object>>> clearToolCache(
-            @RequestParam(required = false) String toolName) {
+    public Mono<ResponseEntity<Map<String, Object>>> clearToolCache(@RequestParam(required = false) String toolName) {
         if (toolExecutionCache == null) {
             return Mono.just(ResponseEntity.ok(Map.of("message", "Cache not enabled")));
         }
@@ -455,9 +446,11 @@ public class AiGatewayController {
 
     @PostMapping("/tools/execute/batch")
     public Mono<ResponseEntity<BatchToolExecuteResponse>> executeBatchTools(
-            @RequestBody BatchToolExecuteRequest request) {
-        log.info("Batch tool execute request: {} tools, parallel={}",
-                request.getToolCalls().size(), request.isParallel());
+            @Valid @RequestBody BatchToolExecuteRequest request) {
+        log.info(
+                "Batch tool execute request: {} tools, parallel={}",
+                request.getToolCalls().size(),
+                request.isParallel());
 
         long startTime = System.currentTimeMillis();
 
@@ -468,7 +461,8 @@ public class AiGatewayController {
         } else {
             // 串行执行
             execution = reactor.core.publisher.Flux.fromIterable(request.getToolCalls())
-                    .concatMap(call -> toolExecutor.executeTool(call.getToolName(), call.getArguments())
+                    .concatMap(call -> toolExecutor
+                            .executeTool(call.getToolName(), call.getArguments())
                             .map(result -> ParallelToolExecutor.ToolExecutionResult.builder()
                                     .toolName(call.getToolName())
                                     .callId(call.getCallId())
@@ -482,7 +476,9 @@ public class AiGatewayController {
         return execution
                 .map(results -> {
                     long totalTime = System.currentTimeMillis() - startTime;
-                    long successCount = results.stream().filter(ParallelToolExecutor.ToolExecutionResult::isSuccess).count();
+                    long successCount = results.stream()
+                            .filter(ParallelToolExecutor.ToolExecutionResult::isSuccess)
+                            .count();
 
                     BatchToolExecuteResponse response = new BatchToolExecuteResponse();
                     response.setResults(results);
@@ -496,62 +492,57 @@ public class AiGatewayController {
                 })
                 .onErrorResume(e -> {
                     log.error("Batch tool execution failed", e);
-                    return Mono.just(ResponseEntity.internalServerError()
-                            .body(new BatchToolExecuteResponse()));
+                    return Mono.just(ResponseEntity.internalServerError().body(new BatchToolExecuteResponse()));
                 });
     }
 
     @GetMapping("/memory/{conversationId}")
     public Mono<ResponseEntity<ConversationContext>> getMemory(@PathVariable String conversationId) {
-        return memoryManager.getContext(conversationId)
-                .map(ResponseEntity::ok);
+        return memoryManager.getContext(conversationId).map(ResponseEntity::ok);
     }
 
     @PostMapping("/memory/{conversationId}")
     public Mono<ResponseEntity<ConversationContext>> saveMemory(
-            @PathVariable String conversationId,
-            @RequestBody ConversationContext context) {
+            @PathVariable String conversationId, @Valid @RequestBody ConversationContext context) {
         context.setConversationId(conversationId);
-        return memoryManager.saveContext(context)
-                .map(ResponseEntity::ok);
+        return memoryManager.saveContext(context).map(ResponseEntity::ok);
     }
 
     @DeleteMapping("/memory/{conversationId}")
     public Mono<ResponseEntity<Void>> deleteMemory(@PathVariable String conversationId) {
-        return memoryManager.deleteContext(conversationId)
+        return memoryManager
+                .deleteContext(conversationId)
                 .then(Mono.just(ResponseEntity.ok().<Void>build()));
     }
 
     @PostMapping("/memory/{conversationId}/messages")
     public Mono<ResponseEntity<ConversationContext>> addMemoryMessage(
-            @PathVariable String conversationId,
-            @RequestBody ChatMessage message) {
-        return memoryManager.addMessage(conversationId, message)
-                .map(ResponseEntity::ok);
+            @PathVariable String conversationId, @Valid @RequestBody ChatMessage message) {
+        return memoryManager.addMessage(conversationId, message).map(ResponseEntity::ok);
     }
 
     @GetMapping("/sessions")
-    public Mono<ResponseEntity<List<ConversationSession>>> listSessions(
-            @RequestParam String userId) {
-        return sessionManager.getUserSessions(userId)
-                .map(ResponseEntity::ok);
+    public Mono<ResponseEntity<List<ConversationSession>>> listSessions(@RequestParam String userId) {
+        return sessionManager.getUserSessions(userId).map(ResponseEntity::ok);
     }
 
     @PostMapping("/sessions")
-    public Mono<ResponseEntity<ConversationSession>> createSession(@RequestBody CreateSessionRequest request) {
-        return sessionManager.createSession(request.getUserId(), request.getSessionName())
+    public Mono<ResponseEntity<ConversationSession>> createSession(@Valid @RequestBody CreateSessionRequest request) {
+        return sessionManager
+                .createSession(request.getUserId(), request.getSessionName())
                 .map(ResponseEntity::ok);
     }
 
     @GetMapping("/sessions/{sessionId}")
     public Mono<ResponseEntity<ConversationSession>> getSession(@PathVariable String sessionId) {
-        return sessionManager.getSession(sessionId)
-                .map(opt -> opt.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build()));
+        return sessionManager.getSession(sessionId).map(opt -> opt.map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build()));
     }
 
     @DeleteMapping("/sessions/{sessionId}")
     public Mono<ResponseEntity<Void>> deleteSession(@PathVariable String sessionId) {
-        return sessionManager.deleteSession(sessionId)
+        return sessionManager
+                .deleteSession(sessionId)
                 .then(Mono.just(ResponseEntity.ok().<Void>build()));
     }
 
@@ -568,7 +559,9 @@ public class AiGatewayController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ToolExecuteRequest {
+        @NotBlank
         private String toolName;
+
         private Map<String, Object> arguments;
     }
 
@@ -585,7 +578,9 @@ public class AiGatewayController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class CreateSessionRequest {
+        @NotBlank
         private String userId;
+
         private String sessionName;
     }
 
@@ -595,7 +590,10 @@ public class AiGatewayController {
     public static class SkillExecuteRequest {
         private String userId;
         private String sessionId;
+
+        @NotBlank
         private String input;
+
         private Map<String, Object> parameters;
     }
 
@@ -615,8 +613,13 @@ public class AiGatewayController {
     public static class SkillChainRequest {
         private String userId;
         private String sessionId;
+
+        @NotBlank
         private String input;
+
+        @NotEmpty
         private List<String> skillNames;
+
         private Map<String, Object> parameters;
     }
 
@@ -624,9 +627,21 @@ public class AiGatewayController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class BatchToolExecuteRequest {
+        @NotEmpty
+        @Valid
         private List<ParallelToolExecutor.ToolCall> toolCalls;
+
         private boolean parallel;
         private int maxConcurrency;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AddDocumentsRequest {
+        @NotNull @NotEmpty
+        @Valid
+        private List<RagService.Document> documents;
     }
 
     @Data

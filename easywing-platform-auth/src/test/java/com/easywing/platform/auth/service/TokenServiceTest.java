@@ -15,36 +15,37 @@
  */
 package com.easywing.platform.auth.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
 import com.easywing.platform.auth.config.AuthProperties;
 import com.easywing.platform.auth.domain.AuthUser;
 import com.easywing.platform.auth.dto.TokenResponse;
 import com.easywing.platform.auth.metrics.AuthMetrics;
+import com.easywing.platform.core.exception.BizException;
+import com.easywing.platform.core.exception.ErrorCode;
 import com.nimbusds.jose.jwk.RSAKey;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
-import org.springframework.data.redis.core.SetOperations;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
-
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Duration;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.data.redis.core.SetOperations;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 /**
  * 令牌服务单元测试
@@ -137,6 +138,38 @@ class TokenServiceTest {
     }
 
     @Test
+    @DisplayName("Refresh token pair - blacklisted refresh token should be rejected")
+    void testRefreshTokenPairRejectsBlacklistedToken() {
+        AuthUser user = new AuthUser("1", "admin", "hash", List.of("ROLE_ADMIN"), "default");
+        TokenResponse initial = tokenService.issueTokenPair(user);
+        when(redisTemplate.hasKey(anyString())).thenReturn(true);
+
+        BizException exception = assertThrows(
+                BizException.class, () -> tokenService.refreshTokenPair(initial.getRefreshToken()));
+
+        assertEquals(ErrorCode.TOKEN_INVALID, exception.getErrorCode());
+        assertEquals("刷新令牌已被吊销", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Refresh token pair - malformed refresh token should be rejected")
+    void testRefreshTokenPairRejectsMalformedToken() {
+        BizException exception =
+                assertThrows(BizException.class, () -> tokenService.refreshTokenPair("not-a-jwt"));
+
+        assertEquals(ErrorCode.TOKEN_INVALID, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("Resolve user id - should return token subject")
+    void testResolveUserId() {
+        AuthUser user = new AuthUser("1", "admin", "hash", List.of("ROLE_ADMIN"), "default");
+        TokenResponse tokens = tokenService.issueTokenPair(user);
+
+        assertEquals("1", tokenService.resolveUserId(tokens.getAccessToken()));
+    }
+
+    @Test
     @DisplayName("UserDetailsService - load existing user")
     void testLoadByUsername() {
         AuthUser user = userDetailsService.loadByUsername("admin");
@@ -159,6 +192,6 @@ class TokenServiceTest {
     @Test
     @DisplayName("UserDetailsService - unknown user throws exception")
     void testLoadUnknownUser() {
-        assertThrows(IllegalArgumentException.class, () -> userDetailsService.loadByUsername("unknown"));
+        assertThrows(BizException.class, () -> userDetailsService.loadByUsername("unknown"));
     }
 }

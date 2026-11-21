@@ -15,9 +15,9 @@
  */
 package com.easywing.platform.messaging.core;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for MessageContext class
@@ -164,14 +164,13 @@ class MessageContextTest {
     }
 
     @Test
-    void testMultipleContextsHaveDifferentTimestamps() throws InterruptedException {
+    void testMultipleContextsHaveDifferentTimestamps() {
         // Given
         MessageHeaders headers1 = new MessageHeaders();
         MessageHeaders headers2 = new MessageHeaders();
 
         // When
         MessageContext context1 = new MessageContext("topic1", headers1, "kafka");
-        Thread.sleep(2); // Small delay to ensure different timestamps
         MessageContext context2 = new MessageContext("topic2", headers2, "kafka");
 
         // Then

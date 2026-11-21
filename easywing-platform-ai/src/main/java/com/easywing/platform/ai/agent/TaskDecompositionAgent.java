@@ -5,6 +5,8 @@ import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.multiagent.AgentRole;
 import com.easywing.platform.ai.provider.AiProviderRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,9 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 任务分解与委派 Agent - 自动将复杂任务分解并委派给最合适的 Agent
@@ -30,9 +29,7 @@ public class TaskDecompositionAgent {
     private final Map<String, AgentRole> availableAgents;
 
     public TaskDecompositionAgent(
-            AgentExecutor agentExecutor,
-            AiProviderRegistry providerRegistry,
-            ObjectMapper objectMapper) {
+            AgentExecutor agentExecutor, AiProviderRegistry providerRegistry, ObjectMapper objectMapper) {
         this.agentExecutor = agentExecutor;
         this.providerRegistry = providerRegistry;
         this.objectMapper = objectMapper;
@@ -46,54 +43,64 @@ public class TaskDecompositionAgent {
         Map<String, AgentRole> agents = new HashMap<>();
 
         // 规划专家
-        agents.put("planner", AgentRole.builder()
-                .id("planner")
-                .name("规划专家")
-                .description("擅长任务规划和分解")
-                .capabilities(List.of("任务分解", "优先级排序", "资源分配"))
-                .domains(List.of("项目管理", "系统设计"))
-                .priority(10)
-                .build());
+        agents.put(
+                "planner",
+                AgentRole.builder()
+                        .id("planner")
+                        .name("规划专家")
+                        .description("擅长任务规划和分解")
+                        .capabilities(List.of("任务分解", "优先级排序", "资源分配"))
+                        .domains(List.of("项目管理", "系统设计"))
+                        .priority(10)
+                        .build());
 
         // 技术专家
-        agents.put("tech_expert", AgentRole.builder()
-                .id("tech_expert")
-                .name("技术专家")
-                .description("擅长技术方案设计和实现")
-                .capabilities(List.of("架构设计", "代码实现", "技术选型"))
-                .domains(List.of("软件开发", "系统架构"))
-                .priority(9)
-                .build());
+        agents.put(
+                "tech_expert",
+                AgentRole.builder()
+                        .id("tech_expert")
+                        .name("技术专家")
+                        .description("擅长技术方案设计和实现")
+                        .capabilities(List.of("架构设计", "代码实现", "技术选型"))
+                        .domains(List.of("软件开发", "系统架构"))
+                        .priority(9)
+                        .build());
 
         // 数据分析师
-        agents.put("data_analyst", AgentRole.builder()
-                .id("data_analyst")
-                .name("数据分析师")
-                .description("擅长数据分析和可视化")
-                .capabilities(List.of("数据处理", "统计分析", "报告生成"))
-                .domains(List.of("数据科学", "商业智能"))
-                .priority(8)
-                .build());
+        agents.put(
+                "data_analyst",
+                AgentRole.builder()
+                        .id("data_analyst")
+                        .name("数据分析师")
+                        .description("擅长数据分析和可视化")
+                        .capabilities(List.of("数据处理", "统计分析", "报告生成"))
+                        .domains(List.of("数据科学", "商业智能"))
+                        .priority(8)
+                        .build());
 
         // 内容创作者
-        agents.put("content_creator", AgentRole.builder()
-                .id("content_creator")
-                .name("内容创作者")
-                .description("擅长内容创作和文案写作")
-                .capabilities(List.of("文案写作", "内容策划", "SEO优化"))
-                .domains(List.of("市场营销", "内容运营"))
-                .priority(7)
-                .build());
+        agents.put(
+                "content_creator",
+                AgentRole.builder()
+                        .id("content_creator")
+                        .name("内容创作者")
+                        .description("擅长内容创作和文案写作")
+                        .capabilities(List.of("文案写作", "内容策划", "SEO优化"))
+                        .domains(List.of("市场营销", "内容运营"))
+                        .priority(7)
+                        .build());
 
         // 质量检查员
-        agents.put("qa_engineer", AgentRole.builder()
-                .id("qa_engineer")
-                .name("质量检查员")
-                .description("擅长质量检查和测试")
-                .capabilities(List.of("质量检查", "测试设计", "缺陷分析"))
-                .domains(List.of("软件测试", "质量保证"))
-                .priority(6)
-                .build());
+        agents.put(
+                "qa_engineer",
+                AgentRole.builder()
+                        .id("qa_engineer")
+                        .name("质量检查员")
+                        .description("擅长质量检查和测试")
+                        .capabilities(List.of("质量检查", "测试设计", "缺陷分析"))
+                        .domains(List.of("软件测试", "质量保证"))
+                        .priority(6)
+                        .build());
 
         return agents;
     }
@@ -107,62 +114,59 @@ public class TaskDecompositionAgent {
         long startTime = System.currentTimeMillis();
 
         // 第一步：分析任务
-        return analyzeTask(request.getPrompt())
-                .flatMap(analysis -> {
-                    log.info("Task analysis complete, complexity: {}, estimated subtasks: {}",
-                            analysis.getComplexity(), analysis.getEstimatedSubtasks());
+        return analyzeTask(request.getPrompt()).flatMap(analysis -> {
+            log.info(
+                    "Task analysis complete, complexity: {}, estimated subtasks: {}",
+                    analysis.getComplexity(),
+                    analysis.getEstimatedSubtasks());
 
-                    // 如果任务简单，直接执行
-                    if (analysis.getComplexity().equals("simple")) {
-                        return agentExecutor.execute(request)
-                                .map(response -> TaskDecompositionResult.builder()
-                                        .originalTask(request.getPrompt())
-                                        .complexity("simple")
-                                        .subtasks(List.of())
-                                        .finalResult(response.getMessage().getContent())
-                                        .totalExecutionTime(System.currentTimeMillis() - startTime)
-                                        .build());
-                    }
+            // 如果任务简单，直接执行
+            if (analysis.getComplexity().equals("simple")) {
+                return agentExecutor.execute(request).map(response -> TaskDecompositionResult.builder()
+                        .originalTask(request.getPrompt())
+                        .complexity("simple")
+                        .subtasks(List.of())
+                        .finalResult(response.getMessage().getContent())
+                        .totalExecutionTime(System.currentTimeMillis() - startTime)
+                        .build());
+            }
 
-                    // 第二步：分解为子任务
-                    return decomposeTask(request.getPrompt(), analysis)
-                            .flatMap(subtasks -> {
-                                log.info("Task decomposed into {} subtasks", subtasks.size());
+            // 第二步：分解为子任务
+            return decomposeTask(request.getPrompt(), analysis).flatMap(subtasks -> {
+                log.info("Task decomposed into {} subtasks", subtasks.size());
 
-                                // 第三步：为每个子任务选择 Agent
-                                return assignAgents(subtasks)
-                                        .flatMap(assignments -> {
-                                            log.info("Agents assigned for all subtasks");
+                // 第三步：为每个子任务选择 Agent
+                return assignAgents(subtasks).flatMap(assignments -> {
+                    log.info("Agents assigned for all subtasks");
 
-                                            // 第四步：执行所有子任务
-                                            return executeSubtasks(assignments, request)
-                                                    .flatMap(results -> {
-                                                        // 第五步：合并结果
-                                                        return synthesizeResults(results, request.getPrompt())
-                                                                .map(finalResult -> {
-                                                                    long totalTime = System.currentTimeMillis() - startTime;
+                    // 第四步：执行所有子任务
+                    return executeSubtasks(assignments, request).flatMap(results -> {
+                        // 第五步：合并结果
+                        return synthesizeResults(results, request.getPrompt()).map(finalResult -> {
+                            long totalTime = System.currentTimeMillis() - startTime;
 
-                                                                    return TaskDecompositionResult.builder()
-                                                                            .originalTask(request.getPrompt())
-                                                                            .complexity(analysis.getComplexity())
-                                                                            .subtasks(subtasks)
-                                                                            .assignments(assignments)
-                                                                            .subtaskResults(results)
-                                                                            .finalResult(finalResult)
-                                                                            .totalExecutionTime(totalTime)
-                                                                            .build();
-                                                                });
-                                                    });
-                                        });
-                            });
+                            return TaskDecompositionResult.builder()
+                                    .originalTask(request.getPrompt())
+                                    .complexity(analysis.getComplexity())
+                                    .subtasks(subtasks)
+                                    .assignments(assignments)
+                                    .subtaskResults(results)
+                                    .finalResult(finalResult)
+                                    .totalExecutionTime(totalTime)
+                                    .build();
+                        });
+                    });
                 });
+            });
+        });
     }
 
     /**
      * 分析任务
      */
     private Mono<TaskAnalysis> analyzeTask(String task) {
-        String analysisPrompt = String.format("""
+        String analysisPrompt = String.format(
+                """
                 请分析以下任务：
                 %s
 
@@ -179,17 +183,18 @@ public class TaskDecompositionAgent {
                   "estimatedSubtasks": 3,
                   "requiredDomains": ["技术", "设计"]
                 }
-                """, task);
+                """,
+                task);
 
-        return callLLM(analysisPrompt)
-                .map(this::parseTaskAnalysis);
+        return callLLM(analysisPrompt).map(this::parseTaskAnalysis);
     }
 
     /**
      * 分解任务
      */
     private Mono<List<SubTask>> decomposeTask(String task, TaskAnalysis analysis) {
-        String decompositionPrompt = String.format("""
+        String decompositionPrompt = String.format(
+                """
                 任务: %s
 
                 请将此任务分解为 %d 个可独立执行的子任务。
@@ -206,10 +211,10 @@ public class TaskDecompositionAgent {
                     }
                   ]
                 }
-                """, task, analysis.getEstimatedSubtasks());
+                """,
+                task, analysis.getEstimatedSubtasks());
 
-        return callLLM(decompositionPrompt)
-                .map(this::parseSubTasks);
+        return callLLM(decompositionPrompt).map(this::parseSubTasks);
     }
 
     /**
@@ -245,8 +250,7 @@ public class TaskDecompositionAgent {
 
         // 能力匹配
         for (String required : subtask.getRequiredCapabilities()) {
-            if (agent.getCapabilities().stream()
-                    .anyMatch(cap -> cap.contains(required) || required.contains(cap))) {
+            if (agent.getCapabilities().stream().anyMatch(cap -> cap.contains(required) || required.contains(cap))) {
                 score += 30.0;
             }
         }
@@ -265,9 +269,7 @@ public class TaskDecompositionAgent {
     /**
      * 执行子任务
      */
-    private Mono<List<SubTaskResult>> executeSubtasks(
-            List<AgentAssignment> assignments,
-            AgentRequest originalRequest) {
+    private Mono<List<SubTaskResult>> executeSubtasks(List<AgentAssignment> assignments, AgentRequest originalRequest) {
 
         return Flux.fromIterable(assignments)
                 .concatMap(assignment -> executeSubtask(assignment, originalRequest))
@@ -277,11 +279,10 @@ public class TaskDecompositionAgent {
     /**
      * 执行单个子任务
      */
-    private Mono<SubTaskResult> executeSubtask(
-            AgentAssignment assignment,
-            AgentRequest originalRequest) {
+    private Mono<SubTaskResult> executeSubtask(AgentAssignment assignment, AgentRequest originalRequest) {
 
-        log.info("Executing subtask: {} with agent: {}",
+        log.info(
+                "Executing subtask: {} with agent: {}",
                 assignment.getSubtask().getDescription(),
                 assignment.getAssignedAgent().getName());
 
@@ -293,7 +294,8 @@ public class TaskDecompositionAgent {
                 .config(originalRequest.getConfig())
                 .build();
 
-        return agentExecutor.execute(subtaskRequest)
+        return agentExecutor
+                .execute(subtaskRequest)
                 .map(response -> {
                     long duration = System.currentTimeMillis() - startTime;
 
@@ -329,14 +331,16 @@ public class TaskDecompositionAgent {
                 .map(r -> String.format("【%s】\n%s", r.getDescription(), r.getResult()))
                 .collect(Collectors.joining("\n\n"));
 
-        String synthesisPrompt = String.format("""
+        String synthesisPrompt = String.format(
+                """
                 原始任务: %s
 
                 各子任务执行结果:
                 %s
 
                 请基于以上结果，提供完整、连贯的最终答案。
-                """, originalTask, successResults);
+                """,
+                originalTask, successResults);
 
         return callLLM(synthesisPrompt);
     }
@@ -347,14 +351,13 @@ public class TaskDecompositionAgent {
     private Mono<String> callLLM(String prompt) {
         ChatCompletionRequest request = ChatCompletionRequest.builder()
                 .model("gpt-4o")
-                .messages(List.of(ChatMessage.builder()
-                        .role("user")
-                        .content(prompt)
-                        .build()))
+                .messages(List.of(
+                        ChatMessage.builder().role("user").content(prompt).build()))
                 .temperature(0.5)
                 .build();
 
-        return providerRegistry.chat(request)
+        return providerRegistry
+                .chat(request)
                 .map(response -> response.getChoices().get(0).getMessage().getContent());
     }
 

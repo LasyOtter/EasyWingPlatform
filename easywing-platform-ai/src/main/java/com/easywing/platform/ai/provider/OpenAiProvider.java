@@ -7,18 +7,17 @@ import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.model.ModelInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 public class OpenAiProvider extends AbstractAiProvider {
@@ -28,10 +27,13 @@ public class OpenAiProvider extends AbstractAiProvider {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public OpenAiProvider(WebClient webClient, AiProperties.OpenAiConfig config) {
-        super(webClient, Map.of(
-                "apiKey", config.getApiKey(),
-                "baseUrl", config.getBaseUrl() != null ? config.getBaseUrl() : DEFAULT_BASE_URL
-        ));
+        super(
+                webClient,
+                Map.of(
+                        "apiKey",
+                        config.getApiKey(),
+                        "baseUrl",
+                        config.getBaseUrl() != null ? config.getBaseUrl() : DEFAULT_BASE_URL));
     }
 
     @Override
@@ -68,8 +70,7 @@ public class OpenAiProvider extends AbstractAiProvider {
                         .supportsVision(true)
                         .inputCostPer1MTokens(0.15)
                         .outputCostPer1MTokens(0.60)
-                        .build()
-        );
+                        .build());
     }
 
     @Override
@@ -79,8 +80,7 @@ public class OpenAiProvider extends AbstractAiProvider {
                 OpenAiModels.GPT_4O_MINI,
                 OpenAiModels.GPT_4_TURBO,
                 OpenAiModels.GPT_4,
-                OpenAiModels.GPT_35_TURBO
-        );
+                OpenAiModels.GPT_35_TURBO);
     }
 
     @Override
@@ -110,7 +110,8 @@ public class OpenAiProvider extends AbstractAiProvider {
             body.put("max_tokens", request.getMaxTokens());
         }
 
-        return webClient.post()
+        return webClient
+                .post()
                 .uri(url)
                 .header("Authorization", "Bearer " + getApiKey())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -138,11 +139,13 @@ public class OpenAiProvider extends AbstractAiProvider {
             requestBody.put("max_tokens", request.getMaxTokens());
         }
 
-        AtomicReference<String> responseId = new AtomicReference<>("chatcmpl-" + Instant.now().getEpochSecond());
+        AtomicReference<String> responseId =
+                new AtomicReference<>("chatcmpl-" + Instant.now().getEpochSecond());
         AtomicReference<String> model = new AtomicReference<>(request.getModel());
         AtomicReference<Integer> totalTokens = new AtomicReference<>(0);
 
-        return webClient.post()
+        return webClient
+                .post()
                 .uri(url)
                 .header("Authorization", "Bearer " + getApiKey())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -180,7 +183,8 @@ public class OpenAiProvider extends AbstractAiProvider {
             String model = root.has("model") ? root.get("model").asText() : null;
             JsonNode choice = root.get("choices").get(0);
             JsonNode delta = choice.has("delta") ? choice.get("delta") : null;
-            String finishReason = choice.has("finish_reason") ? choice.get("finish_reason").asText() : null;
+            String finishReason =
+                    choice.has("finish_reason") ? choice.get("finish_reason").asText() : null;
 
             ChatMessage deltaMsg = null;
             if (delta != null && !delta.isEmpty()) {
@@ -194,9 +198,18 @@ public class OpenAiProvider extends AbstractAiProvider {
             if (root.has("usage")) {
                 JsonNode usageNode = root.get("usage");
                 usage = ChatCompletionResponse.Usage.builder()
-                        .promptTokens(usageNode.has("prompt_tokens") ? usageNode.get("prompt_tokens").asInt() : 0)
-                        .completionTokens(usageNode.has("completion_tokens") ? usageNode.get("completion_tokens").asInt() : 0)
-                        .totalTokens(usageNode.has("total_tokens") ? usageNode.get("total_tokens").asInt() : 0)
+                        .promptTokens(
+                                usageNode.has("prompt_tokens")
+                                        ? usageNode.get("prompt_tokens").asInt()
+                                        : 0)
+                        .completionTokens(
+                                usageNode.has("completion_tokens")
+                                        ? usageNode.get("completion_tokens").asInt()
+                                        : 0)
+                        .totalTokens(
+                                usageNode.has("total_tokens")
+                                        ? usageNode.get("total_tokens").asInt()
+                                        : 0)
                         .build();
             }
 
@@ -205,13 +218,11 @@ public class OpenAiProvider extends AbstractAiProvider {
                     .object("chat.completion.chunk")
                     .created(Instant.now().getEpochSecond())
                     .model(model)
-                    .choices(List.of(
-                            ChatCompletionResponse.Choice.builder()
-                                    .index(0)
-                                    .delta(deltaMsg)
-                                    .finishReason(finishReason)
-                                    .build()
-                    ))
+                    .choices(List.of(ChatCompletionResponse.Choice.builder()
+                            .index(0)
+                            .delta(deltaMsg)
+                            .finishReason(finishReason)
+                            .build()))
                     .usage(usage)
                     .build();
         } catch (Exception e) {
@@ -222,7 +233,8 @@ public class OpenAiProvider extends AbstractAiProvider {
 
     @Override
     public Mono<Boolean> validateConnection() {
-        return webClient.get()
+        return webClient
+                .get()
                 .uri(getApiBaseUrl() + "/models")
                 .header("Authorization", "Bearer " + getApiKey())
                 .retrieve()
@@ -233,12 +245,14 @@ public class OpenAiProvider extends AbstractAiProvider {
 
     private List<Map<String, Object>> convertMessages(List<ChatMessage> messages) {
         if (messages == null) return List.of();
-        return messages.stream().map(msg -> {
-            Map<String, Object> message = new HashMap<>();
-            message.put("role", msg.getRole());
-            message.put("content", msg.getContent());
-            return message;
-        }).toList();
+        return messages.stream()
+                .map(msg -> {
+                    Map<String, Object> message = new HashMap<>();
+                    message.put("role", msg.getRole());
+                    message.put("content", msg.getContent());
+                    return message;
+                })
+                .toList();
     }
 
     private ChatCompletionResponse parseResponse(String json, String defaultModel) {
@@ -248,16 +262,14 @@ public class OpenAiProvider extends AbstractAiProvider {
                     .object("chat.completion")
                     .created(Instant.now().getEpochSecond())
                     .model(defaultModel)
-                    .choices(List.of(
-                            ChatCompletionResponse.Choice.builder()
-                                    .index(0)
-                                    .message(ChatMessage.builder()
-                                            .role("assistant")
-                                            .content("")
-                                            .build())
-                                    .finishReason("stop")
-                                    .build()
-                    ))
+                    .choices(List.of(ChatCompletionResponse.Choice.builder()
+                            .index(0)
+                            .message(ChatMessage.builder()
+                                    .role("assistant")
+                                    .content("")
+                                    .build())
+                            .finishReason("stop")
+                            .build()))
                     .usage(ChatCompletionResponse.Usage.builder()
                             .promptTokens(0)
                             .completionTokens(0)
@@ -269,13 +281,16 @@ public class OpenAiProvider extends AbstractAiProvider {
         try {
             JsonNode root = objectMapper.readTree(json);
             String id = root.has("id") ? root.get("id").asText() : null;
-            long created = root.has("created") ? root.get("created").asLong() : Instant.now().getEpochSecond();
+            long created = root.has("created")
+                    ? root.get("created").asLong()
+                    : Instant.now().getEpochSecond();
             String model = root.has("model") ? root.get("model").asText() : defaultModel;
 
             JsonNode choice = root.get("choices").get(0);
             JsonNode message = choice.get("message");
             String content = message.has("content") ? message.get("content").asText() : "";
-            String finishReason = choice.has("finish_reason") ? choice.get("finish_reason").asText() : "stop";
+            String finishReason =
+                    choice.has("finish_reason") ? choice.get("finish_reason").asText() : "stop";
 
             ChatMessage assistantMessage = ChatMessage.builder()
                     .role(message.has("role") ? message.get("role").asText() : "assistant")
@@ -286,9 +301,18 @@ public class OpenAiProvider extends AbstractAiProvider {
             if (root.has("usage")) {
                 JsonNode usageNode = root.get("usage");
                 usage = ChatCompletionResponse.Usage.builder()
-                        .promptTokens(usageNode.has("prompt_tokens") ? usageNode.get("prompt_tokens").asInt() : 0)
-                        .completionTokens(usageNode.has("completion_tokens") ? usageNode.get("completion_tokens").asInt() : 0)
-                        .totalTokens(usageNode.has("total_tokens") ? usageNode.get("total_tokens").asInt() : 0)
+                        .promptTokens(
+                                usageNode.has("prompt_tokens")
+                                        ? usageNode.get("prompt_tokens").asInt()
+                                        : 0)
+                        .completionTokens(
+                                usageNode.has("completion_tokens")
+                                        ? usageNode.get("completion_tokens").asInt()
+                                        : 0)
+                        .totalTokens(
+                                usageNode.has("total_tokens")
+                                        ? usageNode.get("total_tokens").asInt()
+                                        : 0)
                         .build();
             }
 
@@ -297,13 +321,11 @@ public class OpenAiProvider extends AbstractAiProvider {
                     .object("chat.completion")
                     .created(created)
                     .model(model)
-                    .choices(List.of(
-                            ChatCompletionResponse.Choice.builder()
-                                    .index(0)
-                                    .message(assistantMessage)
-                                    .finishReason(finishReason)
-                                    .build()
-                    ))
+                    .choices(List.of(ChatCompletionResponse.Choice.builder()
+                            .index(0)
+                            .message(assistantMessage)
+                            .finishReason(finishReason)
+                            .build()))
                     .usage(usage)
                     .build();
         } catch (Exception e) {
@@ -313,16 +335,14 @@ public class OpenAiProvider extends AbstractAiProvider {
                     .object("chat.completion")
                     .created(Instant.now().getEpochSecond())
                     .model(defaultModel)
-                    .choices(List.of(
-                            ChatCompletionResponse.Choice.builder()
-                                    .index(0)
-                                    .message(ChatMessage.builder()
-                                            .role("assistant")
-                                            .content("")
-                                            .build())
-                                    .finishReason("error")
-                                    .build()
-                    ))
+                    .choices(List.of(ChatCompletionResponse.Choice.builder()
+                            .index(0)
+                            .message(ChatMessage.builder()
+                                    .role("assistant")
+                                    .content("")
+                                    .build())
+                            .finishReason("error")
+                            .build()))
                     .build();
         }
     }

@@ -15,6 +15,7 @@
  */
 package com.easywing.platform.vthread.config;
 
+import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -25,8 +26,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.core.task.support.TaskExecutorAdapter;
 import org.springframework.scheduling.annotation.AsyncAnnotationBeanPostProcessor;
-
-import java.util.concurrent.Executors;
 
 /**
  * 虚拟线程自动配置
@@ -50,14 +49,22 @@ public class VirtualThreadAutoConfiguration {
     private static final Logger log = LoggerFactory.getLogger(VirtualThreadAutoConfiguration.class);
 
     @Bean
-    @ConditionalOnProperty(prefix = "spring.threads.virtual", name = "enabled", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(
+            prefix = "spring.threads.virtual",
+            name = "enabled",
+            havingValue = "true",
+            matchIfMissing = true)
     public AsyncTaskExecutor applicationTaskExecutor() {
         log.info("Enabling virtual threads for async task execution");
         return new TaskExecutorAdapter(Executors.newVirtualThreadPerTaskExecutor());
     }
 
     @Bean(name = AsyncAnnotationBeanPostProcessor.DEFAULT_TASK_EXECUTOR_BEAN_NAME)
-    @ConditionalOnProperty(prefix = "spring.threads.virtual", name = "enabled", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(
+            prefix = "spring.threads.virtual",
+            name = "enabled",
+            havingValue = "true",
+            matchIfMissing = true)
     public AsyncTaskExecutor asyncTaskExecutor() {
         log.info("Enabling virtual threads for @Async annotation");
         return new TaskExecutorAdapter(Executors.newVirtualThreadPerTaskExecutor());

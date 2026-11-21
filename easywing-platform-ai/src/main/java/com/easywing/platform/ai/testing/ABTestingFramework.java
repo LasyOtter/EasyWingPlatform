@@ -1,7 +1,9 @@
 package com.easywing.platform.ai.testing;
 
-import com.easywing.platform.ai.agent.AgentRequest;
-import com.easywing.platform.ai.agent.AgentResponse;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,11 +11,6 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 /**
  * A/B 测试框架 - 支持策略、提示词、配置的对比测试
@@ -49,7 +46,10 @@ public class ABTestingFramework {
             statistics.put(testId + ":" + variant.getId(), new TestStatistics(variant.getId()));
         }
 
-        log.info("Created A/B test: {} with {} variants", testId, config.getVariants().size());
+        log.info(
+                "Created A/B test: {} with {} variants",
+                testId,
+                config.getVariants().size());
         return testId;
     }
 
@@ -86,8 +86,12 @@ public class ABTestingFramework {
 
         if (stats != null) {
             stats.recordResult(result);
-            log.debug("Recorded result for test {}, variant {}: success={}, duration={}ms",
-                    testId, variantId, result.isSuccess(), result.getExecutionTime());
+            log.debug(
+                    "Recorded result for test {}, variant {}: success={}, duration={}ms",
+                    testId,
+                    variantId,
+                    result.isSuccess(),
+                    result.getExecutionTime());
         }
     }
 
@@ -383,9 +387,9 @@ public class ABTestingFramework {
     }
 
     public enum TestStatus {
-        DRAFT,      // 草稿
-        RUNNING,    // 运行中
-        STOPPED,    // 已停止
-        COMPLETED   // 已完成
+        DRAFT, // 草稿
+        RUNNING, // 运行中
+        STOPPED, // 已停止
+        COMPLETED // 已完成
     }
 }

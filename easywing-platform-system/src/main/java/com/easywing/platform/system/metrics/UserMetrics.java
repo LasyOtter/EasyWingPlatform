@@ -2,10 +2,9 @@ package com.easywing.platform.system.metrics;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
-import java.util.function.Supplier;
 
 @Component
 @RequiredArgsConstructor
@@ -15,10 +14,9 @@ public class UserMetrics {
 
     public void recordUserOperation(String operation, String operator) {
         String operatorRole = getOperatorRole(operator);
-        meterRegistry.counter("user.operation",
-                "operation", operation,
-                "operator_role", operatorRole
-        ).increment();
+        meterRegistry
+                .counter("user.operation", "operation", operation, "operator_role", operatorRole)
+                .increment();
     }
 
     public Timer.Sample startUserQuery() {
@@ -26,19 +24,16 @@ public class UserMetrics {
     }
 
     public void recordUserQuery(Timer.Sample sample, String queryType, int resultCount) {
-        sample.stop(meterRegistry.timer("user.query.duration",
-                "query_type", queryType,
-                "result_size", resultSizeBucket(resultCount)));
+        sample.stop(meterRegistry.timer(
+                "user.query.duration", "query_type", queryType, "result_size", resultSizeBucket(resultCount)));
     }
 
     public <T> T recordDbOperation(String operation, Supplier<T> supplier) {
-        return meterRegistry.timer("db.operation", "operation", operation)
-                .record(supplier);
+        return meterRegistry.timer("db.operation", "operation", operation).record(supplier);
     }
 
     public void recordDbOperation(String operation, Runnable runnable) {
-        meterRegistry.timer("db.operation", "operation", operation)
-                .record(runnable);
+        meterRegistry.timer("db.operation", "operation", operation).record(runnable);
     }
 
     private String getOperatorRole(String operator) {

@@ -86,10 +86,7 @@ public class Message<T> {
 
     @Override
     public String toString() {
-        return "Message{" +
-                "payload=" + payload +
-                ", headers=" + headers +
-                '}';
+        return "Message{" + "payload=" + payload + ", headers=" + headers + '}';
     }
 
     /**

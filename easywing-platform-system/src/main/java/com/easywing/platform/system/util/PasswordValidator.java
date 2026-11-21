@@ -15,9 +15,8 @@
  */
 package com.easywing.platform.system.util;
 
-import org.springframework.stereotype.Component;
-
 import java.util.regex.Pattern;
+import org.springframework.stereotype.Component;
 
 /**
  * 密码强度校验工具类

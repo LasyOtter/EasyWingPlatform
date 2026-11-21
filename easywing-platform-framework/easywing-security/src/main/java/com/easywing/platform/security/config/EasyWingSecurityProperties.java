@@ -15,10 +15,9 @@
  */
 package com.easywing.platform.security.config;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * 安全配置属性
@@ -267,6 +266,4 @@ public class EasyWingSecurityProperties {
             }
         }
     }
-
-
 }

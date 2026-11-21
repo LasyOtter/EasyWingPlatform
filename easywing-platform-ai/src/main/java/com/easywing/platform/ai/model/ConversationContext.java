@@ -1,13 +1,13 @@
 package com.easywing.platform.ai.model;
 
+import jakarta.validation.Valid;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
 
 @Data
 @Builder
@@ -21,8 +21,10 @@ public class ConversationContext {
 
     private String sessionId;
 
+    @Valid
     private List<ChatMessage> messages;
 
+    @Valid
     private List<ToolResult> toolResults;
 
     private Map<String, Object> variables;

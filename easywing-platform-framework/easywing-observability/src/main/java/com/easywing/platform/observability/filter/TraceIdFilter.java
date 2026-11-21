@@ -23,12 +23,11 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.web.filter.OncePerRequestFilter;
-
-import java.io.IOException;
 
 /**
  * TraceId过滤器
@@ -88,9 +87,9 @@ public class TraceIdFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
         // 排除静态资源和健康检查
-        return path.startsWith("/actuator/health") ||
-               path.startsWith("/actuator/prometheus") ||
-               path.startsWith("/static/") ||
-               path.startsWith("/webjars/");
+        return path.startsWith("/actuator/health")
+                || path.startsWith("/actuator/prometheus")
+                || path.startsWith("/static/")
+                || path.startsWith("/webjars/");
     }
 }

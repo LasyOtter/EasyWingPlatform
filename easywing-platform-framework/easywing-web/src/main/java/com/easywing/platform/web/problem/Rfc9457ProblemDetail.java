@@ -19,13 +19,12 @@ import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
-import org.springframework.web.ErrorResponse;
-
 import java.net.URI;
 import java.time.Instant;
 import java.util.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.web.ErrorResponse;
 
 /**
  * RFC 9457 Problem Detail 扩展实现
@@ -153,6 +152,19 @@ public class Rfc9457ProblemDetail {
     }
 
     /**
+     * 构建 type URI
+     * <p>
+     * 统一使用 {@value #TYPE_BASE_URI} 作为前缀，后接 errorCode。
+     * 网关（WebFlux）与无法引用本类的模块应调用此方法，避免各自拼出不同的 type。
+     *
+     * @param errorCode 应用错误码，可为 {@code null}
+     * @return type URI；errorCode 为空时返回 {@code https://api.easywing.io/errors/}
+     */
+    public static URI buildType(String errorCode) {
+        return URI.create(TYPE_BASE_URI + (errorCode == null ? "" : errorCode));
+    }
+
+    /**
      * 从异常创建ProblemDetail
      */
     public static Rfc9457ProblemDetail fromException(Throwable ex, HttpStatus status) {
@@ -175,7 +187,7 @@ public class Rfc9457ProblemDetail {
                 .instance(errorResponse.getBody().getInstance())
                 .build();
     }
-    
+
     /**
      * 转换为 Builder 以支持修改
      */
@@ -208,8 +220,7 @@ public class Rfc9457ProblemDetail {
             @JsonProperty("field") String field,
             @JsonProperty("message") String message,
             @JsonProperty("rejectedValue") Object rejectedValue,
-            @JsonProperty("code") String code
-    ) {
+            @JsonProperty("code") String code) {
         public ValidationError(String field, String message) {
             this(field, message, null, null);
         }

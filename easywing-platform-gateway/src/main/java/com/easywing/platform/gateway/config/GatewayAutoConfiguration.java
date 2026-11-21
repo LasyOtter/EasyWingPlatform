@@ -21,6 +21,8 @@ import com.easywing.platform.gateway.filter.logging.LoggingFilter;
 import com.easywing.platform.gateway.filter.ratelimit.RateLimitFilter;
 import com.easywing.platform.gateway.filter.ratelimit.RedisRateLimiter;
 import com.easywing.platform.gateway.properties.GatewayProperties;
+import com.easywing.platform.gateway.util.JsonCodec;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -40,18 +42,27 @@ import org.springframework.data.redis.core.script.RedisScript;
 public class GatewayAutoConfiguration {
 
     @Bean
-    @ConditionalOnProperty(prefix = "easywing.gateway.jwt", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public JwtValidationFilter jwtValidationFilter(GatewayProperties properties,
-                                                   ReactiveStringRedisTemplate redisTemplate) {
+    @ConditionalOnProperty(
+            prefix = "easywing.gateway.jwt",
+            name = "enabled",
+            havingValue = "true",
+            matchIfMissing = true)
+    public JwtValidationFilter jwtValidationFilter(
+            GatewayProperties properties, ReactiveStringRedisTemplate redisTemplate) {
         return new JwtValidationFilter(properties, redisTemplate);
     }
 
     @Bean
     @ConditionalOnBean(ReactiveStringRedisTemplate.class)
-    @ConditionalOnProperty(prefix = "easywing.gateway.rate-limit", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public RateLimitFilter rateLimitFilter(GatewayProperties properties,
-                                           ReactiveStringRedisTemplate redisTemplate,
-                                           RedisScript<Long> rateLimitScript) {
+    @ConditionalOnProperty(
+            prefix = "easywing.gateway.rate-limit",
+            name = "enabled",
+            havingValue = "true",
+            matchIfMissing = true)
+    public RateLimitFilter rateLimitFilter(
+            GatewayProperties properties,
+            ReactiveStringRedisTemplate redisTemplate,
+            RedisScript<Long> rateLimitScript) {
         return new RateLimitFilter(properties, redisTemplate, rateLimitScript);
     }
 
@@ -60,14 +71,39 @@ public class GatewayAutoConfiguration {
         return new RedisRateLimiter();
     }
 
+    /**
+     * 初始化错误响应使用的 JSON 序列化器，复用容器的 ObjectMapper
+     */
     @Bean
-    @ConditionalOnProperty(prefix = "easywing.gateway.gray", name = "enabled", havingValue = "true", matchIfMissing = true)
+    public JsonCodecInitializer jsonCodecInitializer(ObjectMapper objectMapper) {
+        return new JsonCodecInitializer(objectMapper);
+    }
+
+    /**
+     * {@link JsonCodec} 初始化器，保证静态序列化器在首次写入前完成注入
+     */
+    public static class JsonCodecInitializer {
+        public JsonCodecInitializer(ObjectMapper objectMapper) {
+            JsonCodec.init(objectMapper);
+        }
+    }
+
+    @Bean
+    @ConditionalOnProperty(
+            prefix = "easywing.gateway.gray",
+            name = "enabled",
+            havingValue = "true",
+            matchIfMissing = true)
     public GrayReleaseFilter grayReleaseFilter(GatewayProperties properties) {
         return new GrayReleaseFilter(properties);
     }
 
     @Bean
-    @ConditionalOnProperty(prefix = "easywing.gateway.logging", name = "enabled", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(
+            prefix = "easywing.gateway.logging",
+            name = "enabled",
+            havingValue = "true",
+            matchIfMissing = true)
     public LoggingFilter loggingFilter(GatewayProperties properties) {
         return new LoggingFilter(properties);
     }

@@ -7,6 +7,7 @@ import com.easywing.platform.system.domain.entity.SysOperLog;
 import com.easywing.platform.system.service.SysOperLogService;
 import com.easywing.platform.system.util.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
@@ -18,10 +19,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 
 @Slf4j
 @Aspect
@@ -59,7 +56,8 @@ public class LogAspect {
             operLog.setOperIp(getClientIp(request));
             operLog.setOperUrl(StrUtil.sub(request.getRequestURI(), 0, 500));
             operLog.setOperName(SecurityUtils.getCurrentUsername());
-            operLog.setMethod(joinPoint.getTarget().getClass().getName() + "." + joinPoint.getSignature().getName());
+            operLog.setMethod(joinPoint.getTarget().getClass().getName() + "."
+                    + joinPoint.getSignature().getName());
             operLog.setRequestMethod(request.getMethod());
             operLog.setTitle(logAnnotation.title());
             operLog.setBusinessType(logAnnotation.businessType().getCode());
@@ -83,8 +81,11 @@ public class LogAspect {
 
     private Log getLogAnnotation(JoinPoint joinPoint) {
         try {
-            return joinPoint.getTarget().getClass()
-                    .getMethod(joinPoint.getSignature().getName(),
+            return joinPoint
+                    .getTarget()
+                    .getClass()
+                    .getMethod(
+                            joinPoint.getSignature().getName(),
                             ((org.aspectj.lang.reflect.MethodSignature) joinPoint.getSignature()).getParameterTypes())
                     .getAnnotation(Log.class);
         } catch (NoSuchMethodException e) {

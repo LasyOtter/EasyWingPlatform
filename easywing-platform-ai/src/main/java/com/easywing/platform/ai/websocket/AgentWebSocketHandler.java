@@ -4,6 +4,9 @@ import com.easywing.platform.ai.agent.AgentRequest;
 import com.easywing.platform.ai.agent.AgentStreamEvent;
 import com.easywing.platform.ai.agent.StreamingReactAgent;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -11,10 +14,6 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import reactor.core.Disposable;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * WebSocket Agent 处理器 - 支持双向通信
@@ -43,10 +42,12 @@ public class AgentWebSocketHandler extends TextWebSocketHandler {
         WebSocketMessage welcomeMsg = WebSocketMessage.builder()
                 .type(WebSocketMessage.MessageType.CONNECTED)
                 .data(Map.of(
-                        "sessionId", sessionId,
-                        "message", "Connected to EasyWing AI Agent",
-                        "timestamp", System.currentTimeMillis()
-                ))
+                        "sessionId",
+                        sessionId,
+                        "message",
+                        "Connected to EasyWing AI Agent",
+                        "timestamp",
+                        System.currentTimeMillis()))
                 .build();
         sendMessage(session, welcomeMsg);
     }
@@ -105,15 +106,15 @@ public class AgentWebSocketHandler extends TextWebSocketHandler {
                     .build();
 
             // 订阅流式执行
-            Disposable disposable = streamingReactAgent.executeStream(request)
+            Disposable disposable = streamingReactAgent
+                    .executeStream(request)
                     .subscribe(
                             event -> sendAgentEvent(session, event),
                             error -> {
                                 log.error("Agent execution error", error);
                                 sendError(session, "Execution error: " + error.getMessage());
                             },
-                            () -> log.info("Agent execution completed for session: {}", sessionId)
-                    );
+                            () -> log.info("Agent execution completed for session: {}", sessionId));
 
             activeExecutions.put(sessionId, disposable);
             log.info("Started agent execution for session: {}", sessionId);

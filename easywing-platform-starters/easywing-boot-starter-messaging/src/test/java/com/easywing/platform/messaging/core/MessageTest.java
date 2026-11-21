@@ -15,9 +15,9 @@
  */
 package com.easywing.platform.messaging.core;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for Message class
@@ -63,10 +63,7 @@ class MessageTest {
     @Test
     void testCreateMessageWithNullPayloadThrowsException() {
         // When & Then
-        IllegalArgumentException exception = assertThrows(
-            IllegalArgumentException.class,
-            () -> new Message<>(null)
-        );
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new Message<>(null));
         assertEquals("Payload cannot be null", exception.getMessage());
     }
 
@@ -76,10 +73,8 @@ class MessageTest {
         String payload = "test payload";
 
         // When & Then
-        IllegalArgumentException exception = assertThrows(
-            IllegalArgumentException.class,
-            () -> new Message<>(payload, null)
-        );
+        IllegalArgumentException exception =
+                assertThrows(IllegalArgumentException.class, () -> new Message<>(payload, null));
         assertEquals("Headers cannot be null", exception.getMessage());
     }
 
@@ -104,9 +99,8 @@ class MessageTest {
         String payload = "test payload";
 
         // When
-        Message<String> message = Message.builder(payload)
-            .setHeader("customKey", "customValue")
-            .build();
+        Message<String> message =
+                Message.builder(payload).setHeader("customKey", "customValue").build();
 
         // Then
         assertEquals("customValue", message.getHeaders().get("customKey"));
@@ -119,9 +113,7 @@ class MessageTest {
         String key = "partition-key";
 
         // When
-        Message<String> message = Message.builder(payload)
-            .setKey(key)
-            .build();
+        Message<String> message = Message.builder(payload).setKey(key).build();
 
         // Then
         assertEquals(key, message.getHeaders().get(MessageHeaders.MESSAGE_KEY));
@@ -134,9 +126,8 @@ class MessageTest {
         Integer partition = 5;
 
         // When
-        Message<String> message = Message.builder(payload)
-            .setPartition(partition)
-            .build();
+        Message<String> message =
+                Message.builder(payload).setPartition(partition).build();
 
         // Then
         assertEquals(partition, message.getHeaders().get(MessageHeaders.PARTITION));
@@ -149,9 +140,8 @@ class MessageTest {
         String contentType = "application/json";
 
         // When
-        Message<String> message = Message.builder(payload)
-            .setContentType(contentType)
-            .build();
+        Message<String> message =
+                Message.builder(payload).setContentType(contentType).build();
 
         // Then
         assertEquals(contentType, message.getHeaders().get(MessageHeaders.CONTENT_TYPE));
@@ -164,12 +154,12 @@ class MessageTest {
 
         // When
         Message<String> message = Message.builder(payload)
-            .setKey("key1")
-            .setPartition(3)
-            .setContentType("application/json")
-            .setHeader("custom1", "value1")
-            .setHeader("custom2", "value2")
-            .build();
+                .setKey("key1")
+                .setPartition(3)
+                .setContentType("application/json")
+                .setHeader("custom1", "value1")
+                .setHeader("custom2", "value2")
+                .build();
 
         // Then
         assertEquals(payload, message.getPayload());
@@ -186,9 +176,8 @@ class MessageTest {
         TestPayload payload = new TestPayload("test", 123);
 
         // When
-        Message<TestPayload> message = Message.builder(payload)
-            .setKey("test-key")
-            .build();
+        Message<TestPayload> message =
+                Message.builder(payload).setKey("test-key").build();
 
         // Then
         assertNotNull(message);
@@ -201,9 +190,7 @@ class MessageTest {
     void testToString() {
         // Given
         String payload = "test payload";
-        Message<String> message = Message.builder(payload)
-            .setKey("test-key")
-            .build();
+        Message<String> message = Message.builder(payload).setKey("test-key").build();
 
         // When
         String result = message.toString();
@@ -219,11 +206,11 @@ class MessageTest {
         // Given
         String payload = "test payload";
         Message<String> message = new Message<>(payload);
-        
+
         // When
         String originalId = message.getHeaders().getId();
         message.getHeaders().set("newKey", "newValue");
-        
+
         // Then - headers can be modified but payload and ID remain
         assertEquals(payload, message.getPayload());
         assertEquals(originalId, message.getHeaders().getId());

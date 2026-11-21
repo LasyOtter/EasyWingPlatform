@@ -6,20 +6,14 @@ import com.easywing.platform.system.enums.DataScope;
 import com.easywing.platform.system.mapper.SysDeptMapper;
 import com.easywing.platform.system.mapper.SysRoleMapper;
 import com.easywing.platform.system.util.SecurityUtils;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 /**
  * 系统数据权限处理器
@@ -143,8 +137,8 @@ public class SystemDataScopeHandler implements DataScopeInterceptor.DataScopeHan
             DataScopeInterceptor.DataScopeType dataScope,
             boolean isAdmin,
             Set<Long> childDeptIds,
-            List<Long> customDeptIds
-    ) implements DataScopeInterceptor.DataScopeInfo {
+            List<Long> customDeptIds)
+            implements DataScopeInterceptor.DataScopeInfo {
 
         @Override
         public Long getUserId() {

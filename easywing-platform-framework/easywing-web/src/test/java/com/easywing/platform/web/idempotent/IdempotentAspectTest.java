@@ -15,8 +15,14 @@
  */
 package com.easywing.platform.web.idempotent;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
 import com.easywing.platform.core.exception.BizException;
 import com.easywing.platform.core.exception.ErrorCode;
+import java.lang.reflect.Method;
+import java.util.concurrent.TimeUnit;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,13 +34,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
-
-import java.lang.reflect.Method;
-import java.util.concurrent.TimeUnit;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 /**
  * 幂等性切面单元测试
@@ -70,11 +69,11 @@ class IdempotentAspectTest {
     void testFirstRequestSuccess() throws Throwable {
         // Arrange
         Idempotent idempotent = createIdempotentAnnotation("#username", 30, "请勿重复提交");
-        
+
         when(joinPoint.getSignature()).thenReturn(methodSignature);
         when(methodSignature.getMethod()).thenReturn(getTestMethod());
-        when(methodSignature.getParameterNames()).thenReturn(new String[]{"username"});
-        when(joinPoint.getArgs()).thenReturn(new Object[]{"testuser"});
+        when(methodSignature.getParameterNames()).thenReturn(new String[] {"username"});
+        when(joinPoint.getArgs()).thenReturn(new Object[] {"testuser"});
         when(valueOperations.setIfAbsent(anyString(), anyString(), eq(30L), eq(TimeUnit.SECONDS)))
                 .thenReturn(true);
         when(joinPoint.proceed()).thenReturn(1L);
@@ -93,11 +92,11 @@ class IdempotentAspectTest {
     void testDuplicateRequestThrowsException() throws Throwable {
         // Arrange
         Idempotent idempotent = createIdempotentAnnotation("#username", 30, "该用户正在创建中");
-        
+
         when(joinPoint.getSignature()).thenReturn(methodSignature);
         when(methodSignature.getMethod()).thenReturn(getTestMethod());
-        when(methodSignature.getParameterNames()).thenReturn(new String[]{"username"});
-        when(joinPoint.getArgs()).thenReturn(new Object[]{"testuser"});
+        when(methodSignature.getParameterNames()).thenReturn(new String[] {"username"});
+        when(joinPoint.getArgs()).thenReturn(new Object[] {"testuser"});
         when(joinPoint.getTarget()).thenReturn(this);
         when(valueOperations.setIfAbsent(anyString(), anyString(), eq(30L), eq(TimeUnit.SECONDS)))
                 .thenReturn(false);
@@ -118,11 +117,11 @@ class IdempotentAspectTest {
     void testBusinessFailureReleasesLock() throws Throwable {
         // Arrange
         Idempotent idempotent = createIdempotentAnnotation("#username", 30, "请勿重复提交");
-        
+
         when(joinPoint.getSignature()).thenReturn(methodSignature);
         when(methodSignature.getMethod()).thenReturn(getTestMethod());
-        when(methodSignature.getParameterNames()).thenReturn(new String[]{"username"});
-        when(joinPoint.getArgs()).thenReturn(new Object[]{"testuser"});
+        when(methodSignature.getParameterNames()).thenReturn(new String[] {"username"});
+        when(joinPoint.getArgs()).thenReturn(new Object[] {"testuser"});
         when(valueOperations.setIfAbsent(anyString(), anyString(), eq(30L), eq(TimeUnit.SECONDS)))
                 .thenReturn(true);
         when(joinPoint.proceed()).thenThrow(new RuntimeException("业务异常"));
@@ -141,7 +140,7 @@ class IdempotentAspectTest {
     void testEmptySpelGeneratesDefaultKey() throws Throwable {
         // Arrange
         Idempotent idempotent = createIdempotentAnnotation("", 60, "请勿重复提交");
-        
+
         when(joinPoint.getSignature()).thenReturn(methodSignature);
         when(methodSignature.getMethod()).thenReturn(getTestMethod());
         when(valueOperations.setIfAbsent(anyString(), anyString(), eq(60L), eq(TimeUnit.SECONDS)))
@@ -161,11 +160,11 @@ class IdempotentAspectTest {
     void testShortExpireNoAdjustment() throws Throwable {
         // Arrange
         Idempotent idempotent = createIdempotentAnnotation("#username", 3, "请勿重复提交");
-        
+
         when(joinPoint.getSignature()).thenReturn(methodSignature);
         when(methodSignature.getMethod()).thenReturn(getTestMethod());
-        when(methodSignature.getParameterNames()).thenReturn(new String[]{"username"});
-        when(joinPoint.getArgs()).thenReturn(new Object[]{"testuser"});
+        when(methodSignature.getParameterNames()).thenReturn(new String[] {"username"});
+        when(joinPoint.getArgs()).thenReturn(new Object[] {"testuser"});
         when(valueOperations.setIfAbsent(anyString(), anyString(), eq(3L), eq(TimeUnit.SECONDS)))
                 .thenReturn(true);
         when(joinPoint.proceed()).thenReturn("success");

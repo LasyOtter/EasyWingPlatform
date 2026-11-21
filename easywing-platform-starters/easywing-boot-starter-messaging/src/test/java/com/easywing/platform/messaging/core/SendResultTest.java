@@ -15,12 +15,11 @@
  */
 package com.easywing.platform.messaging.core;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for SendResult class
@@ -154,8 +153,7 @@ class SendResultTest {
         String destination = "test-topic";
         String messageId = "msg-123";
         SendResult successResult = SendResult.success(destination, messageId);
-        SendResult failureResult = SendResult.failure(destination, messageId, 
-            new RuntimeException("Error"));
+        SendResult failureResult = SendResult.failure(destination, messageId, new RuntimeException("Error"));
 
         // When
         String successString = successResult.toString();
@@ -166,7 +164,7 @@ class SendResultTest {
         assertTrue(successString.contains("success=true"));
         assertTrue(successString.contains("destination='test-topic'"));
         assertTrue(successString.contains("messageId='msg-123'"));
-        
+
         assertNotNull(failureString);
         assertTrue(failureString.contains("success=false"));
         assertTrue(failureString.contains("error="));
@@ -203,20 +201,18 @@ class SendResultTest {
         String messageId = "msg-789";
 
         // When
-        SendResult result1 = SendResult.failure(destination, messageId, 
-            new IllegalArgumentException("Invalid argument"));
-        SendResult result2 = SendResult.failure(destination, messageId, 
-            new NullPointerException("Null pointer"));
-        SendResult result3 = SendResult.failure(destination, messageId, 
-            new Exception("Generic exception"));
+        SendResult result1 =
+                SendResult.failure(destination, messageId, new IllegalArgumentException("Invalid argument"));
+        SendResult result2 = SendResult.failure(destination, messageId, new NullPointerException("Null pointer"));
+        SendResult result3 = SendResult.failure(destination, messageId, new Exception("Generic exception"));
 
         // Then
         assertFalse(result1.isSuccess());
         assertTrue(result1.getError() instanceof IllegalArgumentException);
-        
+
         assertFalse(result2.isSuccess());
         assertTrue(result2.getError() instanceof NullPointerException);
-        
+
         assertFalse(result3.isSuccess());
         assertTrue(result3.getError() instanceof Exception);
     }

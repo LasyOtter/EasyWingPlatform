@@ -3,6 +3,7 @@ package com.easywing.platform.ai.multimodal;
 import com.easywing.platform.ai.model.ChatCompletionRequest;
 import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.provider.AiProviderRegistry;
+import java.util.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,8 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.util.*;
 
 /**
  * 多模态处理服务 - 支持文本、图像、音频、文档
@@ -37,7 +36,8 @@ public class MultiModalService {
      * 处理多模态输入
      */
     public Mono<MultiModalResponse> processMultiModal(MultiModalInput input) {
-        log.info("Processing multi-modal input with {} components",
+        log.info(
+                "Processing multi-modal input with {} components",
                 input.getComponents().size());
 
         long startTime = System.currentTimeMillis();
@@ -81,32 +81,28 @@ public class MultiModalService {
      * 处理图像
      */
     private Mono<ComponentResult> processImage(MultiModalComponent component) {
-        return imageAnalyzer.analyze(component.getImageData())
-                .map(analysis -> ComponentResult.builder()
-                        .type(ModalityType.IMAGE)
-                        .content(analysis.getDescription())
-                        .metadata(Map.of(
-                                "objects", analysis.getObjects(),
-                                "scene", analysis.getScene(),
-                                "colors", analysis.getDominantColors()
-                        ))
-                        .build());
+        return imageAnalyzer.analyze(component.getImageData()).map(analysis -> ComponentResult.builder()
+                .type(ModalityType.IMAGE)
+                .content(analysis.getDescription())
+                .metadata(Map.of(
+                        "objects", analysis.getObjects(),
+                        "scene", analysis.getScene(),
+                        "colors", analysis.getDominantColors()))
+                .build());
     }
 
     /**
      * 处理音频
      */
     private Mono<ComponentResult> processAudio(MultiModalComponent component) {
-        return audioProcessor.transcribe(component.getAudioData())
-                .map(transcription -> ComponentResult.builder()
-                        .type(ModalityType.AUDIO)
-                        .content(transcription.getText())
-                        .metadata(Map.of(
-                                "duration", transcription.getDuration(),
-                                "language", transcription.getLanguage(),
-                                "confidence", transcription.getConfidence()
-                        ))
-                        .build());
+        return audioProcessor.transcribe(component.getAudioData()).map(transcription -> ComponentResult.builder()
+                .type(ModalityType.AUDIO)
+                .content(transcription.getText())
+                .metadata(Map.of(
+                        "duration", transcription.getDuration(),
+                        "language", transcription.getLanguage(),
+                        "confidence", transcription.getConfidence()))
+                .build());
     }
 
     /**
@@ -124,15 +120,15 @@ public class MultiModalService {
      * 处理文档
      */
     private Mono<ComponentResult> processDocument(MultiModalComponent component) {
-        return documentParser.parse(component.getDocumentData(), component.getDocumentType())
+        return documentParser
+                .parse(component.getDocumentData(), component.getDocumentType())
                 .map(parsed -> ComponentResult.builder()
                         .type(ModalityType.DOCUMENT)
                         .content(parsed.getExtractedText())
                         .metadata(Map.of(
                                 "pageCount", parsed.getPageCount(),
                                 "hasImages", parsed.isHasImages(),
-                                "hasTables", parsed.isHasTables()
-                        ))
+                                "hasTables", parsed.isHasTables()))
                         .build());
     }
 
@@ -144,8 +140,7 @@ public class MultiModalService {
         context.append("基于以下多模态内容分析：\n\n");
 
         for (ComponentResult result : results) {
-            context.append(String.format("[%s]\n%s\n\n",
-                    result.getType(), result.getContent()));
+            context.append(String.format("[%s]\n%s\n\n", result.getType(), result.getContent()));
         }
 
         context.append("用户问题：").append(query).append("\n\n");
@@ -160,7 +155,8 @@ public class MultiModalService {
                 .temperature(0.7)
                 .build();
 
-        return providerRegistry.chat(request)
+        return providerRegistry
+                .chat(request)
                 .map(response -> response.getChoices().get(0).getMessage().getContent());
     }
 
@@ -220,8 +216,7 @@ public class MultiModalService {
     public static class DocumentParser {
 
         public Mono<ParsedDocument> parse(byte[] documentData, String documentType) {
-            log.info("Parsing document, type: {}, size: {} bytes",
-                    documentType, documentData.length);
+            log.info("Parsing document, type: {}, size: {} bytes", documentType, documentData.length);
 
             return Mono.fromCallable(() -> {
                 // 简化实现：应使用 Apache POI、PDFBox 等

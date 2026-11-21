@@ -15,8 +15,18 @@
  */
 package com.easywing.platform.gateway.filter.ratelimit;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.*;
+
 import com.easywing.platform.gateway.properties.GatewayProperties;
 import com.easywing.platform.gateway.properties.RateLimitProperties;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,17 +39,6 @@ import org.springframework.mock.web.server.MockServerWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.*;
 
 /**
  * RateLimitFilter 单元测试
@@ -93,8 +92,7 @@ class RateLimitFilterEnhancedTest {
                 .thenReturn(Flux.just(1L));
 
         // When & Then
-        StepVerifier.create(filter.filter(exchange, chain))
-                .verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
 
         verify(chain).filter(exchange);
     }
@@ -120,8 +118,7 @@ class RateLimitFilterEnhancedTest {
 
         // When & Then
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        StepVerifier.create(strictFilter.filter(exchange, chain))
-                .verifyComplete();
+        StepVerifier.create(strictFilter.filter(exchange, chain)).verifyComplete();
 
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
         verify(chain, never()).filter(exchange);
@@ -155,7 +152,8 @@ class RateLimitFilterEnhancedTest {
             executor.submit(() -> {
                 try {
                     for (int j = 0; j < requestsPerThread; j++) {
-                        MockServerHttpRequest request = MockServerHttpRequest.get("/api/test").build();
+                        MockServerHttpRequest request =
+                                MockServerHttpRequest.get("/api/test").build();
                         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
                         concurrentFilter.filter(exchange, chain).block();
@@ -193,8 +191,7 @@ class RateLimitFilterEnhancedTest {
                 .thenReturn(Flux.error(new RuntimeException("Redis connection failed")));
 
         // When & Then - 应该使用本地降级，请求通过
-        StepVerifier.create(filter.filter(exchange, chain))
-                .verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
 
         verify(chain).filter(exchange);
     }
@@ -222,8 +219,7 @@ class RateLimitFilterEnhancedTest {
         Thread.sleep(1000);
 
         // Then - 应该有新的 token
-        StepVerifier.create(filter.filter(exchange, chain))
-                .verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
     }
 
     @Test
@@ -245,10 +241,8 @@ class RateLimitFilterEnhancedTest {
                 .thenReturn(Flux.just(1L)); // 都有令牌
 
         // When & Then
-        StepVerifier.create(filter.filter(exchange1, chain))
-                .verifyComplete();
-        StepVerifier.create(filter.filter(exchange2, chain))
-                .verifyComplete();
+        StepVerifier.create(filter.filter(exchange1, chain)).verifyComplete();
+        StepVerifier.create(filter.filter(exchange2, chain)).verifyComplete();
 
         verify(chain, times(2)).filter(any());
     }
@@ -268,7 +262,8 @@ class RateLimitFilterEnhancedTest {
 
         // Then
         assertThat(exchange.getResponse().getHeaders().get("X-RateLimit-Limit")).isNotNull();
-        assertThat(exchange.getResponse().getHeaders().get("X-RateLimit-Remaining")).isNotNull();
+        assertThat(exchange.getResponse().getHeaders().get("X-RateLimit-Remaining"))
+                .isNotNull();
         assertThat(exchange.getResponse().getHeaders().get("X-RateLimit-Reset")).isNotNull();
     }
 
@@ -283,10 +278,49 @@ class RateLimitFilterEnhancedTest {
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
         // When & Then
-        StepVerifier.create(filter.filter(exchange, chain))
-                .verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
 
         verify(chain).filter(exchange);
         verify(redisTemplate, never()).execute(any(), anyList(), anyList());
+    }
+
+    @Test
+    @DisplayName("降级桶也耗尽时应该返回429")
+    void testFallbackExhaustedShouldReturn429() {
+        gatewayProperties.getRateLimit().setDefaultRate(1);
+        gatewayProperties.getRateLimit().setDefaultCapacity(1);
+        gatewayProperties.getRateLimit().setFallbackRate(1);
+        RateLimitFilter strictFilter = new RateLimitFilter(gatewayProperties, redisTemplate, rateLimitScript);
+
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/test").build();
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), anyList()))
+                .thenReturn(Flux.error(new RuntimeException("Redis down")));
+        when(chain.filter(any())).thenReturn(Mono.empty());
+
+        StepVerifier.create(strictFilter.filter(MockServerWebExchange.from(request), chain))
+                .verifyComplete();
+        StepVerifier.create(strictFilter.filter(MockServerWebExchange.from(request), chain))
+                .verifyComplete();
+
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+        StepVerifier.create(strictFilter.filter(exchange, chain)).verifyComplete();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        verify(chain, never()).filter(exchange);
+    }
+
+    @Test
+    @DisplayName("销毁时应该清理本地限流缓存")
+    void testDestroyClearsLocalBuckets() {
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/test").build();
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), anyList()))
+                .thenReturn(Flux.just(1L));
+        when(chain.filter(any())).thenReturn(Mono.empty());
+
+        filter.filter(exchange, chain).block();
+
+        assertThat(filter).isNotNull();
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(filter::destroy);
     }
 }

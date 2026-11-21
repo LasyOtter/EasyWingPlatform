@@ -22,7 +22,6 @@ import io.opentelemetry.extension.trace.propagation.JaegerPropagator;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
-import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.samplers.Sampler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,10 +93,7 @@ public class OpenTelemetryAutoConfiguration {
     @ConditionalOnMissingBean
     public TextMapPropagator otelTextMapPropagator() {
         return TextMapPropagator.composite(
-                io.opentelemetry.context.propagation.TextMapPropagator.composite(
-                        JaegerPropagator.getInstance()
-                )
-        );
+                io.opentelemetry.context.propagation.TextMapPropagator.composite(JaegerPropagator.getInstance()));
     }
 
     @Bean
@@ -118,7 +114,11 @@ public class OpenTelemetryAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnProperty(prefix = "easywing.otel.exporter.otlp", name = "enabled", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(
+            prefix = "easywing.otel.exporter.otlp",
+            name = "enabled",
+            havingValue = "true",
+            matchIfMissing = true)
     @ConditionalOnMissingBean
     public io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter otlpGrpcSpanExporter() {
         log.info("Configuring OTLP gRPC Span Exporter with endpoint: {}", exporterEndpoint);

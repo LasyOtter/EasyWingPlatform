@@ -2,13 +2,12 @@ package com.easywing.platform.ai.provider;
 
 import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.model.ModelInfo;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 public abstract class AbstractAiProvider implements AiProvider {
 

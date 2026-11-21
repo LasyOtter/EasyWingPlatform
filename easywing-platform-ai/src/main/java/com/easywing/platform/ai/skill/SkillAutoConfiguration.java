@@ -3,13 +3,12 @@ package com.easywing.platform.ai.skill;
 import com.easywing.platform.ai.skill.impl.DataAnalysisSkill;
 import com.easywing.platform.ai.skill.impl.InformationRetrievalSkill;
 import com.easywing.platform.ai.skill.impl.TextProcessingSkill;
+import java.util.List;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.util.List;
-import java.util.UUID;
 
 /**
  * 技能自动配置 - 注册所有内置技能
@@ -89,10 +88,9 @@ public class SkillAutoConfiguration {
 
         public SkillInitializer(SkillRegistry skillRegistry) {
             this.skillRegistry = skillRegistry;
-            log.info("Skills available: {}",
-                    skillRegistry.getAll().stream()
-                            .map(AgentSkill::getName)
-                            .toList());
+            log.info(
+                    "Skills available: {}",
+                    skillRegistry.getAll().stream().map(AgentSkill::getName).toList());
         }
 
         public SkillRegistry getSkillRegistry() {

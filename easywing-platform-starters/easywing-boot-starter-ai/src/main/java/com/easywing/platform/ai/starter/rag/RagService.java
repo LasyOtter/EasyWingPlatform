@@ -27,18 +27,18 @@ import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
 import dev.langchain4j.store.embedding.EmbeddingSearchResult;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RagService {
 
     private static final Logger log = LoggerFactory.getLogger(RagService.class);
 
-    private static final PromptTemplate RAG_PROMPT = PromptTemplate.from("""
+    private static final PromptTemplate RAG_PROMPT = PromptTemplate.from(
+            """
         Based on the following information, answer the question.
 
         Information:
@@ -54,10 +54,11 @@ public class RagService {
     private final DocumentSplitter documentSplitter;
     private final AiProperties properties;
 
-    public RagService(EmbeddingModel embeddingModel,
-                      EmbeddingStore<TextSegment> embeddingStore,
-                      DocumentSplitter documentSplitter,
-                      AiProperties properties) {
+    public RagService(
+            EmbeddingModel embeddingModel,
+            EmbeddingStore<TextSegment> embeddingStore,
+            DocumentSplitter documentSplitter,
+            AiProperties properties) {
         this.embeddingModel = embeddingModel;
         this.embeddingStore = embeddingStore;
         this.documentSplitter = documentSplitter;
@@ -88,9 +89,7 @@ public class RagService {
 
         EmbeddingSearchResult<TextSegment> result = embeddingStore.search(request);
 
-        return result.matches().stream()
-                .map(EmbeddingMatch::embedded)
-                .collect(Collectors.toList());
+        return result.matches().stream().map(EmbeddingMatch::embedded).collect(Collectors.toList());
     }
 
     public String searchAndFormat(String query, int topK) {
@@ -100,9 +99,7 @@ public class RagService {
         context.append("Relevant information:\n\n");
 
         for (int i = 0; i < segments.size(); i++) {
-            context.append(i + 1).append(". ")
-                    .append(segments.get(i).text())
-                    .append("\n\n");
+            context.append(i + 1).append(". ").append(segments.get(i).text()).append("\n\n");
         }
 
         return context.toString();
@@ -110,10 +107,11 @@ public class RagService {
 
     public String queryWithContext(String query, int topK) {
         String context = searchAndFormat(query, topK);
-        return RAG_PROMPT.apply(Map.of(
-                "information", context,
-                "question", query
-        )).text();
+        return RAG_PROMPT
+                .apply(Map.of(
+                        "information", context,
+                        "question", query))
+                .text();
     }
 
     public Document createDocument(String content, Map<String, Object> metadata) {

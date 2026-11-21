@@ -1,8 +1,8 @@
 package com.easywing.platform.system.domain.dto;
 
 import jakarta.validation.constraints.*;
-import lombok.Data;
 import java.io.Serializable;
+import lombok.Data;
 
 @Data
 public class SysMenuDTO implements Serializable {
@@ -21,6 +21,7 @@ public class SysMenuDTO implements Serializable {
     private String perms;
     private String permsType;
     private String icon;
+
     @Size(max = 500, message = "备注长度不能超过500个字符")
     private String remark;
 }

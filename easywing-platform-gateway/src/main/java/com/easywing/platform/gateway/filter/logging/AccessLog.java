@@ -15,7 +15,6 @@
  */
 package com.easywing.platform.gateway.filter.logging;
 
-import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -233,34 +232,50 @@ public class AccessLog {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("{\"traceId\":\"").append(traceId).append('"')
-          .append(",\"requestId\":\"").append(requestId).append('"')
-          .append(",\"method\":\"").append(method).append('"')
-          .append(",\"path\":\"").append(path).append('"');
-        
+        sb.append("{\"traceId\":\"")
+                .append(traceId)
+                .append('"')
+                .append(",\"requestId\":\"")
+                .append(requestId)
+                .append('"')
+                .append(",\"method\":\"")
+                .append(method)
+                .append('"')
+                .append(",\"path\":\"")
+                .append(path)
+                .append('"');
+
         if (queryString != null) {
             sb.append(",\"queryString\":\"").append(queryString).append('"');
         }
-        
-        sb.append(",\"clientIp\":\"").append(clientIp).append('"')
-          .append(",\"userId\":\"").append(userId).append('"')
-          .append(",\"status\":").append(status)
-          .append(",\"duration\":").append(duration)
-          .append(",\"requestSize\":").append(requestSize)
-          .append(",\"responseSize\":").append(responseSize);
-        
+
+        sb.append(",\"clientIp\":\"")
+                .append(clientIp)
+                .append('"')
+                .append(",\"userId\":\"")
+                .append(userId)
+                .append('"')
+                .append(",\"status\":")
+                .append(status)
+                .append(",\"duration\":")
+                .append(duration)
+                .append(",\"requestSize\":")
+                .append(requestSize)
+                .append(",\"responseSize\":")
+                .append(responseSize);
+
         if (serviceId != null) {
             sb.append(",\"serviceId\":\"").append(serviceId).append('"');
         }
-        
+
         if (grayVersion != null) {
             sb.append(",\"grayVersion\":\"").append(grayVersion).append('"');
         }
-        
+
         if (errorMessage != null) {
             sb.append(",\"errorMessage\":\"").append(errorMessage).append('"');
         }
-        
+
         sb.append('}');
         return sb.toString();
     }

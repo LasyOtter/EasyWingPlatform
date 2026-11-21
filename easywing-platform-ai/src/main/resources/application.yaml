@@ -1,6 +1,25 @@
 spring:
   application:
-    name: easywing-platform-ai
+    name: ai-service
+  cloud:
+    nacos:
+      discovery:
+        enabled: ${NACOS_DISCOVERY_ENABLED:false}
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 2
+        shutdown-timeout: 100ms
 
 # AI Configuration
 easywing:
@@ -74,6 +93,24 @@ easywing:
       topK: 5
       similarityThreshold: 0.7
 
+    # Embedding 配置：调用 OpenAI 兼容 /embeddings 端点；未配置 apiKey 时回退模拟向量
+    embedding:
+      provider: openai
+      model: text-embedding-3-small
+      # apiKey: ${OPENAI_API_KEY:}
+      # baseUrl: https://api.openai.com/v1
+      batchSize: 32
+      dimension: 1536
+
+    # 代码沙箱：mode=process 仅用于开发；生产必须使用 docker
+    sandbox:
+      mode: process
+      maxExecutionTime: 10000
+      maxMemoryMB: 512
+      maxOutputSize: 10240
+      allowNetworkAccess: false
+      allowFileSystemAccess: false
+
     # Agent Configuration
     agent:
       maxIterations: 10
@@ -121,9 +158,26 @@ springdoc:
     path: /swagger-ui.html
   enabled: true
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true
+
 # Logging
 logging:
   level:
-    com.easywing.platform.ai: DEBUG
-    com.easywing.platform.ai.provider: DEBUG
-    com.easywing.platform.ai.agent: DEBUG
+    root: INFO
+    com.easywing.platform.ai: INFO
+    com.easywing.platform.ai.provider: INFO
+    com.easywing.platform.ai.agent: INFO

@@ -1,15 +1,14 @@
 package com.easywing.platform.ai.tool;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.easywing.platform.ai.tool.impl.CalculatorTool;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.test.StepVerifier;
-
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * 优化功能测试 - 缓存和参数验证

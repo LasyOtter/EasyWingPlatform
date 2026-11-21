@@ -1,8 +1,6 @@
 # EasyWing Platform - Local Development Environment
 # Usage: docker-compose up -d
 
-version: '3.8'
-
 services:
   # MySQL Database
   mysql:
@@ -45,7 +43,8 @@ services:
     environment:
       MODE: standalone
       NACOS_AUTH_ENABLE: "true"
-      NACOS_AUTH_TOKEN: "yTZ/H+D/xJVfZLeLGi2vOg7c6lKbPDgOxRhdWf2DPZs="
+      # Nacos 3 鉴权 token，生产环境必须通过环境变量注入，勿使用默认值
+      NACOS_AUTH_TOKEN: ${NACOS_AUTH_TOKEN:-changeme}
       NACOS_AUTH_IDENTITY_KEY: serverIdentity
       NACOS_AUTH_IDENTITY_VALUE: security
       SPRING_DATASOURCE_PLATFORM: mysql
@@ -58,11 +57,115 @@ services:
       JVM_XMX: 512m
       JVM_XMN: 256m
     ports:
-      - "8080:8080"
+      - "8081:8080"
       - "8848:8848"
       - "9848:9848"
     depends_on:
       - mysql
+    networks:
+      - easywing-network
+
+  # EasyWing Auth Service
+  auth-service:
+    build:
+      context: .
+      dockerfile: easywing-platform-auth/Dockerfile
+    image: easywing/auth-service:1.0.0
+    container_name: easywing-auth-service
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      NACOS_SERVER_ADDR: nacos:8848
+      NACOS_DISCOVERY_ENABLED: "true"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-AdminPass@123}
+      USER_PASSWORD: ${USER_PASSWORD:-UserPass@123}
+      JWT_KEY_PATH: /app/keys
+    volumes:
+      - auth_keys:/app/keys
+    ports:
+      - "8085:8085"
+    depends_on:
+      - redis
+      - nacos
+    networks:
+      - easywing-network
+
+  # EasyWing System Service
+  system-service:
+    build:
+      context: .
+      dockerfile: easywing-platform-system/Dockerfile
+    image: easywing/system-service:1.0.0
+    container_name: easywing-system-service
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      NACOS_SERVER_ADDR: nacos:8848
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      DATABASE_URL: jdbc:mysql://mysql:3306/easywing_system?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      DATABASE_USERNAME: root
+      DATABASE_PASSWORD: root123456
+      DEFAULT_PASSWORD: ${DEFAULT_PASSWORD:-AdminPass@123}
+      JWK_SET_URI: ${JWK_SET_URI:-http://auth-service:8085/.well-known/jwks.json}
+      ISSUER_URI: ${ISSUER_URI:-http://auth-service:8085}
+    ports:
+      - "8083:8083"
+    depends_on:
+      - mysql
+      - redis
+      - auth-service
+    networks:
+      - easywing-network
+
+  # EasyWing AI Service
+  ai-service:
+    build:
+      context: .
+      dockerfile: easywing-platform-ai/Dockerfile
+    image: easywing/ai-service:1.0.0
+    container_name: easywing-ai-service
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      NACOS_SERVER_ADDR: nacos:8848
+      NACOS_DISCOVERY_ENABLED: "true"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports:
+      - "8082:8082"
+    depends_on:
+      - redis
+      - nacos
+    networks:
+      - easywing-network
+
+  # EasyWing API Gateway
+  gateway:
+    build:
+      context: .
+      dockerfile: easywing-platform-gateway/Dockerfile
+    image: easywing/gateway:1.0.0
+    container_name: easywing-gateway
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      NACOS_SERVER_ADDR: nacos:8848
+      NACOS_DISCOVERY_ENABLED: "true"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_JWK_SET_URI: ${JWT_JWK_SET_URI:-http://auth-service:8085/.well-known/jwks.json}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+      - nacos
+      - auth-service
+      - system-service
+      - ai-service
     networks:
       - easywing-network
 
@@ -169,3 +272,4 @@ volumes:
   minio_data:
   prometheus_data:
   grafana_data:
+  auth_keys:

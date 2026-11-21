@@ -97,8 +97,11 @@ mvn spring-boot:run
 ### 4. Verify
 
 - API Gateway: http://localhost:8080
+- System Service: http://localhost:8083
+- Auth Service: http://localhost:8085
+- AI Service: http://localhost:8082
 - User Service: http://localhost:8081/swagger-ui.html
-- Nacos Console: http://localhost:8848/nacos
+- Nacos Console: http://localhost:8081
 - Jaeger UI: http://localhost:16686
 - Grafana: http://localhost:3000
 

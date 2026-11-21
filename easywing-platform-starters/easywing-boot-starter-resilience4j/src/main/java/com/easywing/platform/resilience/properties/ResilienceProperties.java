@@ -15,10 +15,9 @@
  */
 package com.easywing.platform.resilience.properties;
 
+import java.time.Duration;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-
-import java.time.Duration;
 
 /**
  * Resilience4j 熔断限流配置属性

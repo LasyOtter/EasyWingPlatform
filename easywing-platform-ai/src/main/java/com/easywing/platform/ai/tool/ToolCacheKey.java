@@ -1,10 +1,9 @@
 package com.easywing.platform.ai.tool;
 
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import java.util.Map;
 
 /**
  * 工具缓存键 - 用于缓存工具执行结果

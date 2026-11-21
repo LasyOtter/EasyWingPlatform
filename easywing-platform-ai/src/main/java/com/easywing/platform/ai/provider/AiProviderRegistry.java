@@ -4,14 +4,13 @@ import com.easywing.platform.ai.config.AiProperties;
 import com.easywing.platform.ai.model.ChatCompletionRequest;
 import com.easywing.platform.ai.model.ChatCompletionResponse;
 import com.easywing.platform.ai.model.ModelInfo;
-import lombok.extern.slf4j.Slf4j;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 public class AiProviderRegistry {
@@ -75,7 +74,8 @@ public class AiProviderRegistry {
         if (providerHint != null) {
             provider = providers.get(providerHint);
         } else {
-            provider = getProviderForModel(model).orElseGet(() -> getDefaultProvider().orElse(null));
+            provider = getProviderForModel(model)
+                    .orElseGet(() -> getDefaultProvider().orElse(null));
         }
 
         if (provider == null) {
@@ -94,9 +94,7 @@ public class AiProviderRegistry {
     }
 
     public Optional<AiProvider> getProviderForModel(String model) {
-        return providers.values().stream()
-                .filter(p -> p.supportsModel(model))
-                .findFirst();
+        return providers.values().stream().filter(p -> p.supportsModel(model)).findFirst();
     }
 
     public boolean supportsModel(String model) {

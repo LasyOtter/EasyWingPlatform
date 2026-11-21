@@ -27,10 +27,10 @@ import java.util.concurrent.CompletableFuture;
  * <pre>{@code
  * // 同步发送
  * SendResult result = messageTemplate.send("my-topic", myMessage);
- * 
+ *
  * // 异步发送
  * CompletableFuture<SendResult> future = messageTemplate.sendAsync("my-topic", myMessage);
- * 
+ *
  * // 事务发送
  * SendResult result = messageTemplate.sendInTransaction("my-topic", myMessage, () -> {
  *     // 执行业务逻辑
@@ -42,12 +42,12 @@ import java.util.concurrent.CompletableFuture;
  * @since 1.0.0
  */
 public interface MessageTemplate {
-    
+
     /**
      * 同步发送消息到指定目标
      * <p>
      * 该方法会阻塞当前线程直到消息发送完成。消息发送成功后返回包含发送状态和元数据的结果对象。
-     * 
+     *
      * @param <T> 消息类型
      * @param destination 目标（主题/队列），格式取决于底层消息中间件
      * @param message 消息内容，将被自动序列化
@@ -55,13 +55,13 @@ public interface MessageTemplate {
      * @throws MessagingException 当消息发送失败时抛出
      */
     <T> SendResult send(String destination, T message) throws MessagingException;
-    
+
     /**
      * 同步发送消息到指定目标（带分区键）
      * <p>
      * 该方法允许指定分区键，用于确定消息发送到哪个分区。
      * 对于 Kafka，分区键用于计算消息的分区；对于 RabbitMQ，可用于路由。
-     * 
+     *
      * @param <T> 消息类型
      * @param destination 目标（主题/队列）
      * @param key 分区键，用于确定消息的分区或路由
@@ -70,33 +70,33 @@ public interface MessageTemplate {
      * @throws MessagingException 当消息发送失败时抛出
      */
     <T> SendResult send(String destination, String key, T message) throws MessagingException;
-    
+
     /**
      * 异步发送消息到指定目标
      * <p>
      * 该方法立即返回一个 CompletableFuture，不会阻塞当前线程。
      * 可以通过返回的 Future 对象获取发送结果或注册回调。
-     * 
+     *
      * @param <T> 消息类型
      * @param destination 目标（主题/队列）
      * @param message 消息内容
      * @return CompletableFuture，异步完成时包含发送结果
      */
     <T> CompletableFuture<SendResult> sendAsync(String destination, T message);
-    
+
     /**
      * 异步发送消息到指定目标（带回调）
      * <p>
      * 该方法立即返回，不会阻塞当前线程。
      * 当消息发送完成时，会调用提供的回调对象的相应方法。
-     * 
+     *
      * @param <T> 消息类型
      * @param destination 目标（主题/队列）
      * @param message 消息内容
      * @param callback 发送回调，用于处理发送成功或失败的情况
      */
     <T> void sendAsync(String destination, T message, SendCallback callback);
-    
+
     /**
      * 在事务中发送消息
      * <p>
@@ -105,7 +105,7 @@ public interface MessageTemplate {
      * 如果业务逻辑成功但消息发送失败，会抛出异常。
      * <p>
      * 注意：事务的具体实现取决于底层消息中间件的支持。
-     * 
+     *
      * @param <T> 消息类型
      * @param destination 目标（主题/队列）
      * @param message 消息内容
@@ -113,6 +113,6 @@ public interface MessageTemplate {
      * @return 发送结果
      * @throws MessagingException 当事务执行失败或消息发送失败时抛出
      */
-    <T> SendResult sendInTransaction(String destination, T message, 
-                                     TransactionExecutor transactionExecutor) throws MessagingException;
+    <T> SendResult sendInTransaction(String destination, T message, TransactionExecutor transactionExecutor)
+            throws MessagingException;
 }

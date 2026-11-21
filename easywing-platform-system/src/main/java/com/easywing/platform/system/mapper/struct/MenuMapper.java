@@ -4,12 +4,11 @@ import com.easywing.platform.system.domain.dto.SysMenuDTO;
 import com.easywing.platform.system.domain.entity.SysMenu;
 import com.easywing.platform.system.domain.vo.RouterVO;
 import com.easywing.platform.system.domain.vo.SysMenuVO;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface MenuMapper {
@@ -24,15 +23,18 @@ public interface MenuMapper {
 
     @Mapping(target = "name", expression = "java(cn.hutool.core.util.StrUtil.upperFirst(menu.getPath()))")
     @Mapping(target = "path", expression = "java(getRouterPath(menu))")
-    @Mapping(target = "component", expression = "java(cn.hutool.core.util.StrUtil.isNotBlank(menu.getComponent()) ? menu.getComponent() : \"Layout\")")
+    @Mapping(
+            target = "component",
+            expression =
+                    "java(cn.hutool.core.util.StrUtil.isNotBlank(menu.getComponent()) ? menu.getComponent() : \"Layout\")")
     @Mapping(target = "hidden", expression = "java(menu.getVisible() == 1)")
     RouterVO toRouterVO(SysMenu menu);
 
     default List<RouterVO> toRouterVOList(List<SysMenu> menus) {
         return menus.stream()
-            .filter(menu -> "M".equals(menu.getMenuType()) || "C".equals(menu.getMenuType()))
-            .map(this::toRouterVO)
-            .collect(Collectors.toList());
+                .filter(menu -> "M".equals(menu.getMenuType()) || "C".equals(menu.getMenuType()))
+                .map(this::toRouterVO)
+                .collect(Collectors.toList());
     }
 
     default String getRouterPath(SysMenu menu) {

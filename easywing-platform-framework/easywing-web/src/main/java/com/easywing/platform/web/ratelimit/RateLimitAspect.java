@@ -18,6 +18,7 @@ package com.easywing.platform.web.ratelimit;
 import com.easywing.platform.core.exception.BizException;
 import com.easywing.platform.core.exception.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.Collections;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -32,9 +33,6 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-
-import java.lang.reflect.Method;
-import java.util.Collections;
 
 /**
  * 限流保护切面
@@ -56,6 +54,7 @@ public class RateLimitAspect {
     public RateLimitAspect(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
+
     private final SpelExpressionParser parser = new SpelExpressionParser();
 
     /**
@@ -67,36 +66,30 @@ public class RateLimitAspect {
      * 3. 如果令牌数 < 请求数，拒绝请求
      * 4. 更新令牌数和上次更新时间
      */
-    private static final String TOKEN_BUCKET_SCRIPT =
-            "local key = KEYS[1] " +
-                    "local rate = tonumber(ARGV[1]) " +
-                    "local capacity = tonumber(ARGV[2]) " +
-                    "local now = tonumber(ARGV[3]) " +
-                    "local requested = tonumber(ARGV[4]) " +
-
-                    "local fill_time = capacity / rate " +
-                    "local ttl = math.floor(fill_time * 2) " +
-
-                    "local last_updated = redis.call('get', key .. ':last_updated') " +
-                    "local tokens = redis.call('get', key .. ':tokens') " +
-
-                    "if last_updated == false then " +
-                    "    tokens = capacity " +
-                    "else " +
-                    "    local delta = math.max(0, now - tonumber(last_updated)) " +
-                    "    tokens = math.min(capacity, tonumber(tokens) + (delta * rate)) " +
-                    "end " +
-
-                    "if tokens >= requested then " +
-                    "    tokens = tokens - requested " +
-                    "    redis.call('setex', key .. ':tokens', ttl, tokens) " +
-                    "    redis.call('setex', key .. ':last_updated', ttl, now) " +
-                    "    return 1 " +
-                    "else " +
-                    "    redis.call('setex', key .. ':tokens', ttl, tokens) " +
-                    "    redis.call('setex', key .. ':last_updated', ttl, now) " +
-                    "    return 0 " +
-                    "end";
+    private static final String TOKEN_BUCKET_SCRIPT = "local key = KEYS[1] " + "local rate = tonumber(ARGV[1]) "
+            + "local capacity = tonumber(ARGV[2]) "
+            + "local now = tonumber(ARGV[3]) "
+            + "local requested = tonumber(ARGV[4]) "
+            + "local fill_time = capacity / rate "
+            + "local ttl = math.floor(fill_time * 2) "
+            + "local last_updated = redis.call('get', key .. ':last_updated') "
+            + "local tokens = redis.call('get', key .. ':tokens') "
+            + "if last_updated == false then "
+            + "    tokens = capacity "
+            + "else "
+            + "    local delta = math.max(0, now - tonumber(last_updated)) "
+            + "    tokens = math.min(capacity, tonumber(tokens) + (delta * rate)) "
+            + "end "
+            + "if tokens >= requested then "
+            + "    tokens = tokens - requested "
+            + "    redis.call('setex', key .. ':tokens', ttl, tokens) "
+            + "    redis.call('setex', key .. ':last_updated', ttl, now) "
+            + "    return 1 "
+            + "else "
+            + "    redis.call('setex', key .. ':tokens', ttl, tokens) "
+            + "    redis.call('setex', key .. ':last_updated', ttl, now) "
+            + "    return 0 "
+            + "end";
 
     @Around("@annotation(rateLimit)")
     public Object around(ProceedingJoinPoint point, RateLimit rateLimit) throws Throwable {
@@ -112,8 +105,7 @@ public class RateLimitAspect {
                 String.valueOf(rateLimit.rate()),
                 String.valueOf(rateLimit.capacity()),
                 String.valueOf(System.currentTimeMillis() / 1000),
-                "1"
-        );
+                "1");
 
         if (result == null || result == 0) {
             log.warn("Rate limit exceeded: key={}, rate={}, capacity={}", key, rateLimit.rate(), rateLimit.capacity());

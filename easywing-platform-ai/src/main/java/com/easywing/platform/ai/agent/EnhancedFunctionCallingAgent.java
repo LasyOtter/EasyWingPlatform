@@ -7,12 +7,11 @@ import com.easywing.platform.ai.tool.ToolDefinition;
 import com.easywing.platform.ai.tool.ToolExecutor;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 增强版 Function Calling Agent - 完整支持 OpenAI Tools API
@@ -41,21 +40,22 @@ public class EnhancedFunctionCallingAgent {
      * 执行 Function Calling Agent（完整版）
      */
     public Mono<AgentResponse> execute(AgentRequest request) {
-        String sessionId = request.getSessionId() != null ?
-                request.getSessionId() : UUID.randomUUID().toString();
+        String sessionId = request.getSessionId() != null
+                ? request.getSessionId()
+                : UUID.randomUUID().toString();
 
-        AgentRequest.AgentConfig config = request.getConfig() != null ?
-                request.getConfig() : AgentRequest.AgentConfig.builder()
-                .maxIterations(10)
-                .maxToolCalls(20)
-                .timeoutMs(60000)
-                .model("gpt-4o")
-                .temperature(0.7)
-                .build();
+        AgentRequest.AgentConfig config = request.getConfig() != null
+                ? request.getConfig()
+                : AgentRequest.AgentConfig.builder()
+                        .maxIterations(10)
+                        .maxToolCalls(20)
+                        .timeoutMs(60000)
+                        .model("gpt-4o")
+                        .temperature(0.7)
+                        .build();
 
         List<AgentIteration> iterations = new ArrayList<>();
-        List<ChatMessage> messages = new ArrayList<>(request.getMessages() != null ?
-                request.getMessages() : List.of());
+        List<ChatMessage> messages = new ArrayList<>(request.getMessages() != null ? request.getMessages() : List.of());
 
         // 添加用户消息
         if (request.getPrompt() != null) {
@@ -135,76 +135,74 @@ public class EnhancedFunctionCallingAgent {
                 .messages(messages)
                 .temperature(config.getTemperature())
                 .tools(openAiTools)
-                .toolChoice("auto")  // 自动决定是否调用工具
+                .toolChoice("auto") // 自动决定是否调用工具
                 .build();
 
         long iterationStartTime = System.currentTimeMillis();
 
-        return providerRegistry.chat(completionRequest)
-                .flatMap(response -> {
-                    long iterationTime = System.currentTimeMillis() - iterationStartTime;
+        return providerRegistry.chat(completionRequest).flatMap(response -> {
+            long iterationTime = System.currentTimeMillis() - iterationStartTime;
 
-                    ChatMessage assistantMessage = extractMessage(response);
-                    if (assistantMessage == null) {
-                        return Mono.just(messages);
-                    }
+            ChatMessage assistantMessage = extractMessage(response);
+            if (assistantMessage == null) {
+                return Mono.just(messages);
+            }
 
-                    messages.add(assistantMessage);
+            messages.add(assistantMessage);
 
-                    // 检查是否有工具调用
-                    List<OpenAiToolCall> toolCalls = assistantMessage.getToolCalls();
-                    if (toolCalls == null || toolCalls.isEmpty()) {
-                        // 没有工具调用，返回最终答案
-                        AgentIteration iteration = AgentIteration.builder()
-                                .iterationNumber(currentIteration)
-                                .executionTimeMs(iterationTime)
-                                .finalAnswer(true)
-                                .answer(assistantMessage.getContent())
-                                .build();
-                        iterations.add(iteration);
+            // 检查是否有工具调用
+            List<OpenAiToolCall> toolCalls = assistantMessage.getToolCalls();
+            if (toolCalls == null || toolCalls.isEmpty()) {
+                // 没有工具调用，返回最终答案
+                AgentIteration iteration = AgentIteration.builder()
+                        .iterationNumber(currentIteration)
+                        .executionTimeMs(iterationTime)
+                        .finalAnswer(true)
+                        .answer(assistantMessage.getContent())
+                        .build();
+                iterations.add(iteration);
 
-                        return Mono.just(messages);
-                    }
+                return Mono.just(messages);
+            }
 
-                    // 有工具调用，执行工具
-                    log.info("LLM requested {} tool calls", toolCalls.size());
+            // 有工具调用，执行工具
+            log.info("LLM requested {} tool calls", toolCalls.size());
 
-                    // 转换为并行工具调用格式
-                    List<ParallelToolExecutor.ToolCall> parallelCalls = toolCalls.stream()
-                            .map(tc -> ParallelToolExecutor.ToolCall.builder()
-                                    .callId(tc.getId())
-                                    .toolName(tc.getFunction().getName())
-                                    .arguments(parseArguments(tc.getFunction().getArguments()))
-                                    .build())
-                            .collect(Collectors.toList());
+            // 转换为并行工具调用格式
+            List<ParallelToolExecutor.ToolCall> parallelCalls = toolCalls.stream()
+                    .map(tc -> ParallelToolExecutor.ToolCall.builder()
+                            .callId(tc.getId())
+                            .toolName(tc.getFunction().getName())
+                            .arguments(parseArguments(tc.getFunction().getArguments()))
+                            .build())
+                    .collect(Collectors.toList());
 
-                    // 并行执行所有工具
-                    return parallelToolExecutor.executeParallel(parallelCalls)
-                            .flatMap(results -> {
-                                // 将工具执行结果添加到消息历史
-                                for (ParallelToolExecutor.ToolExecutionResult result : results) {
-                                    ChatMessage toolMessage = ChatMessage.builder()
-                                            .role("tool")
-                                            .toolCallId(result.getCallId())
-                                            .name(result.getToolName())
-                                            .content(formatToolResult(result))
-                                            .build();
-                                    messages.add(toolMessage);
-                                }
+            // 并行执行所有工具
+            return parallelToolExecutor.executeParallel(parallelCalls).flatMap(results -> {
+                // 将工具执行结果添加到消息历史
+                for (ParallelToolExecutor.ToolExecutionResult result : results) {
+                    ChatMessage toolMessage = ChatMessage.builder()
+                            .role("tool")
+                            .toolCallId(result.getCallId())
+                            .name(result.getToolName())
+                            .content(formatToolResult(result))
+                            .build();
+                    messages.add(toolMessage);
+                }
 
-                                // 记录迭代
-                                AgentIteration iteration = AgentIteration.builder()
-                                        .iterationNumber(currentIteration)
-                                        .executionTimeMs(iterationTime)
-                                        .action("parallel_tool_calls")
-                                        .finalAnswer(false)
-                                        .build();
-                                iterations.add(iteration);
+                // 记录迭代
+                AgentIteration iteration = AgentIteration.builder()
+                        .iterationNumber(currentIteration)
+                        .executionTimeMs(iterationTime)
+                        .action("parallel_tool_calls")
+                        .finalAnswer(false)
+                        .build();
+                iterations.add(iteration);
 
-                                // 继续下一轮
-                                return executeFunctionCallingLoop(messages, config, iterations, currentIteration + 1);
-                            });
-                });
+                // 继续下一轮
+                return executeFunctionCallingLoop(messages, config, iterations, currentIteration + 1);
+            });
+        });
     }
 
     /**
@@ -217,9 +215,10 @@ public class EnhancedFunctionCallingAgent {
                         .function(OpenAiTool.FunctionDefinition.builder()
                                 .name(tool.getName())
                                 .description(tool.getDescription())
-                                .parameters(tool.getParametersSchema() != null ?
-                                        tool.getParametersSchema() :
-                                        createDefaultParameters())
+                                .parameters(
+                                        tool.getParametersSchema() != null
+                                                ? tool.getParametersSchema()
+                                                : createDefaultParameters())
                                 .build())
                         .build())
                 .collect(Collectors.toList());

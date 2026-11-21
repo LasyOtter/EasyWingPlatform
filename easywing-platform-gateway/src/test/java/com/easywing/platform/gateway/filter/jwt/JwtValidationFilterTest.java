@@ -15,8 +15,19 @@
  */
 package com.easywing.platform.gateway.filter.jwt;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+
+import com.easywing.platform.core.exception.ErrorCode;
 import com.easywing.platform.gateway.properties.GatewayProperties;
 import com.easywing.platform.gateway.properties.JwtProperties;
+import com.easywing.platform.gateway.util.JsonCodec;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,20 +38,10 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
-
-import java.time.Duration;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
 
 /**
  * JWT校验过滤器测试
@@ -61,6 +62,11 @@ class JwtValidationFilterTest {
     private GatewayProperties properties;
 
     @BeforeEach
+    void initCodec() {
+        JsonCodec.init(new ObjectMapper());
+    }
+
+    @org.junit.jupiter.api.BeforeEach
     void setUp() {
         properties = new GatewayProperties();
         JwtProperties jwtProperties = properties.getJwt();
@@ -68,7 +74,7 @@ class JwtValidationFilterTest {
         jwtProperties.setIgnorePaths(List.of("/actuator/**", "/api/auth/**"));
         jwtProperties.setCacheTtl(Duration.ofMinutes(5));
         jwtProperties.setCacheMaxSize(10000);
-        
+
         filter = new JwtValidationFilter(properties, redisTemplate);
     }
 
@@ -77,50 +83,42 @@ class JwtValidationFilterTest {
     void testJwtDisabled() {
         properties.getJwt().setEnabled(false);
         JwtValidationFilter disabledFilter = new JwtValidationFilter(properties, redisTemplate);
-        
-        MockServerHttpRequest request = MockServerHttpRequest
-                .get("/api/users")
-                .build();
-        
+
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/users").build();
+
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        
+
         when(chain.filter(any())).thenReturn(Mono.empty());
-        
-        StepVerifier.create(disabledFilter.filter(exchange, chain))
-                .verifyComplete();
-        
+
+        StepVerifier.create(disabledFilter.filter(exchange, chain)).verifyComplete();
+
         verify(chain).filter(any());
     }
 
     @Test
     @DisplayName("Ignored path - should pass through without JWT")
     void testIgnoredPath() {
-        MockServerHttpRequest request = MockServerHttpRequest
-                .get("/actuator/health")
-                .build();
-        
+        MockServerHttpRequest request =
+                MockServerHttpRequest.get("/actuator/health").build();
+
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        
+
         when(chain.filter(any())).thenReturn(Mono.empty());
-        
-        StepVerifier.create(filter.filter(exchange, chain))
-                .verifyComplete();
-        
+
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
+
         verify(chain).filter(any());
     }
 
     @Test
     @DisplayName("Missing Authorization header - should return 401")
     void testMissingAuthorizationHeader() {
-        MockServerHttpRequest request = MockServerHttpRequest
-                .get("/api/users")
-                .build();
-        
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/users").build();
+
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        
-        StepVerifier.create(filter.filter(exchange, chain))
-                .verifyComplete();
-        
+
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
+
         assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
         verify(chain, never()).filter(any());
     }
@@ -128,16 +126,14 @@ class JwtValidationFilterTest {
     @Test
     @DisplayName("Invalid Authorization header format - should return 401")
     void testInvalidAuthorizationHeaderFormat() {
-        MockServerHttpRequest request = MockServerHttpRequest
-                .get("/api/users")
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/users")
                 .header(HttpHeaders.AUTHORIZATION, "InvalidToken")
                 .build();
-        
+
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        
-        StepVerifier.create(filter.filter(exchange, chain))
-                .verifyComplete();
-        
+
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
+
         assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
     }
 
@@ -152,9 +148,8 @@ class JwtValidationFilterTest {
                 "tenant1",
                 java.time.Instant.now(),
                 java.time.Instant.now().plusSeconds(3600),
-                java.util.Map.of("custom", "value")
-        );
-        
+                java.util.Map.of("custom", "value"));
+
         assertEquals("user123", claims.getSubject());
         assertEquals("testuser", claims.getUsername());
         assertEquals("https://auth.easywing.com", claims.getIssuer());
@@ -175,9 +170,8 @@ class JwtValidationFilterTest {
                 null,
                 java.time.Instant.now().minusSeconds(7200),
                 java.time.Instant.now().minusSeconds(3600),
-                null
-        );
-        
+                null);
+
         assertTrue(claims.isExpired());
     }
 
@@ -186,15 +180,13 @@ class JwtValidationFilterTest {
     void testBlacklistedToken() {
         when(redisTemplate.hasKey(anyString())).thenReturn(Mono.just(true));
 
-        MockServerHttpRequest request = MockServerHttpRequest
-                .get("/api/users")
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/users")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer some-token")
                 .build();
 
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
-        StepVerifier.create(filter.filter(exchange, chain))
-                .verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
 
         assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
         assertEquals("Token已注销", exchange.getResponse().getHeaders().getFirst("X-Error-Message"));
@@ -205,17 +197,39 @@ class JwtValidationFilterTest {
     void testNonBlacklistedToken() {
         when(redisTemplate.hasKey(anyString())).thenReturn(Mono.just(false));
 
-        MockServerHttpRequest request = MockServerHttpRequest
-                .get("/api/users")
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/users")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer some-token")
                 .build();
 
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
-        StepVerifier.create(filter.filter(exchange, chain))
-                .verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
 
         verify(redisTemplate).hasKey(anyString());
         verify(chain, never()).filter(any());
+    }
+
+    @Test
+    @DisplayName("Malformed JWT - should return 401 with format error")
+    void testMalformedJwtReturns401() {
+        when(redisTemplate.hasKey(anyString())).thenReturn(Mono.just(false));
+
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/users")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer malformed-token")
+                .build();
+
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
+
+        assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
+        assertEquals("Token格式错误", exchange.getResponse().getHeaders().getFirst("X-Error-Message"));
+        verify(chain, never()).filter(any());
+    }
+
+    @Test
+    @DisplayName("Destroy - should release filter resources")
+    void testDestroyReleasesResources() {
+        assertDoesNotThrow(filter::destroy);
     }
 }

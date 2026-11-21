@@ -16,14 +16,15 @@
 package com.easywing.platform.auth.service;
 
 import com.easywing.platform.auth.domain.AuthUser;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.util.StringUtils;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-
+import com.easywing.platform.core.exception.BizException;
+import com.easywing.platform.core.exception.ErrorCode;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 /**
  * 用户详情服务
@@ -50,7 +51,7 @@ public class UserDetailsService {
     public AuthUser loadByUsername(String username) {
         AuthUser user = usersByUsername.get(username);
         if (user == null) {
-            throw new IllegalArgumentException("User not found: " + username);
+            throw new BizException(ErrorCode.INVALID_CREDENTIALS, "用户名或密码错误");
         }
         return user;
     }
@@ -58,7 +59,7 @@ public class UserDetailsService {
     public AuthUser loadById(String userId) {
         AuthUser user = usersById.get(userId);
         if (user == null) {
-            throw new IllegalArgumentException("User not found by id: " + userId);
+            throw new BizException(ErrorCode.INVALID_CREDENTIALS, "用户名或密码错误");
         }
         return user;
     }
@@ -68,10 +69,8 @@ public class UserDetailsService {
     }
 
     private void initDefaultUsers() {
-        register("1", "admin", resolvePassword("ADMIN_PASSWORD"),
-                List.of("ROLE_ADMIN", "ROLE_USER"), "default");
-        register("2", "user", resolvePassword("USER_PASSWORD"),
-                List.of("ROLE_USER"), "default");
+        register("1", "admin", resolvePassword("ADMIN_PASSWORD"), List.of("ROLE_ADMIN", "ROLE_USER"), "default");
+        register("2", "user", resolvePassword("USER_PASSWORD"), List.of("ROLE_USER"), "default");
     }
 
     /**
@@ -84,9 +83,14 @@ public class UserDetailsService {
         if (StringUtils.hasText(configured)) {
             return configured;
         }
-        String generated = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12) + "A1!";
-        log.warn("Environment variable {} is not set. Generated a random password for the built-in"
-                + " account: {}. Set {} to a strong password before production.", envName, generated, envName);
+        String generated =
+                java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12) + "A1!";
+        log.warn(
+                "Environment variable {} is not set. Generated a random password for the built-in"
+                        + " account: {}. Set {} to a strong password before production.",
+                envName,
+                generated,
+                envName);
         return generated;
     }
 

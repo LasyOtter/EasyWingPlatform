@@ -8,7 +8,9 @@ import com.easywing.platform.system.domain.entity.SysRole;
 import com.easywing.platform.system.enums.DataScope;
 import com.easywing.platform.system.mapper.SysDeptMapper;
 import com.easywing.platform.system.mapper.SysRoleMapper;
-
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,10 +24,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
 
 /**
  * SystemDataScopeHandler 单元测试
@@ -79,7 +77,9 @@ class SystemDataScopeHandlerTest {
 
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(jwt);
-        doReturn(Collections.singletonList(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))).when(auth).getAuthorities();
+        doReturn(Collections.singletonList(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN")))
+                .when(auth)
+                .getAuthorities();
 
         SecurityContext context = mock(SecurityContext.class);
         when(context.getAuthentication()).thenReturn(auth);
@@ -106,7 +106,9 @@ class SystemDataScopeHandlerTest {
 
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(jwt);
-        doReturn(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))).when(auth).getAuthorities();
+        doReturn(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")))
+                .when(auth)
+                .getAuthorities();
 
         SecurityContext context = mock(SecurityContext.class);
         when(context.getAuthentication()).thenReturn(auth);
@@ -137,7 +139,9 @@ class SystemDataScopeHandlerTest {
 
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(jwt);
-        doReturn(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))).when(auth).getAuthorities();
+        doReturn(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")))
+                .when(auth)
+                .getAuthorities();
 
         SecurityContext context = mock(SecurityContext.class);
         when(context.getAuthentication()).thenReturn(auth);
@@ -168,7 +172,9 @@ class SystemDataScopeHandlerTest {
 
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(jwt);
-        doReturn(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))).when(auth).getAuthorities();
+        doReturn(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")))
+                .when(auth)
+                .getAuthorities();
 
         SecurityContext context = mock(SecurityContext.class);
         when(context.getAuthentication()).thenReturn(auth);
@@ -200,7 +206,9 @@ class SystemDataScopeHandlerTest {
 
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(jwt);
-        doReturn(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))).when(auth).getAuthorities();
+        doReturn(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")))
+                .when(auth)
+                .getAuthorities();
 
         SecurityContext context = mock(SecurityContext.class);
         when(context.getAuthentication()).thenReturn(auth);
@@ -232,7 +240,9 @@ class SystemDataScopeHandlerTest {
 
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(jwt);
-        doReturn(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))).when(auth).getAuthorities();
+        doReturn(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")))
+                .when(auth)
+                .getAuthorities();
 
         SecurityContext context = mock(SecurityContext.class);
         when(context.getAuthentication()).thenReturn(auth);
@@ -259,7 +269,9 @@ class SystemDataScopeHandlerTest {
 
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(jwt);
-        doReturn(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))).when(auth).getAuthorities();
+        doReturn(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")))
+                .when(auth)
+                .getAuthorities();
 
         SecurityContext context = mock(SecurityContext.class);
         when(context.getAuthentication()).thenReturn(auth);

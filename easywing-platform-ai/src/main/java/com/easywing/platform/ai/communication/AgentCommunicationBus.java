@@ -1,5 +1,7 @@
 package com.easywing.platform.ai.communication;
 
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,9 +11,6 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Agent 间通信协议 - 支持 Agent 之间的消息传递和协作
@@ -56,13 +55,12 @@ public class AgentCommunicationBus {
      * 发送点对点消息
      */
     public Mono<MessageReceipt> sendMessage(AgentMessage message) {
-        log.debug("Sending message from {} to {}: {}",
-                message.getSenderId(), message.getReceiverId(), message.getType());
+        log.debug(
+                "Sending message from {} to {}: {}", message.getSenderId(), message.getReceiverId(), message.getType());
 
         // 验证接收者存在
         if (!channels.containsKey(message.getReceiverId())) {
-            return Mono.error(new IllegalArgumentException(
-                    "Receiver not found: " + message.getReceiverId()));
+            return Mono.error(new IllegalArgumentException("Receiver not found: " + message.getReceiverId()));
         }
 
         // 设置时间戳和ID
@@ -145,8 +143,7 @@ public class AgentCommunicationBus {
                 .timeout(java.time.Duration.ofMillis(timeoutMs));
 
         // 发送请求
-        return sendMessage(request)
-                .then(responseMono);
+        return sendMessage(request).then(responseMono);
     }
 
     /**
@@ -178,9 +175,7 @@ public class AgentCommunicationBus {
      * 获取在线 Agent 列表
      */
     public List<AgentInfo> getOnlineAgents() {
-        return channels.values().stream()
-                .map(AgentChannel::getInfo)
-                .toList();
+        return channels.values().stream().map(AgentChannel::getInfo).toList();
     }
 
     /**
@@ -210,10 +205,8 @@ public class AgentCommunicationBus {
     public List<AgentMessage> getConversationHistory(String agentId1, String agentId2, int limit) {
         synchronized (messageHistory) {
             return messageHistory.stream()
-                    .filter(msg ->
-                            (agentId1.equals(msg.getSenderId()) && agentId2.equals(msg.getReceiverId())) ||
-                            (agentId2.equals(msg.getSenderId()) && agentId1.equals(msg.getReceiverId()))
-                    )
+                    .filter(msg -> (agentId1.equals(msg.getSenderId()) && agentId2.equals(msg.getReceiverId()))
+                            || (agentId2.equals(msg.getSenderId()) && agentId1.equals(msg.getReceiverId())))
                     .sorted(Comparator.comparingLong(AgentMessage::getTimestamp).reversed())
                     .limit(limit)
                     .toList();
@@ -306,22 +299,25 @@ public class AgentCommunicationBus {
     }
 
     public enum MessageType {
-        REQUEST,        // 请求
-        RESPONSE,       // 响应
-        NOTIFICATION,   // 通知
-        COMMAND,        // 命令
-        EVENT,          // 事件
-        DATA            // 数据传输
+        REQUEST, // 请求
+        RESPONSE, // 响应
+        NOTIFICATION, // 通知
+        COMMAND, // 命令
+        EVENT, // 事件
+        DATA // 数据传输
     }
 
     public enum MessagePriority {
-        LOW, NORMAL, HIGH, URGENT
+        LOW,
+        NORMAL,
+        HIGH,
+        URGENT
     }
 
     public enum DeliveryStatus {
-        PENDING,        // 待发送
-        DELIVERED,      // 已送达
-        FAILED,         // 失败
-        TIMEOUT         // 超时
+        PENDING, // 待发送
+        DELIVERED, // 已送达
+        FAILED, // 失败
+        TIMEOUT // 超时
     }
 }

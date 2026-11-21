@@ -16,12 +16,11 @@
 package com.easywing.platform.gateway.filter.logging;
 
 import com.easywing.platform.gateway.properties.LoggingProperties;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 敏感信息脱敏转换器
@@ -52,7 +51,7 @@ public class DesensitizeConverter {
     private static final Pattern ID_CARD_PATTERN = Pattern.compile("(\\d{6})\\d{8}(\\d{4})");
     private static final Pattern BANK_CARD_PATTERN = Pattern.compile("(\\d{4})\\d+(\\d{4})");
     private static final Pattern EMAIL_PATTERN = Pattern.compile("(\\w{2})\\w+(@\\w+\\.\\w+)");
-    
+
     private static final String MOBILE_REPLACEMENT = "$1****$2";
     private static final String ID_CARD_REPLACEMENT = "$1********$2";
     private static final String BANK_CARD_REPLACEMENT = "$1****$2";
@@ -65,7 +64,7 @@ public class DesensitizeConverter {
 
     public DesensitizeConverter(LoggingProperties properties) {
         this.enabled = properties.isDesensitize();
-        
+
         if (enabled) {
             initFieldPatterns(properties);
         }
@@ -78,7 +77,7 @@ public class DesensitizeConverter {
             }
             fieldTypes.put(pattern.getField().toLowerCase(), pattern.getType());
         }
-        
+
         addDefaultPatterns();
     }
 
@@ -123,14 +122,14 @@ public class DesensitizeConverter {
         if (!enabled || content == null || content.isEmpty()) {
             return content;
         }
-        
+
         String result = content;
-        
+
         result = ID_CARD_PATTERN.matcher(result).replaceAll(ID_CARD_REPLACEMENT);
         result = MOBILE_PATTERN.matcher(result).replaceAll(MOBILE_REPLACEMENT);
         result = BANK_CARD_PATTERN.matcher(result).replaceAll(BANK_CARD_REPLACEMENT);
         result = EMAIL_PATTERN.matcher(result).replaceAll(EMAIL_REPLACEMENT);
-        
+
         return result;
     }
 
@@ -138,15 +137,15 @@ public class DesensitizeConverter {
         if (!enabled || value == null || value.isEmpty()) {
             return value;
         }
-        
+
         String lowerFieldName = fieldName.toLowerCase();
-        
+
         if (!fieldTypes.containsKey(lowerFieldName)) {
             return value;
         }
-        
+
         LoggingProperties.DesensitizeType type = fieldTypes.get(lowerFieldName);
-        
+
         return switch (type) {
             case FULL -> FULL_MASK;
             case MASK -> {
@@ -176,32 +175,24 @@ public class DesensitizeConverter {
         if (!enabled || json == null || json.isEmpty()) {
             return json;
         }
-        
+
         String result = json;
-        
+
         for (Map.Entry<String, Pattern> entry : fieldPatterns.entrySet()) {
             String field = entry.getKey();
-            Pattern fieldPattern = Pattern.compile(
-                    "\"(" + field + ")\"\\s*:\\s*\"([^\"]+)\"",
-                    Pattern.CASE_INSENSITIVE
-            );
-            result = fieldPattern.matcher(result).replaceAll(
-                    "\"$1\":\"******\""
-            );
+            Pattern fieldPattern =
+                    Pattern.compile("\"(" + field + ")\"\\s*:\\s*\"([^\"]+)\"", Pattern.CASE_INSENSITIVE);
+            result = fieldPattern.matcher(result).replaceAll("\"$1\":\"******\"");
         }
-        
+
         for (String sensitiveField : fieldTypes.keySet()) {
             if (!fieldPatterns.containsKey(sensitiveField)) {
-                Pattern fieldPattern = Pattern.compile(
-                        "\"(" + sensitiveField + ")\"\\s*:\\s*\"([^\"]+)\"",
-                        Pattern.CASE_INSENSITIVE
-                );
-                result = fieldPattern.matcher(result).replaceAll(
-                        "\"$1\":\"******\""
-                );
+                Pattern fieldPattern =
+                        Pattern.compile("\"(" + sensitiveField + ")\"\\s*:\\s*\"([^\"]+)\"", Pattern.CASE_INSENSITIVE);
+                result = fieldPattern.matcher(result).replaceAll("\"$1\":\"******\"");
             }
         }
-        
+
         return result;
     }
 }

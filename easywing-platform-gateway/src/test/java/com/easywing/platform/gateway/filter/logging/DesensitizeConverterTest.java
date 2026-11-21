@@ -15,14 +15,13 @@
  */
 package com.easywing.platform.gateway.filter.logging;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.easywing.platform.gateway.properties.LoggingProperties;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * 脱敏转换器测试
@@ -40,7 +39,7 @@ class DesensitizeConverterTest {
         properties = new LoggingProperties();
         properties.setDesensitize(true);
         properties.setDesensitizePatterns(List.of());
-        
+
         converter = new DesensitizeConverter(properties);
     }
 
@@ -98,7 +97,7 @@ class DesensitizeConverterTest {
     void testJsonDesensitization() {
         String json = "{\"username\":\"test\",\"password\":\"secret123\",\"mobile\":\"13812345678\"}";
         String result = converter.desensitizeJson(json);
-        
+
         assertTrue(result.contains("\"password\":\"******\""));
         assertTrue(result.contains("\"mobile\":\"******\""));
         assertTrue(result.contains("\"username\":\"test\""));
@@ -124,19 +123,20 @@ class DesensitizeConverterTest {
         LoggingProperties disabledProps = new LoggingProperties();
         disabledProps.setDesensitize(false);
         DesensitizeConverter disabledConverter = new DesensitizeConverter(disabledProps);
-        
+
         String input = "手机号13812345678测试";
         String result = disabledConverter.desensitize(input);
-        
+
         assertEquals(input, result);
     }
 
     @Test
     @DisplayName("Complex JSON desensitization")
     void testComplexJsonDesensitization() {
-        String json = "{\"user\":{\"name\":\"张三\",\"idCard\":\"110101199001011234\",\"contacts\":[{\"type\":\"mobile\",\"value\":\"13812345678\"}]}}";
+        String json =
+                "{\"user\":{\"name\":\"张三\",\"idCard\":\"110101199001011234\",\"contacts\":[{\"type\":\"mobile\",\"value\":\"13812345678\"}]}}";
         String result = converter.desensitizeJson(json);
-        
+
         assertTrue(result.contains("\"idCard\":\"******\""));
         assertTrue(result.contains("\"name\":\"张三\""));
     }

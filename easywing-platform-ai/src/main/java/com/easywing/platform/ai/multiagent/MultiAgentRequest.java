@@ -1,11 +1,13 @@
 package com.easywing.platform.ai.multiagent;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
 
 /**
  * 多 Agent 请求
@@ -19,11 +21,13 @@ public class MultiAgentRequest {
     /**
      * Agent ID 列表
      */
+    @NotEmpty
     private List<String> agentIds;
 
     /**
      * 任务描述
      */
+    @NotBlank
     private String task;
 
     /**
@@ -35,6 +39,7 @@ public class MultiAgentRequest {
      * 最大轮次（用于辩论模式）
      */
     @Builder.Default
+    @Min(0)
     private int maxRounds = 3;
 
     /**
@@ -52,5 +57,6 @@ public class MultiAgentRequest {
      * 最大工具调用次数
      */
     @Builder.Default
+    @Min(0)
     private int maxToolCalls = 10;
 }

@@ -15,13 +15,12 @@
  */
 package com.easywing.platform.messaging.core;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for MessageHeaders class
@@ -161,10 +160,8 @@ class MessageHeadersTest {
         headers.set("stringKey", "stringValue");
 
         // When & Then
-        ClassCastException exception = assertThrows(
-            ClassCastException.class,
-            () -> headers.get("stringKey", Integer.class)
-        );
+        ClassCastException exception =
+                assertThrows(ClassCastException.class, () -> headers.get("stringKey", Integer.class));
         assertTrue(exception.getMessage().contains("stringKey"));
         assertTrue(exception.getMessage().contains("Integer"));
     }

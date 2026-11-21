@@ -20,8 +20,6 @@ import static org.mockito.Mockito.*;
 
 import com.easywing.platform.system.domain.vo.LoginUser;
 import com.easywing.platform.system.enums.DataScope;
-
-import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -459,7 +457,9 @@ class SecurityUtilsTest {
 
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(jwt);
-        doReturn(List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))).when(auth).getAuthorities();
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN")))
+                .when(auth)
+                .getAuthorities();
 
         SecurityContext context = mock(SecurityContext.class);
         when(context.getAuthentication()).thenReturn(auth);

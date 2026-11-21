@@ -17,14 +17,13 @@ package com.easywing.platform.cache.endpoint;
 
 import com.easywing.platform.cache.service.CacheStatsService;
 import com.easywing.platform.cache.service.CacheStatsService.CacheStatistics;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Map;
 
 /**
  * 缓存统计端点
@@ -71,31 +70,23 @@ public class CacheStatsEndpoint {
     @GetMapping("/summary")
     public CacheSummary getCacheSummary() {
         Map<String, CacheStatistics> stats = cacheStatsService.getAllCacheStats();
-        
+
         long totalHitCount = 0;
         long totalMissCount = 0;
         long totalSize = 0;
         long totalEvictions = 0;
-        
+
         for (CacheStatistics stat : stats.values()) {
             totalHitCount += stat.hitCount();
             totalMissCount += stat.missCount();
             totalSize += stat.size();
             totalEvictions += stat.evictionCount();
         }
-        
-        double overallHitRate = (totalHitCount + totalMissCount) == 0 
-                ? 0.0 
-                : (double) totalHitCount / (totalHitCount + totalMissCount);
-        
-        return new CacheSummary(
-                stats.size(),
-                totalHitCount,
-                totalMissCount,
-                overallHitRate,
-                totalSize,
-                totalEvictions
-        );
+
+        double overallHitRate =
+                (totalHitCount + totalMissCount) == 0 ? 0.0 : (double) totalHitCount / (totalHitCount + totalMissCount);
+
+        return new CacheSummary(stats.size(), totalHitCount, totalMissCount, overallHitRate, totalSize, totalEvictions);
     }
 
     /**
@@ -107,8 +98,7 @@ public class CacheStatsEndpoint {
             long totalMissCount,
             double overallHitRate,
             long totalSize,
-            long totalEvictions
-    ) {
+            long totalEvictions) {
         /**
          * 获取总请求次数
          */

@@ -1,10 +1,9 @@
 package com.easywing.platform.system.domain.vo;
 
 import com.easywing.platform.system.enums.DataScope;
-import lombok.Data;
-
 import java.io.Serializable;
 import java.util.List;
+import lombok.Data;
 
 /**
  * 登录用户信息

@@ -17,7 +17,6 @@ package com.easywing.platform.data.util;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -30,8 +29,7 @@ import java.util.stream.Collectors;
  */
 public class PageUtils {
 
-    private PageUtils() {
-    }
+    private PageUtils() {}
 
     /**
      * 构建分页对象
@@ -68,9 +66,7 @@ public class PageUtils {
     public static <T, R> Page<R> convert(Page<T> source, Function<T, R> converter) {
         Page<R> target = new Page<>(source.getCurrent(), source.getSize(), source.getTotal());
         if (source.getRecords() != null) {
-            target.setRecords(source.getRecords().stream()
-                    .map(converter)
-                    .collect(Collectors.toList()));
+            target.setRecords(source.getRecords().stream().map(converter).collect(Collectors.toList()));
         }
         return target;
     }
@@ -87,9 +83,7 @@ public class PageUtils {
     public static <T, R> IPage<R> convert(IPage<T> source, Function<T, R> converter) {
         Page<R> target = new Page<>(source.getCurrent(), source.getSize(), source.getTotal());
         if (source.getRecords() != null) {
-            target.setRecords(source.getRecords().stream()
-                    .map(converter)
-                    .collect(Collectors.toList()));
+            target.setRecords(source.getRecords().stream().map(converter).collect(Collectors.toList()));
         }
         return target;
     }

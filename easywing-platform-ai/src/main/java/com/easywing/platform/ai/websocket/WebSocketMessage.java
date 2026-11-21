@@ -35,17 +35,17 @@ public class WebSocketMessage {
      */
     public enum MessageType {
         // 客户端发送
-        EXECUTE,          // 执行 Agent
-        CANCEL,           // 取消执行
-        PING,             // 心跳
-        CONFIGURE,        // 配置更新
+        EXECUTE, // 执行 Agent
+        CANCEL, // 取消执行
+        PING, // 心跳
+        CONFIGURE, // 配置更新
 
         // 服务器发送
-        CONNECTED,        // 连接成功
-        AGENT_EVENT,      // Agent 事件
-        ERROR,            // 错误
-        CANCELLED,        // 已取消
-        PONG,             // 心跳响应
-        CONFIGURED        // 配置已更新
+        CONNECTED, // 连接成功
+        AGENT_EVENT, // Agent 事件
+        ERROR, // 错误
+        CANCELLED, // 已取消
+        PONG, // 心跳响应
+        CONFIGURED // 配置已更新
     }
 }

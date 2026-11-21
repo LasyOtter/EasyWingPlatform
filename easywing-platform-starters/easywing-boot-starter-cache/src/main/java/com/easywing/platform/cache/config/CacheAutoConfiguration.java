@@ -23,9 +23,10 @@ import com.easywing.platform.cache.service.CacheStatsService;
 import com.easywing.platform.cache.service.MultiLevelCacheService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RedissonClient;
 import org.redisson.api.RTopic;
+import org.redisson.api.RedissonClient;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -39,8 +40,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * 缓存自动配置
@@ -70,21 +69,22 @@ public class CacheAutoConfiguration {
     @ConditionalOnProperty(prefix = "easywing.cache", name = "type", havingValue = "multi", matchIfMissing = true)
     public CacheManager localCacheManager(CacheProperties properties) {
         log.info("EasyWing Local Cache Manager (Caffeine) initialized");
-        
+
         CaffeineCacheManager cacheManager = new CaffeineCacheManager();
         Caffeine<Object, Object> caffeine = Caffeine.newBuilder()
                 .initialCapacity(properties.getCaffeine().getInitialCapacity())
                 .maximumSize(properties.getCaffeine().getMaximumSize())
                 .expireAfterWrite(properties.getCaffeine().getExpireAfterWrite().toMillis(), TimeUnit.MILLISECONDS);
-        
+
         if (properties.getCaffeine().getExpireAfterAccess() != null) {
-            caffeine.expireAfterAccess(properties.getCaffeine().getExpireAfterAccess().toMillis(), TimeUnit.MILLISECONDS);
+            caffeine.expireAfterAccess(
+                    properties.getCaffeine().getExpireAfterAccess().toMillis(), TimeUnit.MILLISECONDS);
         }
-        
+
         if (properties.getCaffeine().isRecordStats() && properties.isStatsEnabled()) {
             caffeine.recordStats();
         }
-        
+
         cacheManager.setCaffeine(caffeine);
         return cacheManager;
     }
@@ -97,7 +97,7 @@ public class CacheAutoConfiguration {
     @ConditionalOnProperty(prefix = "easywing.cache", name = "type", havingValue = "caffeine")
     public CacheManager caffeineCacheManager(CacheProperties properties) {
         log.info("EasyWing Caffeine Cache Manager (standalone) initialized");
-        
+
         CaffeineCacheManager cacheManager = new CaffeineCacheManager();
         cacheManager.setCaffeine(Caffeine.newBuilder()
                 .initialCapacity(properties.getCaffeine().getInitialCapacity())
@@ -147,7 +147,8 @@ public class CacheAutoConfiguration {
             ObjectMapper cacheObjectMapper,
             CacheProperties properties) {
         log.info("EasyWing Multi-level Cache Service initialized");
-        return new MultiLevelCacheService(localCacheManager, redisTemplate, redissonClient, cacheObjectMapper, properties);
+        return new MultiLevelCacheService(
+                localCacheManager, redisTemplate, redissonClient, cacheObjectMapper, properties);
     }
 
     /**
@@ -155,7 +156,11 @@ public class CacheAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "easywing.cache", name = "stats-enabled", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(
+            prefix = "easywing.cache",
+            name = "stats-enabled",
+            havingValue = "true",
+            matchIfMissing = true)
     public CacheStatsService cacheStatsService(CacheManager localCacheManager) {
         log.info("EasyWing Cache Stats Service initialized");
         if (localCacheManager instanceof CaffeineCacheManager caffeineCacheManager) {
@@ -197,9 +202,7 @@ public class CacheAutoConfiguration {
     @Bean
     @ConditionalOnProperty(prefix = "easywing.cache", name = "type", havingValue = "multi", matchIfMissing = true)
     public Object cacheTopicSubscription(
-            RedissonClient redissonClient,
-            CacheEvictListener cacheEvictListener,
-            CacheProperties properties) {
+            RedissonClient redissonClient, CacheEvictListener cacheEvictListener, CacheProperties properties) {
         String topicName = properties.getRedis().getCacheTopic();
         RTopic topic = redissonClient.getTopic(topicName);
         topic.addListener(String.class, cacheEvictListener);
@@ -213,9 +216,7 @@ public class CacheAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "easywing.cache", name = "type", havingValue = "multi", matchIfMissing = true)
-    public CacheProtector cacheProtector(
-            RedissonClient redissonClient,
-            StringRedisTemplate redisTemplate) {
+    public CacheProtector cacheProtector(RedissonClient redissonClient, StringRedisTemplate redisTemplate) {
         log.info("EasyWing Cache Protector initialized");
         return new CacheProtector(redissonClient, redisTemplate);
     }

@@ -18,12 +18,11 @@ package com.easywing.platform.data.handler;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.easywing.platform.data.properties.DataProperties;
 import com.easywing.platform.data.tenant.TenantContext;
+import java.time.LocalDateTime;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-
-import java.time.LocalDateTime;
 
 /**
  * 审计字段自动填充处理器
@@ -46,7 +45,9 @@ public class AuditMetaObjectHandler implements MetaObjectHandler {
 
     @Override
     public void insertFill(MetaObject metaObject) {
-        log.debug("Start insert fill for entity: {}", metaObject.getOriginalObject().getClass().getSimpleName());
+        log.debug(
+                "Start insert fill for entity: {}",
+                metaObject.getOriginalObject().getClass().getSimpleName());
         LocalDateTime now = LocalDateTime.now();
 
         // 填充创建时间
@@ -54,24 +55,31 @@ public class AuditMetaObjectHandler implements MetaObjectHandler {
         // 填充更新时间
         this.strictInsertFill(metaObject, dataProperties.getAudit().getUpdateTimeColumn(), LocalDateTime.class, now);
         // 填充创建人
-        this.strictInsertFill(metaObject, dataProperties.getAudit().getCreateByColumn(), String.class, getCurrentUserId());
+        this.strictInsertFill(
+                metaObject, dataProperties.getAudit().getCreateByColumn(), String.class, getCurrentUserId());
         // 填充更新人
-        this.strictInsertFill(metaObject, dataProperties.getAudit().getUpdateByColumn(), String.class, getCurrentUserId());
+        this.strictInsertFill(
+                metaObject, dataProperties.getAudit().getUpdateByColumn(), String.class, getCurrentUserId());
         // 填充逻辑删除标识（0-正常）
         this.strictInsertFill(metaObject, dataProperties.getAudit().getDeletedColumn(), Integer.class, 0);
         // 填充租户ID
         if (dataProperties.isTenantEnabled()) {
-            this.strictInsertFill(metaObject, dataProperties.getAudit().getTenantIdColumn(), Long.class, TenantContext.getTenantId());
+            this.strictInsertFill(
+                    metaObject, dataProperties.getAudit().getTenantIdColumn(), Long.class, TenantContext.getTenantId());
         }
     }
 
     @Override
     public void updateFill(MetaObject metaObject) {
-        log.debug("Start update fill for entity: {}", metaObject.getOriginalObject().getClass().getSimpleName());
+        log.debug(
+                "Start update fill for entity: {}",
+                metaObject.getOriginalObject().getClass().getSimpleName());
         // 填充更新时间
-        this.strictUpdateFill(metaObject, dataProperties.getAudit().getUpdateTimeColumn(), LocalDateTime.class, LocalDateTime.now());
+        this.strictUpdateFill(
+                metaObject, dataProperties.getAudit().getUpdateTimeColumn(), LocalDateTime.class, LocalDateTime.now());
         // 填充更新人
-        this.strictUpdateFill(metaObject, dataProperties.getAudit().getUpdateByColumn(), String.class, getCurrentUserId());
+        this.strictUpdateFill(
+                metaObject, dataProperties.getAudit().getUpdateByColumn(), String.class, getCurrentUserId());
     }
 
     /**
@@ -86,10 +94,13 @@ public class AuditMetaObjectHandler implements MetaObjectHandler {
         try {
             // 方式1: 尝试从 Spring Security 上下文获取
             org.springframework.security.core.Authentication authentication =
-                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                    org.springframework.security.core.context.SecurityContextHolder.getContext()
+                            .getAuthentication();
 
-            if (authentication != null && authentication.isAuthenticated()
-                    && !(authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
+            if (authentication != null
+                    && authentication.isAuthenticated()
+                    && !(authentication
+                            instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
                 // 优先从 Principal 获取用户ID
                 Object principal = authentication.getPrincipal();
                 if (principal instanceof org.springframework.security.core.userdetails.UserDetails userDetails) {
@@ -103,7 +114,10 @@ public class AuditMetaObjectHandler implements MetaObjectHandler {
             org.springframework.web.context.request.RequestAttributes requestAttributes =
                     org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
 
-            if (requestAttributes instanceof org.springframework.web.context.request.ServletRequestAttributes servletRequestAttributes) {
+            if (requestAttributes
+                    instanceof
+                    org.springframework.web.context.request.ServletRequestAttributes
+                    servletRequestAttributes) {
                 jakarta.servlet.http.HttpServletRequest request = servletRequestAttributes.getRequest();
                 String userId = request.getHeader("X-User-Id");
                 if (userId != null && !userId.isEmpty()) {

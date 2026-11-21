@@ -7,7 +7,10 @@ import java.lang.annotation.*;
 @Documented
 public @interface Skill {
     String name();
+
     String description() default "";
+
     String category() default "custom";
+
     int priority() default 0;
 }

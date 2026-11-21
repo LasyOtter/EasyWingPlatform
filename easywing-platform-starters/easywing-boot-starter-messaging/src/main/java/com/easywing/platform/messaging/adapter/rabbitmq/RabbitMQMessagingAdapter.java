@@ -22,11 +22,10 @@ import com.easywing.platform.messaging.core.MessageListener;
 import com.easywing.platform.messaging.core.MessagingException;
 import com.easywing.platform.messaging.core.SendCallback;
 import com.easywing.platform.messaging.core.SendResult;
-import org.springframework.amqp.rabbit.connection.CorrelationData;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
 public class RabbitMQMessagingAdapter implements MessagingAdapter {
 
@@ -34,8 +33,7 @@ public class RabbitMQMessagingAdapter implements MessagingAdapter {
     private final MessageConverter converter;
     private final Map<String, MessageListener<?>> listeners;
 
-    public RabbitMQMessagingAdapter(RabbitTemplate rabbitTemplate,
-                                     MessageConverter converter) {
+    public RabbitMQMessagingAdapter(RabbitTemplate rabbitTemplate, MessageConverter converter) {
         this.rabbitTemplate = rabbitTemplate;
         this.converter = converter;
         this.listeners = new ConcurrentHashMap<>();
@@ -73,12 +71,14 @@ public class RabbitMQMessagingAdapter implements MessagingAdapter {
 
             org.springframework.amqp.core.Message amqpMessage = createAmqpMessage(message, payload);
 
-            CorrelationData correlationData = new CorrelationData(message.getHeaders().getId());
+            CorrelationData correlationData =
+                    new CorrelationData(message.getHeaders().getId());
             correlationData.getFuture().whenComplete((result, ex) -> {
                 if (ex != null) {
                     callback.onFailure(new MessagingException("RabbitMQ async send failed", ex));
                 } else if (result != null && result.isAck()) {
-                    callback.onSuccess(SendResult.success(destination, message.getHeaders().getId()));
+                    callback.onSuccess(
+                            SendResult.success(destination, message.getHeaders().getId()));
                 } else {
                     callback.onFailure(new MessagingException("Message not acknowledged"));
                 }
@@ -105,12 +105,13 @@ public class RabbitMQMessagingAdapter implements MessagingAdapter {
             String[] parts = destination.split("/", 2);
             return parts;
         }
-        return new String[]{"", destination};
+        return new String[] {"", destination};
     }
 
     private org.springframework.amqp.core.Message createAmqpMessage(Message<?> message, byte[] payload) {
-        org.springframework.amqp.core.MessageProperties properties = new org.springframework.amqp.core.MessageProperties();
-        
+        org.springframework.amqp.core.MessageProperties properties =
+                new org.springframework.amqp.core.MessageProperties();
+
         message.getHeaders().forEach((k, v) -> {
             if (v != null) {
                 properties.setHeader(k, v);

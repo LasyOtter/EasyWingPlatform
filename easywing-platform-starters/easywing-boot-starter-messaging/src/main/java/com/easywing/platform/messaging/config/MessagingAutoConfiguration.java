@@ -19,6 +19,8 @@ import com.easywing.platform.messaging.annotation.DelayMessage;
 import com.easywing.platform.messaging.converter.JsonMessageConverter;
 import com.easywing.platform.messaging.converter.MessageConverter;
 import com.easywing.platform.messaging.processor.MessageListenerBeanPostProcessor;
+import java.util.HashMap;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -26,9 +28,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @AutoConfiguration
 @ConditionalOnProperty(prefix = "easywing.messaging", name = "enabled", havingValue = "true", matchIfMissing = true)
@@ -89,8 +88,10 @@ public class MessagingAutoConfiguration {
 
         protected boolean isSpringCloudStreamAvailable() {
             try {
-                Class.forName("org.springframework.cloud.stream.function.StreamBridge", false, 
-                    getClass().getClassLoader());
+                Class.forName(
+                        "org.springframework.cloud.stream.function.StreamBridge",
+                        false,
+                        getClass().getClassLoader());
                 return true;
             } catch (ClassNotFoundException e) {
                 return false;
@@ -99,8 +100,10 @@ public class MessagingAutoConfiguration {
 
         protected boolean isRocketMQAvailable() {
             try {
-                Class.forName("org.apache.rocketmq.spring.core.RocketMQTemplate", false, 
-                    getClass().getClassLoader());
+                Class.forName(
+                        "org.apache.rocketmq.spring.core.RocketMQTemplate",
+                        false,
+                        getClass().getClassLoader());
                 return true;
             } catch (ClassNotFoundException e) {
                 return false;
@@ -130,11 +133,12 @@ public class MessagingAutoConfiguration {
             try {
                 Class<?> rocketMQTemplateClass = Class.forName("org.apache.rocketmq.spring.core.RocketMQTemplate");
                 Object rocketMQTemplate = applicationContext.getBean(rocketMQTemplateClass);
-                
+
                 Object message = createRocketMessage(payload, headers);
-                java.lang.reflect.Method method = rocketMQTemplateClass.getMethod("send", String.class, message.getClass());
+                java.lang.reflect.Method method =
+                        rocketMQTemplateClass.getMethod("send", String.class, message.getClass());
                 Object result = method.invoke(rocketMQTemplate, destination, message);
-                
+
                 return result != null;
             } catch (Exception e) {
                 log.error("Failed to send message via RocketMQ", e);
@@ -146,10 +150,10 @@ public class MessagingAutoConfiguration {
             Class<?> builderClass = Class.forName("org.springframework.messaging.support.GenericMessageBuilder");
             java.lang.reflect.Method createPayload = builderClass.getMethod("createPayload", Object.class);
             Object builder = createPayload.invoke(null, payload);
-            
+
             java.lang.reflect.Method copyHeaders = builderClass.getMethod("copyHeaders", Map.class);
             copyHeaders.invoke(builder, headers);
-            
+
             java.lang.reflect.Method build = builderClass.getMethod("build");
             return build.invoke(builder);
         }
@@ -187,13 +191,14 @@ public class MessagingAutoConfiguration {
             try {
                 Class<?> rocketMQTemplateClass = Class.forName("org.apache.rocketmq.spring.core.RocketMQTemplate");
                 Object rocketMQTemplate = applicationContext.getBean(rocketMQTemplateClass);
-                
+
                 businessLogic.run();
-                
+
                 Object message = createRocketMessage(payload, new HashMap<>());
-                java.lang.reflect.Method method = rocketMQTemplateClass.getMethod("sendMessageInTransaction", String.class, message.getClass(), Object.class);
+                java.lang.reflect.Method method = rocketMQTemplateClass.getMethod(
+                        "sendMessageInTransaction", String.class, message.getClass(), Object.class);
                 Object result = method.invoke(rocketMQTemplate, destination, message, null);
-                
+
                 return result != null;
             } catch (Exception e) {
                 log.error("Failed to send transaction message via RocketMQ", e);
@@ -206,14 +211,15 @@ public class MessagingAutoConfiguration {
             try {
                 Class<?> rocketMQTemplateClass = Class.forName("org.apache.rocketmq.spring.core.RocketMQTemplate");
                 Object rocketMQTemplate = applicationContext.getBean(rocketMQTemplateClass);
-                
+
                 Map<String, Object> headers = new HashMap<>();
                 headers.put("DELAY", delayLevel);
-                
+
                 Object message = createRocketMessage(payload, headers);
-                java.lang.reflect.Method method = rocketMQTemplateClass.getMethod("syncSend", String.class, message.getClass(), long.class, int.class);
+                java.lang.reflect.Method method = rocketMQTemplateClass.getMethod(
+                        "syncSend", String.class, message.getClass(), long.class, int.class);
                 Object result = method.invoke(rocketMQTemplate, destination, message, 3000L, delayLevel);
-                
+
                 return result != null;
             } catch (Exception e) {
                 log.error("Failed to send delay message via RocketMQ", e);

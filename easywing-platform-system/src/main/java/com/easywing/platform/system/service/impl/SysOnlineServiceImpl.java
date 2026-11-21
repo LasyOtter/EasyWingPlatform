@@ -3,14 +3,13 @@ package com.easywing.platform.system.service.impl;
 import cn.hutool.core.util.StrUtil;
 import com.easywing.platform.system.domain.vo.SysOnlineVO;
 import com.easywing.platform.system.service.SysOnlineService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +35,9 @@ public class SysOnlineServiceImpl implements SysOnlineService {
     }
 
     @Override
-    public void forceLogout(String sessionId) { redisTemplate.delete(ONLINE_KEY_PREFIX + sessionId); }
+    public void forceLogout(String sessionId) {
+        redisTemplate.delete(ONLINE_KEY_PREFIX + sessionId);
+    }
 
     @Override
     public long getOnlineCount() {

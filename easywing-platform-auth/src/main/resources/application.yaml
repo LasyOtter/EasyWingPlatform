@@ -10,16 +10,13 @@ spring:
     name: auth-service
   cloud:
     nacos:
-      discovery:
+      discovery: &nacos
         enabled: false
         server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
         namespace: ${NACOS_NAMESPACE:}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
       config:
-        enabled: false
-        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
-        namespace: ${NACOS_NAMESPACE:}
-        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        <<: *nacos
         file-extension: yaml
   data:
     redis:

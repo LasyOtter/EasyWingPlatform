@@ -38,15 +38,15 @@ public class AgentStreamEvent {
      * 事件类型枚举
      */
     public enum EventType {
-        START,              // 开始执行
-        THINKING,           // 思考中
-        TOOL_CALL_START,    // 工具调用开始
-        TOOL_CALL_END,      // 工具调用结束
-        OBSERVATION,        // 观察结果
-        ANSWER_CHUNK,       // 答案片段（流式输出）
-        FINAL_ANSWER,       // 最终答案
-        ERROR,              // 错误
-        COMPLETE            // 完成
+        START, // 开始执行
+        THINKING, // 思考中
+        TOOL_CALL_START, // 工具调用开始
+        TOOL_CALL_END, // 工具调用结束
+        OBSERVATION, // 观察结果
+        ANSWER_CHUNK, // 答案片段（流式输出）
+        FINAL_ANSWER, // 最终答案
+        ERROR, // 错误
+        COMPLETE // 完成
     }
 
     /**

@@ -61,8 +61,5 @@ public class FeignProperties {
     /**
      * 需要传递的请求头列表
      */
-    private String[] propagateHeaderNames = {
-        "X-Request-Id", "X-Trace-Id", "X-Span-Id",
-        "Authorization", "X-Tenant-Id"
-    };
+    private String[] propagateHeaderNames = {"X-Request-Id", "X-Trace-Id", "X-Span-Id", "Authorization", "X-Tenant-Id"};
 }

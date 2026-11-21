@@ -19,6 +19,12 @@ import com.baomidou.mybatisplus.core.toolkit.PluginUtils;
 import com.easywing.platform.data.interceptor.DataScopeInterceptor.DataScopeInfo;
 import com.easywing.platform.data.interceptor.DataScopeInterceptor.DataScopeType;
 import com.easywing.platform.data.properties.DataProperties;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.JdbcParameter;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
@@ -36,13 +42,6 @@ import net.sf.jsqlparser.statement.update.Update;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.mapping.ParameterMapping;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * 数据权限SQL解析器。
@@ -125,9 +124,8 @@ public class DataScopeSqlParser {
         if (deptIds.isEmpty()) {
             return null;
         }
-        List<Long> sortedDeptIds = deptIds.stream()
-                .sorted(Comparator.naturalOrder())
-                .collect(Collectors.toList());
+        List<Long> sortedDeptIds =
+                deptIds.stream().sorted(Comparator.naturalOrder()).collect(Collectors.toList());
         return buildInFilter(getDeptIdColumn(), sortedDeptIds);
     }
 
@@ -151,9 +149,8 @@ public class DataScopeSqlParser {
     }
 
     private DataScopeFilter buildInFilter(Column column, List<Long> values) {
-        List<Expression> expressions = values.stream()
-                .map(value -> new JdbcParameter())
-                .collect(Collectors.toList());
+        List<Expression> expressions =
+                values.stream().map(value -> new JdbcParameter()).collect(Collectors.toList());
         ExpressionList expressionList = new ParenthesedExpressionList(expressions);
         return new DataScopeFilter(new InExpression(column, expressionList), new ArrayList<>(values));
     }
@@ -234,13 +231,13 @@ public class DataScopeSqlParser {
         for (int index = 0; index < parameters.size(); index++) {
             Object value = parameters.get(index);
             String parameterName = PARAMETER_PREFIX + (startIndex + index);
-            ParameterMapping mapping = new ParameterMapping.Builder(mappedStatement.getConfiguration(),
-                    parameterName, value.getClass()).build();
+            ParameterMapping mapping = new ParameterMapping.Builder(
+                            mappedStatement.getConfiguration(), parameterName, value.getClass())
+                    .build();
             parameterMappings.add(mapping);
             boundSql.setAdditionalParameter(parameterName, value);
         }
     }
 
-    private record DataScopeFilter(Expression filter, List<Object> parameters) {
-    }
+    private record DataScopeFilter(Expression filter, List<Object> parameters) {}
 }

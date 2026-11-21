@@ -39,7 +39,7 @@ public class CacheEvictListener implements MessageListener<String> {
     @Override
     public void onMessage(CharSequence channel, String message) {
         log.info("Received cache evict message: channel={}, message={}", channel, message);
-        
+
         try {
             processEvictMessage(message);
         } catch (Exception e) {
@@ -61,25 +61,25 @@ public class CacheEvictListener implements MessageListener<String> {
             log.warn("Received empty cache evict message");
             return;
         }
-        
+
         // 解析消息：cacheName:cacheKey 或 cacheName:*
         int colonIndex = message.indexOf(':');
         String cacheName;
         String cacheKey = null;
-        
+
         if (colonIndex > 0) {
             cacheName = message.substring(0, colonIndex);
             cacheKey = message.substring(colonIndex + 1);
         } else {
             cacheName = message;
         }
-        
+
         Cache cache = localCacheManager.getCache(cacheName);
         if (cache == null) {
             log.debug("Cache not found: {}", cacheName);
             return;
         }
-        
+
         // 清理本地缓存
         if (cacheKey == null || "*".equals(cacheKey) || cacheKey.isEmpty()) {
             cache.clear();

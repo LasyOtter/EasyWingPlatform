@@ -16,8 +16,8 @@
 package com.easywing.platform.ai.starter.config;
 
 import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
+import dev.langchain4j.model.openai.OpenAiChatModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -75,7 +75,7 @@ public class ChatModelAutoConfiguration {
         AiProperties.ChatModel.Qwen config = properties.getChatModel().getQwen();
         log.info("Creating Qwen ChatModel with model: {}", config.getModelName());
 
-        return  OpenAiChatModel.builder()
+        return OpenAiChatModel.builder()
                 .apiKey(config.getApiKey())
                 .modelName(config.getModelName())
                 .temperature(config.getTemperature())

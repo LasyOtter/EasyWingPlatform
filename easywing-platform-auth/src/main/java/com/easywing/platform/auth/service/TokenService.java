@@ -19,6 +19,9 @@ import com.easywing.platform.auth.config.AuthProperties;
 import com.easywing.platform.auth.domain.AuthUser;
 import com.easywing.platform.auth.dto.TokenResponse;
 import com.easywing.platform.auth.metrics.AuthMetrics;
+import com.easywing.platform.core.exception.BizException;
+import com.easywing.platform.core.exception.ErrorCode;
+import com.easywing.platform.core.exception.SystemException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
@@ -27,16 +30,15 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import io.micrometer.core.instrument.Timer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Service;
-
 import java.text.ParseException;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Set;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Service;
 
 /**
  * JWT令牌服务
@@ -66,10 +68,12 @@ public class TokenService {
     private final UserDetailsService userDetailsService;
     private final AuthMetrics authMetrics;
 
-    public TokenService(AuthProperties properties, RSAKey rsaKey,
-                        StringRedisTemplate redisTemplate,
-                        UserDetailsService userDetailsService,
-                        AuthMetrics authMetrics) {
+    public TokenService(
+            AuthProperties properties,
+            RSAKey rsaKey,
+            StringRedisTemplate redisTemplate,
+            UserDetailsService userDetailsService,
+            AuthMetrics authMetrics) {
         this.properties = properties;
         this.rsaKey = rsaKey;
         this.redisTemplate = redisTemplate;
@@ -80,8 +84,14 @@ public class TokenService {
     public TokenResponse issueTokenPair(AuthUser user) {
         Timer.Sample sample = authMetrics.startTokenIssuance();
         try {
-            String accessToken = buildToken(user, TOKEN_TYPE_ACCESS, properties.getJwt().getAccessTokenTtl().getSeconds());
-            String refreshToken = buildToken(user, TOKEN_TYPE_REFRESH, properties.getJwt().getRefreshTokenTtl().getSeconds());
+            String accessToken = buildToken(
+                    user,
+                    TOKEN_TYPE_ACCESS,
+                    properties.getJwt().getAccessTokenTtl().getSeconds());
+            String refreshToken = buildToken(
+                    user,
+                    TOKEN_TYPE_REFRESH,
+                    properties.getJwt().getRefreshTokenTtl().getSeconds());
 
             addTokenToUserSet(user.getUserId(), accessToken);
             addTokenToUserSet(user.getUserId(), refreshToken);
@@ -89,7 +99,10 @@ public class TokenService {
             authMetrics.recordTokenIssuance(sample, "PAIR");
             authMetrics.recordLoginSuccess(user.getUsername(), "PASSWORD");
 
-            return new TokenResponse(accessToken, refreshToken, properties.getJwt().getAccessTokenTtl().getSeconds());
+            return new TokenResponse(
+                    accessToken,
+                    refreshToken,
+                    properties.getJwt().getAccessTokenTtl().getSeconds());
         } catch (Exception e) {
             authMetrics.recordLoginFailure(user.getUsername(), "TOKEN_BUILD_ERROR");
             throw e;
@@ -101,18 +114,20 @@ public class TokenService {
         try {
             JWTClaimsSet claims = jwt.getJWTClaimsSet();
             if (!TOKEN_TYPE_REFRESH.equals(claims.getStringClaim("token_type"))) {
-                throw new IllegalArgumentException("Not a refresh token");
+                throw new BizException(ErrorCode.INVALID_CREDENTIALS, "不是有效的刷新令牌");
             }
             if (isBlacklisted(rawRefreshToken)) {
-                throw new IllegalArgumentException("Refresh token has been revoked");
+                throw new BizException(ErrorCode.TOKEN_INVALID, "刷新令牌已被吊销");
             }
             String subject = claims.getSubject();
             AuthUser user = userDetailsService.loadById(subject);
             blacklist(rawRefreshToken, claims.getExpirationTime().toInstant());
             return issueTokenPair(user);
+        } catch (BizException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Refresh token validation failed", e);
-            throw new IllegalArgumentException("Invalid or expired refresh token");
+            throw new BizException(ErrorCode.TOKEN_EXPIRED, "刷新令牌无效或已过期");
         }
     }
 
@@ -127,7 +142,7 @@ public class TokenService {
             log.debug("Token revoked: jti={}, userId={}", jti, userId);
         } catch (Exception e) {
             log.error("Failed to revoke token", e);
-            throw new IllegalArgumentException("Failed to revoke token");
+            throw new BizException(ErrorCode.SYSTEM_ERROR, "令牌吊销失败");
         }
     }
 
@@ -136,19 +151,19 @@ public class TokenService {
     }
 
     /**
-      * 从令牌中解析用户ID
-      * <p>
-      * 用于让客户端只能操作自己的令牌，避免通过请求头伪造 userId 越权撤销他人会话。
-      *
-      * @param rawToken 已签名令牌
-      * @return 令牌 subject（用户ID）
-      */
+     * 从令牌中解析用户ID
+     * <p>
+     * 用于让客户端只能操作自己的令牌，避免通过请求头伪造 userId 越权撤销他人会话。
+     *
+     * @param rawToken 已签名令牌
+     * @return 令牌 subject（用户ID）
+     */
     public String resolveUserId(String rawToken) {
         try {
             SignedJWT jwt = parseAndValidate(rawToken);
             return jwt.getJWTClaimsSet().getSubject();
         } catch (ParseException e) {
-            throw new IllegalArgumentException("Invalid token", e);
+            throw new BizException(ErrorCode.TOKEN_INVALID, "无效的令牌", e);
         }
     }
 
@@ -166,7 +181,8 @@ public class TokenService {
             for (String token : tokens) {
                 try {
                     SignedJWT jwt = SignedJWT.parse(token);
-                    Instant expiresAt = jwt.getJWTClaimsSet().getExpirationTime().toInstant();
+                    Instant expiresAt =
+                            jwt.getJWTClaimsSet().getExpirationTime().toInstant();
                     blacklist(token, expiresAt);
                 } catch (Exception e) {
                     log.warn("Failed to blacklist token for user {}: {}", userId, e.getMessage());
@@ -224,7 +240,7 @@ public class TokenService {
             signedJWT.sign(signer);
             return signedJWT.serialize();
         } catch (Exception e) {
-            throw new IllegalStateException("Failed to build JWT", e);
+            throw new SystemException(ErrorCode.SYSTEM_ERROR, "令牌签发失败", e);
         }
     }
 
@@ -234,26 +250,24 @@ public class TokenService {
             com.nimbusds.jose.JWSVerifier verifier =
                     new com.nimbusds.jose.crypto.RSASSAVerifier(rsaKey.toRSAPublicKey());
             if (!jwt.verify(verifier)) {
-                throw new IllegalArgumentException("Invalid token signature");
+                throw new BizException(ErrorCode.TOKEN_INVALID, "令牌签名无效");
             }
             if (jwt.getJWTClaimsSet().getExpirationTime().toInstant().isBefore(Instant.now())) {
-                throw new IllegalArgumentException("Token has expired");
+                throw new BizException(ErrorCode.TOKEN_EXPIRED, "令牌已过期");
             }
             return jwt;
+        } catch (BizException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Token validation failed", e);
-            throw new IllegalArgumentException("Invalid token");
+            throw new BizException(ErrorCode.TOKEN_INVALID, "无效的令牌");
         }
     }
 
     private void blacklist(String rawToken, Instant expiresAt) {
         long ttlSeconds = expiresAt.getEpochSecond() - Instant.now().getEpochSecond();
         if (ttlSeconds > 0) {
-            redisTemplate.opsForValue().set(
-                    BLACKLIST_PREFIX + rawToken,
-                    "1",
-                    java.time.Duration.ofSeconds(ttlSeconds)
-            );
+            redisTemplate.opsForValue().set(BLACKLIST_PREFIX + rawToken, "1", java.time.Duration.ofSeconds(ttlSeconds));
         }
     }
 }

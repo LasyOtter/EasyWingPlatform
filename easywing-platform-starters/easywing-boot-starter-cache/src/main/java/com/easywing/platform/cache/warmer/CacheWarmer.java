@@ -15,11 +15,6 @@
  */
 package com.easywing.platform.cache.warmer;
 
-import lombok.extern.slf4j.Slf4j;
-
-import java.util.List;
-import java.util.function.Supplier;
-
 /**
  * 缓存预热器接口
  * <p>

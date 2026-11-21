@@ -43,8 +43,8 @@ public class SendResult {
      * @param metadata 元数据
      * @param error 错误信息
      */
-    private SendResult(boolean success, String destination, String messageId, 
-                      Map<String, Object> metadata, Throwable error) {
+    private SendResult(
+            boolean success, String destination, String messageId, Map<String, Object> metadata, Throwable error) {
         this.success = success;
         this.destination = destination;
         this.messageId = messageId;
@@ -144,12 +144,11 @@ public class SendResult {
 
     @Override
     public String toString() {
-        return "SendResult{" +
-                "success=" + success +
-                ", destination='" + destination + '\'' +
-                ", messageId='" + messageId + '\'' +
-                ", metadata=" + metadata +
-                ", error=" + error +
-                '}';
+        return "SendResult{" + "success="
+                + success + ", destination='"
+                + destination + '\'' + ", messageId='"
+                + messageId + '\'' + ", metadata="
+                + metadata + ", error="
+                + error + '}';
     }
 }

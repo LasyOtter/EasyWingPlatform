@@ -1,12 +1,11 @@
 package com.easywing.platform.ai.rag;
 
+import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * 文档块 - RAG 的基本单元

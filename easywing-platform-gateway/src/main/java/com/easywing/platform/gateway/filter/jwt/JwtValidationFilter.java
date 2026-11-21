@@ -16,10 +16,15 @@
 package com.easywing.platform.gateway.filter.jwt;
 
 import com.easywing.platform.core.constant.HttpHeaders;
+import com.easywing.platform.core.exception.ErrorCode;
 import com.easywing.platform.core.exception.TokenBlacklistedException;
 import com.easywing.platform.gateway.constants.CacheConstants;
+import com.easywing.platform.gateway.constants.GatewayConstants;
+import com.easywing.platform.gateway.error.ProblemDetailSupport;
 import com.easywing.platform.gateway.properties.GatewayProperties;
 import com.easywing.platform.gateway.properties.JwtProperties;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSVerifier;
@@ -30,8 +35,17 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import java.net.URL;
+import java.security.interfaces.ECPublicKey;
+import java.security.interfaces.RSAPublicKey;
+import java.text.ParseException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -45,19 +59,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-
-import java.net.URL;
-import java.text.ParseException;
-import java.security.interfaces.ECPublicKey;
-import java.security.interfaces.RSAPublicKey;
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 
 /**
  * JWT校验全局过滤器
@@ -84,9 +85,7 @@ import jakarta.annotation.PreDestroy;
 public class JwtValidationFilter implements GlobalFilter, Ordered {
 
     private static final Logger log = LoggerFactory.getLogger(JwtValidationFilter.class);
-    private static final String BEARER_PREFIX = "Bearer ";
     private static final String JWT_CLAIMS_ATTR = "jwtClaims";
-    private static final String BLACKLIST_PREFIX = "auth:blacklist:";
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     private final JwtProperties properties;
@@ -98,8 +97,7 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
     private volatile long lastJwkRefreshTime = 0;
     private ScheduledExecutorService jwkRefreshScheduler;
 
-    public JwtValidationFilter(GatewayProperties gatewayProperties,
-                                ReactiveStringRedisTemplate redisTemplate) {
+    public JwtValidationFilter(GatewayProperties gatewayProperties, ReactiveStringRedisTemplate redisTemplate) {
         this.properties = gatewayProperties.getJwt();
         this.redisTemplate = redisTemplate;
         this.jwtCache = Caffeine.newBuilder()
@@ -122,8 +120,7 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
     @PostConstruct
     public void init() {
         scheduleJwkRefresh();
-        log.info("JwtValidationFilter initialized with JWK refresh interval: {}",
-                properties.getJwkRefreshInterval());
+        log.info("JwtValidationFilter initialized with JWK refresh interval: {}", properties.getJwkRefreshInterval());
     }
 
     @PreDestroy
@@ -132,10 +129,11 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
             log.info("Shutting down JWK refresh scheduler...");
             jwkRefreshScheduler.shutdown();
             try {
-                if (!jwkRefreshScheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                if (!jwkRefreshScheduler.awaitTermination(GatewayConstants.SHUTDOWN_AWAIT_SECONDS, TimeUnit.SECONDS)) {
                     log.warn("JWK refresh scheduler did not terminate in time, forcing shutdown");
                     jwkRefreshScheduler.shutdownNow();
-                    if (!jwkRefreshScheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                    if (!jwkRefreshScheduler.awaitTermination(
+                            GatewayConstants.SHUTDOWN_AWAIT_SECONDS, TimeUnit.SECONDS)) {
                         log.error("JWK refresh scheduler did not terminate");
                     }
                 }
@@ -167,18 +165,18 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
         }
 
         String path = exchange.getRequest().getPath().value();
-        
+
         if (isIgnoredPath(path)) {
             return chain.filter(exchange);
         }
 
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        if (!StringUtils.hasText(authHeader) || !authHeader.startsWith(BEARER_PREFIX)) {
+        if (!StringUtils.hasText(authHeader) || !authHeader.startsWith(GatewayConstants.BEARER_PREFIX)) {
             return unauthorized(exchange, "Missing or invalid Authorization header");
         }
 
-        String token = authHeader.substring(BEARER_PREFIX.length());
-        
+        String token = authHeader.substring(GatewayConstants.BEARER_PREFIX.length());
+
         return checkBlacklist(token)
                 .then(Mono.fromCallable(() -> validateAndParseToken(token)))
                 .subscribeOn(Schedulers.boundedElastic())
@@ -187,18 +185,20 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
                         jwtCache.invalidate(token);
                         return unauthorized(exchange, "Token expired");
                     }
-                    
+
                     String roles = String.join(",", claims.getRoles());
-                    ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
+                    ServerHttpRequest mutatedRequest = exchange.getRequest()
+                            .mutate()
                             .header(HttpHeaders.X_USER_ID, claims.getSubject())
                             .header(HttpHeaders.X_USERNAME, claims.getUsername() != null ? claims.getUsername() : "")
                             .header(HttpHeaders.X_ROLES, roles)
                             .header(HttpHeaders.X_TENANT_ID, claims.getTenantId() != null ? claims.getTenantId() : "")
                             .build();
-                    
+
                     exchange.getAttributes().put(JWT_CLAIMS_ATTR, claims);
-                    
-                    return chain.filter(exchange.mutate().request(mutatedRequest).build());
+
+                    return chain.filter(
+                            exchange.mutate().request(mutatedRequest).build());
                 })
                 .onErrorResume(JOSEException.class, e -> {
                     log.warn("JWT signature verification failed: {}", e.getMessage());
@@ -230,7 +230,7 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
 
         SignedJWT signedJWT = SignedJWT.parse(token);
         String keyId = signedJWT.getHeader().getKeyID();
-        
+
         JWK jwk = getJwk(keyId);
         if (jwk == null) {
             throw new IllegalArgumentException("Unable to find JWK with kid: " + keyId);
@@ -242,7 +242,7 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
         }
 
         JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
-        
+
         JwtClaims claims = new JwtClaims(
                 claimsSet.getSubject(),
                 getStringClaim(claimsSet, properties.getUsernameClaimName()),
@@ -250,10 +250,11 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
                 claimsSet.getStringListClaim(properties.getRolesClaimName()),
                 getStringClaim(claimsSet, properties.getTenantIdClaimName()),
                 claimsSet.getIssueTime() != null ? claimsSet.getIssueTime().toInstant() : null,
-                claimsSet.getExpirationTime() != null ? claimsSet.getExpirationTime().toInstant() : null,
-                claimsSet.getClaims()
-        );
-        
+                claimsSet.getExpirationTime() != null
+                        ? claimsSet.getExpirationTime().toInstant()
+                        : null,
+                claimsSet.getClaims());
+
         jwtCache.put(token, claims);
         return claims;
     }
@@ -271,15 +272,15 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
                     }
                     return null;
                 })
-                .then(redisTemplate.hasKey(BLACKLIST_PREFIX + token)
+                .then(redisTemplate
+                        .hasKey(GatewayConstants.JWT_BLACKLIST_PREFIX + token)
                         .flatMap(isBlacklisted -> {
                             if (Boolean.TRUE.equals(isBlacklisted)) {
                                 blacklistCache.put(token, true);
                                 return Mono.error(new TokenBlacklistedException(token));
                             }
                             return Mono.empty();
-                        })
-                )
+                        }))
                 .onErrorResume(TokenBlacklistedException.class, e -> Mono.error(e))
                 .then();
     }
@@ -328,9 +329,8 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
     }
 
     private Mono<Void> unauthorized(ServerWebExchange exchange, String message) {
-        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-        exchange.getResponse().getHeaders().add("X-Error-Message", message);
-        return exchange.getResponse().setComplete();
+        return ProblemDetailSupport.writeUnauthorized(
+                exchange, "Unauthorized", message, ErrorCode.UNAUTHORIZED, exchange.getResponse());
     }
 
     private void initJwkSet() {
@@ -340,7 +340,7 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
                 jwkSetCache.put("default", jwkSet);
                 log.info("Loaded JWK Set from {}", properties.getJwkSetUri());
             }
-            
+
             for (JwtProperties.IssuerConfig issuer : properties.getIssuers()) {
                 if (StringUtils.hasText(issuer.getJwkSetUri())) {
                     JWKSet jwkSet = JWKSet.load(new URL(issuer.getJwkSetUri()));
@@ -364,8 +364,7 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
                 this::refreshJwkSet,
                 properties.getJwkRefreshInterval().toMillis(),
                 properties.getJwkRefreshInterval().toMillis(),
-                TimeUnit.MILLISECONDS
-        );
+                TimeUnit.MILLISECONDS);
 
         log.info("JWK refresh scheduled with interval: {}", properties.getJwkRefreshInterval());
     }
@@ -377,7 +376,7 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
                 return;
             }
             lastJwkRefreshTime = now;
-            
+
             if (StringUtils.hasText(properties.getJwkSetUri())) {
                 JWKSet jwkSet = JWKSet.load(new URL(properties.getJwkSetUri()));
                 jwkSetCache.put("default", jwkSet);

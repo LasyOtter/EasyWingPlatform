@@ -1,18 +1,15 @@
 package com.easywing.platform.ai.cost;
 
 import com.easywing.platform.ai.agent.AgentRequest;
-import com.easywing.platform.ai.agent.AgentResponse;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 成本智能优化引擎 - 自动选择最优模型，优化 Token 使用
@@ -34,41 +31,49 @@ public class CostOptimizationEngine {
      */
     private void initializeModelPricing() {
         // OpenAI 价格 (每 1M tokens)
-        modelPricing.put("gpt-4o", ModelPricing.builder()
-                .modelName("gpt-4o")
-                .inputPricePer1M(5.0)
-                .outputPricePer1M(15.0)
-                .capability(95)
-                .speed(8)
-                .contextWindow(128000)
-                .build());
+        modelPricing.put(
+                "gpt-4o",
+                ModelPricing.builder()
+                        .modelName("gpt-4o")
+                        .inputPricePer1M(5.0)
+                        .outputPricePer1M(15.0)
+                        .capability(95)
+                        .speed(8)
+                        .contextWindow(128000)
+                        .build());
 
-        modelPricing.put("gpt-4o-mini", ModelPricing.builder()
-                .modelName("gpt-4o-mini")
-                .inputPricePer1M(0.15)
-                .outputPricePer1M(0.6)
-                .capability(85)
-                .speed(9)
-                .contextWindow(128000)
-                .build());
+        modelPricing.put(
+                "gpt-4o-mini",
+                ModelPricing.builder()
+                        .modelName("gpt-4o-mini")
+                        .inputPricePer1M(0.15)
+                        .outputPricePer1M(0.6)
+                        .capability(85)
+                        .speed(9)
+                        .contextWindow(128000)
+                        .build());
 
-        modelPricing.put("gpt-3.5-turbo", ModelPricing.builder()
-                .modelName("gpt-3.5-turbo")
-                .inputPricePer1M(0.5)
-                .outputPricePer1M(1.5)
-                .capability(75)
-                .speed(10)
-                .contextWindow(16000)
-                .build());
+        modelPricing.put(
+                "gpt-3.5-turbo",
+                ModelPricing.builder()
+                        .modelName("gpt-3.5-turbo")
+                        .inputPricePer1M(0.5)
+                        .outputPricePer1M(1.5)
+                        .capability(75)
+                        .speed(10)
+                        .contextWindow(16000)
+                        .build());
 
-        modelPricing.put("gpt-4-turbo", ModelPricing.builder()
-                .modelName("gpt-4-turbo")
-                .inputPricePer1M(10.0)
-                .outputPricePer1M(30.0)
-                .capability(98)
-                .speed(7)
-                .contextWindow(128000)
-                .build());
+        modelPricing.put(
+                "gpt-4-turbo",
+                ModelPricing.builder()
+                        .modelName("gpt-4-turbo")
+                        .inputPricePer1M(10.0)
+                        .outputPricePer1M(30.0)
+                        .capability(98)
+                        .speed(7)
+                        .contextWindow(128000)
+                        .build());
     }
 
     /**
@@ -86,9 +91,8 @@ public class CostOptimizationEngine {
         int complexity = analyzeComplexity(request);
 
         // 获取可用预算
-        double availableBudget = constraint != null ?
-                constraint.getMaxCostPerRequest() :
-                globalBudget.getRemainingBudget();
+        double availableBudget =
+                constraint != null ? constraint.getMaxCostPerRequest() : globalBudget.getRemainingBudget();
 
         log.info("Task complexity: {}, available budget: ${}", complexity, availableBudget);
 
@@ -124,8 +128,10 @@ public class CostOptimizationEngine {
         if (lowerPrompt.contains("分析") || lowerPrompt.contains("analyze")) {
             complexity += 1;
         }
-        if (lowerPrompt.contains("设计") || lowerPrompt.contains("design") ||
-            lowerPrompt.contains("架构") || lowerPrompt.contains("architecture")) {
+        if (lowerPrompt.contains("设计")
+                || lowerPrompt.contains("design")
+                || lowerPrompt.contains("架构")
+                || lowerPrompt.contains("architecture")) {
             complexity += 2;
         }
         if (lowerPrompt.contains("复杂") || lowerPrompt.contains("complex")) {
@@ -220,18 +226,14 @@ public class CostOptimizationEngine {
      * 压缩空白字符
      */
     private String compressWhitespace(String text) {
-        return text.replaceAll("\\s+", " ")
-                   .replaceAll("\n\\s+", "\n")
-                   .trim();
+        return text.replaceAll("\\s+", " ").replaceAll("\n\\s+", "\n").trim();
     }
 
     /**
      * 缩写常见词
      */
     private String abbreviateCommon(String text) {
-        return text.replace("请", "")
-                   .replace("麻烦", "")
-                   .replace("非常感谢", "谢谢");
+        return text.replace("请", "").replace("麻烦", "").replace("非常感谢", "谢谢");
     }
 
     /**
@@ -258,17 +260,19 @@ public class CostOptimizationEngine {
         double cost = pricing.calculateCost(inputTokens, outputTokens);
 
         // 更新统计
-        CostStatistics stats = costStats.computeIfAbsent(
-                agentId,
-                k -> new CostStatistics(agentId)
-        );
+        CostStatistics stats = costStats.computeIfAbsent(agentId, k -> new CostStatistics(agentId));
         stats.recordCost(cost, inputTokens, outputTokens);
 
         // 更新全局预算
         globalBudget.spend(cost);
 
-        log.info("Cost recorded - Agent: {}, Model: {}, Tokens: {}/{}, Cost: ${:.4f}",
-                agentId, model, inputTokens, outputTokens, cost);
+        log.info(
+                "Cost recorded - Agent: {}, Model: {}, Tokens: {}/{}, Cost: ${:.4f}",
+                agentId,
+                model,
+                inputTokens,
+                outputTokens,
+                cost);
     }
 
     /**
@@ -307,15 +311,15 @@ public class CostOptimizationEngine {
             suggestions.add(OptimizationSuggestion.builder()
                     .type("HIGH_COST")
                     .priority("HIGH")
-                    .description("平均单次请求成本较高 ($" +
-                            String.format("%.4f", stats.getAverageCostPerRequest()) + ")")
+                    .description("平均单次请求成本较高 ($" + String.format("%.4f", stats.getAverageCostPerRequest()) + ")")
                     .recommendation("考虑使用更便宜的模型（如 gpt-4o-mini）或优化提示词")
                     .potentialSaving(stats.getAverageCostPerRequest() * 0.6 + " per request")
                     .build());
         }
 
         // 建议2：Token 使用过多
-        long avgInputTokens = stats.getTotalInputTokens() / Math.max(stats.getTotalRequests().get(), 1);
+        long avgInputTokens =
+                stats.getTotalInputTokens() / Math.max(stats.getTotalRequests().get(), 1);
         if (avgInputTokens > 2000) {
             suggestions.add(OptimizationSuggestion.builder()
                     .type("HIGH_TOKEN_USAGE")
@@ -333,8 +337,8 @@ public class CostOptimizationEngine {
                     .priority("MEDIUM")
                     .description("任务复杂度较低，但使用了高成本模型")
                     .recommendation("使用 gpt-4o-mini 可节省 97% 成本")
-                    .potentialSaving("$" + String.format("%.4f", stats.getAverageCostPerRequest() * 0.97) +
-                            " per request")
+                    .potentialSaving(
+                            "$" + String.format("%.4f", stats.getAverageCostPerRequest() * 0.97) + " per request")
                     .build());
         }
 
@@ -376,11 +380,11 @@ public class CostOptimizationEngine {
     @AllArgsConstructor
     public static class ModelPricing {
         private String modelName;
-        private double inputPricePer1M;    // 每 1M input tokens 的价格
-        private double outputPricePer1M;   // 每 1M output tokens 的价格
-        private int capability;            // 能力评分 (0-100)
-        private int speed;                 // 速度评分 (0-10)
-        private int contextWindow;         // 上下文窗口大小
+        private double inputPricePer1M; // 每 1M input tokens 的价格
+        private double outputPricePer1M; // 每 1M output tokens 的价格
+        private int capability; // 能力评分 (0-100)
+        private int speed; // 速度评分 (0-10)
+        private int contextWindow; // 上下文窗口大小
 
         public double calculateCost(int inputTokens, int outputTokens) {
             double inputCost = (inputTokens / 1_000_000.0) * inputPricePer1M;
@@ -528,8 +532,8 @@ public class CostOptimizationEngine {
     }
 
     public enum OptimizationStrategy {
-        AGGRESSIVE,     // 激进：最大化节省
-        BALANCED,       // 平衡：保持质量
-        CONSERVATIVE    // 保守：最小改动
+        AGGRESSIVE, // 激进：最大化节省
+        BALANCED, // 平衡：保持质量
+        CONSERVATIVE // 保守：最小改动
     }
 }

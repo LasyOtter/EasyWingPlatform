@@ -1,14 +1,13 @@
 package com.easywing.platform.ai.tool.impl;
 
 import com.easywing.platform.ai.tool.AiTool;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
-
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
 /**
  * 当前时间工具 - 获取当前时间信息
@@ -24,15 +23,15 @@ public class CurrentTimeTool implements AiTool {
 
     @Override
     public String getDescription() {
-        return "获取当前时间信息。" +
-                "输入参数：timezone (string, 可选) - 时区，例如: 'Asia/Shanghai', 'America/New_York'，默认为系统时区。" +
-                "format (string, 可选) - 日期格式，例如: 'yyyy-MM-dd HH:mm:ss'，默认为 ISO 格式";
+        return "获取当前时间信息。" + "输入参数：timezone (string, 可选) - 时区，例如: 'Asia/Shanghai', 'America/New_York'，默认为系统时区。"
+                + "format (string, 可选) - 日期格式，例如: 'yyyy-MM-dd HH:mm:ss'，默认为 ISO 格式";
     }
 
     @Override
     public Mono<Map<String, Object>> execute(Map<String, Object> arguments) {
         return Mono.fromCallable(() -> {
-            String timezone = (String) arguments.getOrDefault("timezone", ZoneId.systemDefault().getId());
+            String timezone = (String)
+                    arguments.getOrDefault("timezone", ZoneId.systemDefault().getId());
             String format = (String) arguments.get("format");
 
             log.info("Getting current time for timezone: {}", timezone);

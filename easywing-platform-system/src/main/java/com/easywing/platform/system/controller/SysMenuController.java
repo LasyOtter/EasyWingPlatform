@@ -8,19 +8,20 @@ import com.easywing.platform.system.enums.BusinessType;
 import com.easywing.platform.system.service.SysMenuService;
 import com.easywing.platform.system.util.SecurityUtils;
 import com.easywing.platform.web.idempotent.Idempotent;
+import com.easywing.platform.web.version.ApiVersion;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/system/menus")
 @Tag(name = "菜单管理")
+@ApiVersion("v1")
 @RequiredArgsConstructor
 public class SysMenuController {
 

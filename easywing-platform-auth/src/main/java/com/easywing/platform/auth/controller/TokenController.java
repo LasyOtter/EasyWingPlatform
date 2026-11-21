@@ -22,6 +22,8 @@ import com.easywing.platform.auth.dto.TokenResponse;
 import com.easywing.platform.auth.service.TokenService;
 import com.easywing.platform.auth.service.UserDetailsService;
 import com.easywing.platform.core.constant.HttpHeaders;
+import com.easywing.platform.core.exception.BizException;
+import com.easywing.platform.core.exception.ErrorCode;
 import com.easywing.platform.web.ratelimit.RateLimit;
 import com.easywing.platform.web.version.ApiVersion;
 import io.swagger.v3.oas.annotations.Operation;
@@ -71,10 +73,10 @@ public class TokenController {
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthUser user = userDetailsService.loadByUsername(request.getUsername());
         if (!user.isEnabled()) {
-            return ResponseEntity.status(403).build();
+            throw new BizException(ErrorCode.ACCOUNT_LOCKED, "账户已锁定");
         }
         if (!userDetailsService.validatePassword(user, request.getPassword())) {
-            return ResponseEntity.status(401).build();
+            throw new BizException(ErrorCode.INVALID_CREDENTIALS, "用户名或密码错误");
         }
         TokenResponse response = tokenService.issueTokenPair(user);
         return ResponseEntity.ok(response);

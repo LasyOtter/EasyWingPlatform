@@ -1,14 +1,15 @@
 package com.easywing.platform.system.domain.vo;
 
-import lombok.Data;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import lombok.Data;
 
 @Data
 public class SysOperLogVO implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
+
     private Long operId;
     private Long tenantId;
     private String title;

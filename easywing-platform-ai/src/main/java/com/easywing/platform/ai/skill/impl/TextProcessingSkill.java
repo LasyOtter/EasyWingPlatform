@@ -4,13 +4,12 @@ import com.easywing.platform.ai.skill.SkillContext;
 import com.easywing.platform.ai.skill.SkillExecutor;
 import com.easywing.platform.ai.skill.SkillResult;
 import com.easywing.platform.ai.tool.ToolExecutor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
 /**
  * 文本处理技能 - 对文本进行各种处理操作
@@ -51,13 +50,11 @@ public class TextProcessingSkill implements SkillExecutor {
             }
         });
 
-        return toolExecutor.executeTool("string_manipulation", toolArgs)
+        return toolExecutor
+                .executeTool("string_manipulation", toolArgs)
                 .map(result -> {
                     if (Boolean.TRUE.equals(result.get("success"))) {
-                        return SkillResult.success(
-                                result.get("result"),
-                                "文本处理完成: " + operation
-                        );
+                        return SkillResult.success(result.get("result"), "文本处理完成: " + operation);
                     } else {
                         return SkillResult.failure((String) result.get("error"));
                     }

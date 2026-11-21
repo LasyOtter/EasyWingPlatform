@@ -44,10 +44,15 @@ public class JwtClaims implements Serializable {
     private final Instant expiresAt;
     private final Map<String, Object> additionalClaims;
 
-    public JwtClaims(String subject, String username, String issuer,
-                     List<String> roles, String tenantId,
-                     Instant issuedAt, Instant expiresAt,
-                     Map<String, Object> additionalClaims) {
+    public JwtClaims(
+            String subject,
+            String username,
+            String issuer,
+            List<String> roles,
+            String tenantId,
+            Instant issuedAt,
+            Instant expiresAt,
+            Map<String, Object> additionalClaims) {
         this.subject = subject;
         this.username = username;
         this.issuer = issuer;
@@ -100,14 +105,13 @@ public class JwtClaims implements Serializable {
 
     @Override
     public String toString() {
-        return "JwtClaims{" +
-                "subject='" + subject + '\'' +
-                ", username='" + username + '\'' +
-                ", issuer='" + issuer + '\'' +
-                ", roles=" + roles +
-                ", tenantId='" + tenantId + '\'' +
-                ", issuedAt=" + issuedAt +
-                ", expiresAt=" + expiresAt +
-                '}';
+        return "JwtClaims{" + "subject='"
+                + subject + '\'' + ", username='"
+                + username + '\'' + ", issuer='"
+                + issuer + '\'' + ", roles="
+                + roles + ", tenantId='"
+                + tenantId + '\'' + ", issuedAt="
+                + issuedAt + ", expiresAt="
+                + expiresAt + '}';
     }
 }

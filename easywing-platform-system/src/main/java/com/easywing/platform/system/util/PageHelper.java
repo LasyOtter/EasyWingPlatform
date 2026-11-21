@@ -19,12 +19,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.easywing.platform.core.exception.BizException;
 import com.easywing.platform.core.exception.ErrorCode;
 import com.easywing.platform.system.config.PageProperties;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * 分页工具类
@@ -54,8 +53,7 @@ public class PageHelper {
         }
         // 页码不能超过最大值
         if (current > pageProperties.getMaxPage()) {
-            throw new BizException(ErrorCode.PAGE_TOO_DEEP,
-                    "页码不能超过" + pageProperties.getMaxPage() + "，请使用条件筛选");
+            throw new BizException(ErrorCode.PAGE_TOO_DEEP, "页码不能超过" + pageProperties.getMaxPage() + "，请使用条件筛选");
         }
         // 每页大小限制
         if (size < 1) {
@@ -75,8 +73,7 @@ public class PageHelper {
      */
     public void checkDeepPage(long current, long total) {
         if (current > pageProperties.getDeepPageThreshold() && total > 10000) {
-            log.warn("Deep page query detected: page={}, total={}, suggest using filter conditions",
-                    current, total);
+            log.warn("Deep page query detected: page={}, total={}, suggest using filter conditions", current, total);
         }
     }
 
@@ -108,12 +105,13 @@ public class PageHelper {
     public void setCountCache(String cacheKey, long count) {
         if (pageProperties.isCountCacheEnabled()) {
             try {
-                redisTemplate.opsForValue().set(
-                        "page:count:" + cacheKey,
-                        String.valueOf(count),
-                        pageProperties.getCountCacheSeconds(),
-                        TimeUnit.SECONDS
-                );
+                redisTemplate
+                        .opsForValue()
+                        .set(
+                                "page:count:" + cacheKey,
+                                String.valueOf(count),
+                                pageProperties.getCountCacheSeconds(),
+                                TimeUnit.SECONDS);
             } catch (Exception e) {
                 log.warn("Failed to set count cache: {}", e.getMessage());
             }

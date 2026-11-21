@@ -1,12 +1,11 @@
 package com.easywing.platform.ai.config;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.List;
 
 @Data
 @ConfigurationProperties(prefix = "easywing.ai")
@@ -25,6 +24,10 @@ public class AiProperties {
     private GatewayConfig gateway = new GatewayConfig();
 
     private KnowledgeBaseConfig knowledgeBase = new KnowledgeBaseConfig();
+
+    private EmbeddingConfig embedding = new EmbeddingConfig();
+
+    private SandboxSettings sandbox = new SandboxSettings();
 
     private AgentConfig agent = new AgentConfig();
 
@@ -49,18 +52,15 @@ public class AiProperties {
 
     @Data
     @EqualsAndHashCode(callSuper = true)
-    public static class OpenAiConfig extends ProviderConfig {
-    }
+    public static class OpenAiConfig extends ProviderConfig {}
 
     @Data
     @EqualsAndHashCode(callSuper = true)
-    public static class AnthropicConfig extends ProviderConfig {
-    }
+    public static class AnthropicConfig extends ProviderConfig {}
 
     @Data
     @EqualsAndHashCode(callSuper = true)
-    public static class GoogleConfig extends ProviderConfig {
-    }
+    public static class GoogleConfig extends ProviderConfig {}
 
     @Data
     public static class MemoryConfig {
@@ -101,6 +101,57 @@ public class AiProperties {
         private String collectionName = "easywing_knowledge";
         private int topK = 5;
         private double similarityThreshold = 0.7;
+    }
+
+    @Data
+    public static class EmbeddingConfig {
+
+        /**
+         * 提供方名称，对应 providers 中的 key，默认 openai。
+         * 也兼容 DashScope 等 OpenAI 兼容端点。
+         */
+        private String provider = "openai";
+
+        private String model = "text-embedding-3-small";
+
+        /**
+         * 覆盖提供方的 apiKey；为空时使用 providers 中的配置。
+         */
+        private String apiKey;
+
+        /**
+         * 覆盖提供方的 baseUrl；为空时使用 providers 中的配置。
+         */
+        private String baseUrl;
+
+        /**
+         * 单批最大输入文本数，OpenAI 建议不超过 2048。
+         */
+        private int batchSize = 32;
+
+        /**
+         * 向量维度，需与模型输出一致，默认 1536。
+         */
+        private int dimension = 1536;
+    }
+
+    @Data
+    public static class SandboxSettings {
+
+        /**
+         * 执行模式：process（本机进程，仅开发）或 docker（容器隔离，生产推荐）。
+         */
+        private String mode = "process";
+
+        private long maxExecutionTime = 10000;
+
+        private int maxMemoryMB = 512;
+
+        private int maxOutputSize = 10240;
+
+        private boolean allowNetworkAccess = false;
+
+        private boolean allowFileSystemAccess = false;
     }
 
     @Data

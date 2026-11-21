@@ -33,13 +33,13 @@ import com.easywing.platform.messaging.core.SendResult;
  * <pre>{@code
  * public class KafkaMessagingAdapter implements MessagingAdapter {
  *     private final KafkaTemplate<String, byte[]> kafkaTemplate;
- *     
+ *
  *     @Override
  *     public SendResult doSend(String destination, Message<?> message) {
  *         // 使用 KafkaTemplate 发送消息
  *         return ...;
  *     }
- *     
+ *
  *     @Override
  *     public String getAdapterType() {
  *         return "kafka";

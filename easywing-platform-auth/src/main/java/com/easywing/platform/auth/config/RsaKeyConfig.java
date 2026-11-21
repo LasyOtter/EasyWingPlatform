@@ -17,12 +17,6 @@ package com.easywing.platform.auth.config;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.RSAKey;
-import org.springframework.util.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -41,6 +35,11 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
 
 /**
  * RSA密钥对配置
@@ -95,8 +94,12 @@ public class RsaKeyConfig {
             if (parent != null) {
                 Files.createDirectories(parent);
             }
-            Files.writeString(path, toPem(key), StandardCharsets.UTF_8,
-                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            Files.writeString(
+                    path,
+                    toPem(key),
+                    StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING);
             try {
                 Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-------"));
             } catch (IOException | UnsupportedOperationException ignored) {
@@ -125,8 +128,7 @@ public class RsaKeyConfig {
         }
     }
 
-    private RSAKey loadFromPem(Path path, String keyId)
-            throws IOException, GeneralSecurityException, JOSEException {
+    private RSAKey loadFromPem(Path path, String keyId) throws IOException, GeneralSecurityException, JOSEException {
         String pem = Files.readString(path, StandardCharsets.UTF_8);
         byte[] privateBytes = decodePemBlock(pem, "PRIVATE KEY");
         byte[] publicBytes = decodePemBlock(pem, "PUBLIC KEY");
@@ -161,8 +163,7 @@ public class RsaKeyConfig {
         if (start < 0 || end < 0) {
             throw new IllegalStateException("PEM block not found: " + label);
         }
-        String base64 = pem.substring(start + beginMarker.length(), end)
-                .replaceAll("\\s", "");
+        String base64 = pem.substring(start + beginMarker.length(), end).replaceAll("\\s", "");
         return Base64.getDecoder().decode(base64);
     }
 }

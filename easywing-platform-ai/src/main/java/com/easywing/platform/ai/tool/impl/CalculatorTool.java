@@ -1,14 +1,13 @@
 package com.easywing.platform.ai.tool.impl;
 
 import com.easywing.platform.ai.tool.AiTool;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
 /**
  * 计算器工具 - 执行数学表达式计算
@@ -17,8 +16,7 @@ import java.util.Map;
 @Component
 public class CalculatorTool implements AiTool {
 
-    public CalculatorTool() {
-    }
+    public CalculatorTool() {}
 
     @Override
     public String getName() {
@@ -27,8 +25,8 @@ public class CalculatorTool implements AiTool {
 
     @Override
     public String getDescription() {
-        return "执行数学计算。支持基本运算（+、-、*、/）、幂运算（**）、括号等。" +
-                "输入参数：expression (string) - 数学表达式，例如: '2 + 2', '(10 * 5) / 2', 'Math.sqrt(16)'";
+        return "执行数学计算。支持基本运算（+、-、*、/）、幂运算（**）、括号等。"
+                + "输入参数：expression (string) - 数学表达式，例如: '2 + 2', '(10 * 5) / 2', 'Math.sqrt(16)'";
     }
 
     @Override

@@ -23,15 +23,14 @@ import com.easywing.platform.messaging.core.MessageListener;
 import com.easywing.platform.messaging.core.MessagingException;
 import com.easywing.platform.messaging.core.SendCallback;
 import com.easywing.platform.messaging.core.SendResult;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.springframework.kafka.core.KafkaTemplate;
-
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 public class KafkaMessagingAdapter implements MessagingAdapter {
 
@@ -39,8 +38,7 @@ public class KafkaMessagingAdapter implements MessagingAdapter {
     private final MessageConverter converter;
     private final Map<String, MessageListener<?>> listeners;
 
-    public KafkaMessagingAdapter(KafkaTemplate<String, byte[]> kafkaTemplate,
-                                 MessageConverter converter) {
+    public KafkaMessagingAdapter(KafkaTemplate<String, byte[]> kafkaTemplate, MessageConverter converter) {
         this.kafkaTemplate = kafkaTemplate;
         this.converter = converter;
         this.listeners = new ConcurrentHashMap<>();
@@ -52,7 +50,8 @@ public class KafkaMessagingAdapter implements MessagingAdapter {
             byte[] payload = converter.toBytes(message.getPayload());
             ProducerRecord<String, byte[]> record = createProducerRecord(destination, message, payload);
 
-            org.springframework.kafka.support.SendResult<String, byte[]> result = kafkaTemplate.send(record).get(30, TimeUnit.SECONDS);
+            org.springframework.kafka.support.SendResult<String, byte[]> result =
+                    kafkaTemplate.send(record).get(30, TimeUnit.SECONDS);
 
             return convertToSendResult(result);
         } catch (InterruptedException e) {
@@ -73,7 +72,8 @@ public class KafkaMessagingAdapter implements MessagingAdapter {
             byte[] payload = converter.toBytes(message.getPayload());
             ProducerRecord<String, byte[]> record = createProducerRecord(destination, message, payload);
 
-            CompletableFuture<org.springframework.kafka.support.SendResult<String, byte[]>> future = kafkaTemplate.send(record);
+            CompletableFuture<org.springframework.kafka.support.SendResult<String, byte[]>> future =
+                    kafkaTemplate.send(record);
             future.whenComplete((result, ex) -> {
                 if (ex != null) {
                     callback.onFailure(new MessagingException("Kafka async send failed", ex));
@@ -98,9 +98,7 @@ public class KafkaMessagingAdapter implements MessagingAdapter {
         return "kafka";
     }
 
-    private ProducerRecord<String, byte[]> createProducerRecord(String topic,
-                                                                 Message<?> message,
-                                                                 byte[] payload) {
+    private ProducerRecord<String, byte[]> createProducerRecord(String topic, Message<?> message, byte[] payload) {
         String key = message.getHeaders().get(MessageHeaders.MESSAGE_KEY, String.class);
         Integer partition = message.getHeaders().get(MessageHeaders.PARTITION, Integer.class);
 
@@ -130,10 +128,12 @@ public class KafkaMessagingAdapter implements MessagingAdapter {
         long offset = result.getRecordMetadata().offset();
         long timestamp = result.getRecordMetadata().timestamp();
 
-        return SendResult.success(topic, String.valueOf(offset), Map.of(
-            "partition", partition,
-            "offset", offset,
-            "timestamp", timestamp
-        ));
+        return SendResult.success(
+                topic,
+                String.valueOf(offset),
+                Map.of(
+                        "partition", partition,
+                        "offset", offset,
+                        "timestamp", timestamp));
     }
 }

@@ -3,10 +3,9 @@ package com.easywing.platform.system.mapper.struct;
 import com.easywing.platform.system.domain.dto.SysRoleDTO;
 import com.easywing.platform.system.domain.entity.SysRole;
 import com.easywing.platform.system.domain.vo.SysRoleVO;
+import java.util.List;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
-
-import java.util.List;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface RoleMapper {

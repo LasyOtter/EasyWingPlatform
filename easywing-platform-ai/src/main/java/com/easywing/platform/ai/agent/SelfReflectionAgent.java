@@ -4,6 +4,8 @@ import com.easywing.platform.ai.model.ChatCompletionRequest;
 import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.provider.AiProviderRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,9 +13,6 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * 自我反思 Agent - 评估和改进执行结果
@@ -27,9 +26,7 @@ public class SelfReflectionAgent {
     private final ObjectMapper objectMapper;
 
     public SelfReflectionAgent(
-            AgentExecutor agentExecutor,
-            AiProviderRegistry providerRegistry,
-            ObjectMapper objectMapper) {
+            AgentExecutor agentExecutor, AiProviderRegistry providerRegistry, ObjectMapper objectMapper) {
         this.agentExecutor = agentExecutor;
         this.providerRegistry = providerRegistry;
         this.objectMapper = objectMapper;
@@ -50,36 +47,33 @@ public class SelfReflectionAgent {
 
         log.info("Executing with reflection, round: {}", reflectionRound);
 
-        return agentExecutor.execute(request)
-                .flatMap(response -> {
-                    // 执行反思
-                    return reflect(request, response)
-                            .flatMap(reflection -> {
-                                log.info("Reflection result - score: {}, needsImprovement: {}",
-                                        reflection.getQualityScore(),
-                                        reflection.isNeedsImprovement());
+        return agentExecutor.execute(request).flatMap(response -> {
+            // 执行反思
+            return reflect(request, response).flatMap(reflection -> {
+                log.info(
+                        "Reflection result - score: {}, needsImprovement: {}",
+                        reflection.getQualityScore(),
+                        reflection.isNeedsImprovement());
 
-                                // 将反思结果添加到响应元数据
-                                response.getMetadata().put("reflection", reflection);
+                // 将反思结果添加到响应元数据
+                response.getMetadata().put("reflection", reflection);
 
-                                // 如果需要改进且未达到最大轮次
-                                if (reflection.isNeedsImprovement()
-                                        && reflectionRound < maxReflectionRounds) {
+                // 如果需要改进且未达到最大轮次
+                if (reflection.isNeedsImprovement() && reflectionRound < maxReflectionRounds) {
 
-                                    log.info("Retrying with improvements based on reflection");
+                    log.info("Retrying with improvements based on reflection");
 
-                                    // 基于反思创建改进的请求
-                                    AgentRequest improvedRequest = createImprovedRequest(
-                                            request, response, reflection);
+                    // 基于反思创建改进的请求
+                    AgentRequest improvedRequest = createImprovedRequest(request, response, reflection);
 
-                                    // 递归执行
-                                    return executeWithReflection(improvedRequest, reflectionRound + 1);
-                                }
+                    // 递归执行
+                    return executeWithReflection(improvedRequest, reflectionRound + 1);
+                }
 
-                                // 反思通过或达到最大轮次，返回结果
-                                return Mono.just(response);
-                            });
-                });
+                // 反思通过或达到最大轮次，返回结果
+                return Mono.just(response);
+            });
+        });
     }
 
     /**
@@ -98,14 +92,15 @@ public class SelfReflectionAgent {
                         ChatMessage.builder()
                                 .role("user")
                                 .content(reflectionPrompt)
-                                .build()
-                ))
+                                .build()))
                 .temperature(0.3) // 低温度，更客观
                 .build();
 
-        return providerRegistry.chat(completionRequest)
+        return providerRegistry
+                .chat(completionRequest)
                 .map(llmResponse -> {
-                    String content = llmResponse.getChoices().get(0).getMessage().getContent();
+                    String content =
+                            llmResponse.getChoices().get(0).getMessage().getContent();
                     return parseReflection(content);
                 })
                 .onErrorResume(e -> {
@@ -122,10 +117,11 @@ public class SelfReflectionAgent {
      * 构建反思提示词
      */
     private String buildReflectionPrompt(AgentRequest request, AgentResponse response) {
-        int iterationCount = response.getMetadata() != null ?
-                (int) response.getMetadata().getOrDefault("iterationCount", 0) : 0;
+        int iterationCount =
+                response.getMetadata() != null ? (int) response.getMetadata().getOrDefault("iterationCount", 0) : 0;
 
-        return String.format("""
+        return String.format(
+                """
                 请评估以下 AI Agent 的执行结果：
 
                 【原始任务】
@@ -234,15 +230,10 @@ public class SelfReflectionAgent {
      * 基于反思创建改进的请求
      */
     private AgentRequest createImprovedRequest(
-            AgentRequest originalRequest,
-            AgentResponse previousResponse,
-            Reflection reflection) {
+            AgentRequest originalRequest, AgentResponse previousResponse, Reflection reflection) {
 
         // 构建改进的提示词
-        String improvedPrompt = buildImprovedPrompt(
-                originalRequest.getPrompt(),
-                previousResponse,
-                reflection);
+        String improvedPrompt = buildImprovedPrompt(originalRequest.getPrompt(), previousResponse, reflection);
 
         return AgentRequest.builder()
                 .agentId(originalRequest.getAgentId())
@@ -256,10 +247,7 @@ public class SelfReflectionAgent {
     /**
      * 构建改进的提示词
      */
-    private String buildImprovedPrompt(
-            String originalPrompt,
-            AgentResponse previousResponse,
-            Reflection reflection) {
+    private String buildImprovedPrompt(String originalPrompt, AgentResponse previousResponse, Reflection reflection) {
 
         StringBuilder improved = new StringBuilder();
         improved.append("【原始任务】\n");
@@ -272,15 +260,17 @@ public class SelfReflectionAgent {
 
         improved.append("【存在的问题】\n");
         if (reflection.getIssues() != null) {
-            reflection.getIssues().forEach(issue ->
-                    improved.append("- ").append(issue).append("\n"));
+            reflection
+                    .getIssues()
+                    .forEach(issue -> improved.append("- ").append(issue).append("\n"));
         }
         improved.append("\n");
 
         improved.append("【改进建议】\n");
         if (reflection.getSuggestions() != null) {
-            reflection.getSuggestions().forEach(suggestion ->
-                    improved.append("- ").append(suggestion).append("\n"));
+            reflection.getSuggestions().forEach(suggestion -> improved.append("- ")
+                    .append(suggestion)
+                    .append("\n"));
         }
         improved.append("\n");
 

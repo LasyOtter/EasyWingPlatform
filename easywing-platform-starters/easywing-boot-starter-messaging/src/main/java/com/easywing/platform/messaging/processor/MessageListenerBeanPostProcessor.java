@@ -16,6 +16,11 @@
 package com.easywing.platform.messaging.processor;
 
 import com.easywing.platform.messaging.annotation.MessageListener;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.HashMap;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -27,12 +32,6 @@ import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.lang.NonNull;
 import org.springframework.messaging.Message;
 import org.springframework.util.ClassUtils;
-
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.HashMap;
-import java.util.Map;
 
 public class MessageListenerBeanPostProcessor implements BeanPostProcessor, ApplicationListener<ContextRefreshedEvent> {
 
@@ -84,16 +83,19 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor, Appl
         ListenerMethodInfo info = new ListenerMethodInfo(bean, method, payloadType, annotation);
         registeredListeners.put(destination, info);
 
-        log.info("Found @MessageListener: {}.{} -> destination={}", 
-            bean.getClass().getSimpleName(), method.getName(), destination);
+        log.info(
+                "Found @MessageListener: {}.{} -> destination={}",
+                bean.getClass().getSimpleName(),
+                method.getName(),
+                destination);
     }
 
     private Class<?> extractPayloadType(Method method) {
         if (method.getParameterCount() > 0) {
             for (int i = 0; i < method.getParameterCount(); i++) {
                 Class<?> paramType = method.getParameterTypes()[i];
-                if (!Message.class.isAssignableFrom(paramType) && 
-                    !paramType.getName().startsWith("org.springframework.messaging")) {
+                if (!Message.class.isAssignableFrom(paramType)
+                        && !paramType.getName().startsWith("org.springframework.messaging")) {
                     Type genericType = method.getGenericParameterTypes()[i];
                     if (genericType instanceof ParameterizedType pt) {
                         Type[] typeArgs = pt.getActualTypeArguments();
@@ -116,8 +118,10 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor, Appl
         processed = true;
 
         if (!isSpringCloudStreamAvailable()) {
-            log.warn("Spring Cloud Stream not available, @MessageListener registration skipped. " +
-                "Listeners found: {}", registeredListeners.size());
+            log.warn(
+                    "Spring Cloud Stream not available, @MessageListener registration skipped. "
+                            + "Listeners found: {}",
+                    registeredListeners.size());
             return;
         }
 
@@ -132,8 +136,10 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor, Appl
 
     private boolean isSpringCloudStreamAvailable() {
         try {
-            Class.forName("org.springframework.cloud.stream.function.StreamBridge", false, 
-                getClass().getClassLoader());
+            Class.forName(
+                    "org.springframework.cloud.stream.function.StreamBridge",
+                    false,
+                    getClass().getClassLoader());
             return true;
         } catch (ClassNotFoundException e) {
             return false;
@@ -142,9 +148,9 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor, Appl
 
     private void registerListenersWithSpringCloudStream() throws Exception {
         Class<?> streamBridgeClass = Class.forName("org.springframework.cloud.stream.function.StreamBridge");
-        
+
         Object streamBridge = applicationContext.getBean(streamBridgeClass);
-        
+
         for (Map.Entry<String, ListenerMethodInfo> entry : registeredListeners.entrySet()) {
             String destination = entry.getKey();
             ListenerMethodInfo info = entry.getValue();
@@ -172,22 +178,27 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor, Appl
             }
         };
 
-        Class<?> functionRegistrationClass = Class.forName("org.springframework.cloud.function.context.FunctionRegistration");
+        Class<?> functionRegistrationClass =
+                Class.forName("org.springframework.cloud.function.context.FunctionRegistration");
         Class<?> functionRegistryClass = Class.forName("org.springframework.cloud.function.context.FunctionRegistry");
-        
-        Object functionRegistry = applicationContext.getBeanProvider(functionRegistryClass).getIfAvailable();
+
+        Object functionRegistry =
+                applicationContext.getBeanProvider(functionRegistryClass).getIfAvailable();
         if (functionRegistry == null) {
             log.warn("FunctionRegistry not available");
             return;
         }
 
-        Object registration = functionRegistrationClass.getConstructor(Object.class, String.class)
-            .newInstance(consumer, destination);
+        Object registration = functionRegistrationClass
+                .getConstructor(Object.class, String.class)
+                .newInstance(consumer, destination);
 
-        java.lang.reflect.Method typeMethod = functionRegistrationClass.getMethod("type", java.util.function.Supplier.class);
+        java.lang.reflect.Method typeMethod =
+                functionRegistrationClass.getMethod("type", java.util.function.Supplier.class);
         typeMethod.invoke(registration, (java.util.function.Supplier<?>) () -> payloadType);
 
-        java.lang.reflect.Method registerMethod = functionRegistryClass.getMethod("register", functionRegistrationClass);
+        java.lang.reflect.Method registerMethod =
+                functionRegistryClass.getMethod("register", functionRegistrationClass);
         registerMethod.invoke(functionRegistry, registration);
 
         log.debug("Registered consumer for destination: {} with payload type: {}", destination, payloadType.getName());
@@ -195,10 +206,10 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor, Appl
 
     private Object[] buildMethodArguments(Method method, Object payload) {
         java.util.List<Object> args = new java.util.ArrayList<>();
-        
+
         for (int i = 0; i < method.getParameterCount(); i++) {
             Class<?> paramType = method.getParameterTypes()[i];
-            
+
             if (paramType.isInstance(payload)) {
                 args.add(payload);
             } else if (Message.class.isAssignableFrom(paramType)) {
@@ -209,7 +220,7 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor, Appl
                 args.add(null);
             }
         }
-        
+
         return args.toArray();
     }
 
@@ -230,9 +241,20 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor, Appl
             this.annotation = annotation;
         }
 
-        public Object getBean() { return bean; }
-        public Method getMethod() { return method; }
-        public Class<?> getPayloadType() { return payloadType; }
-        public MessageListener getAnnotation() { return annotation; }
+        public Object getBean() {
+            return bean;
+        }
+
+        public Method getMethod() {
+            return method;
+        }
+
+        public Class<?> getPayloadType() {
+            return payloadType;
+        }
+
+        public MessageListener getAnnotation() {
+            return annotation;
+        }
     }
 }

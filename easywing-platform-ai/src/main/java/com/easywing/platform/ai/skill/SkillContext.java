@@ -1,13 +1,12 @@
 package com.easywing.platform.ai.skill;
 
 import com.easywing.platform.ai.model.ChatMessage;
+import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * 技能执行上下文 - 传递给技能执行器的输入

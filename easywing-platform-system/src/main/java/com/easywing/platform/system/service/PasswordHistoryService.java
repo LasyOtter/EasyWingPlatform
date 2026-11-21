@@ -16,14 +16,13 @@
 package com.easywing.platform.system.service;
 
 import com.easywing.platform.system.config.UserProperties;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 密码历史服务
@@ -56,8 +55,7 @@ public class PasswordHistoryService {
         if (CollectionUtils.isEmpty(recentPasswords)) {
             return false;
         }
-        return recentPasswords.stream()
-                .anyMatch(oldHash -> passwordEncoder.matches(newPassword, oldHash));
+        return recentPasswords.stream().anyMatch(oldHash -> passwordEncoder.matches(newPassword, oldHash));
     }
 
     /**

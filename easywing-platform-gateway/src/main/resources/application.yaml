@@ -13,16 +13,13 @@ spring:
     web-application-type: reactive
   cloud:
     nacos:
-      discovery:
+      discovery: &nacos
         enabled: false
         server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
         namespace: ${NACOS_NAMESPACE:}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
       config:
-        enabled: false
-        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
-        namespace: ${NACOS_NAMESPACE:}
-        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        <<: *nacos
         file-extension: yaml
     gateway:
       discovery:
@@ -46,6 +43,12 @@ spring:
           uri: lb://system-service
           predicates:
             - Path=/api/system/**
+          filters:
+            - StripPrefix=0
+        - id: ai-service
+          uri: lb://ai-service
+          predicates:
+            - Path=/api/v1/ai/**
           filters:
             - StripPrefix=0
         - id: user-service

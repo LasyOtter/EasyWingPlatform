@@ -29,8 +29,7 @@ public final class TraceUtil {
     private static final int TRACE_ID_LENGTH = 32;
     private static final int SPAN_ID_LENGTH = 16;
 
-    private TraceUtil() {
-    }
+    private TraceUtil() {}
 
     public static String generateTraceId() {
         return generateId(TRACE_ID_LENGTH);

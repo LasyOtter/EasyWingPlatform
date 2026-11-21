@@ -6,6 +6,18 @@ springdoc:
   swagger-ui:
     enabled: false
 
+spring:
+  cloud:
+    nacos:
+      discovery:
+        enabled: ${NACOS_DISCOVERY_ENABLED:true}
+
+management:
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+
 logging:
   level:
     root: INFO

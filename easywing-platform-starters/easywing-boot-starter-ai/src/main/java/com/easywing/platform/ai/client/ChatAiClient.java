@@ -16,11 +16,10 @@
 package com.easywing.platform.ai.client;
 
 import com.easywing.platform.ai.starter.config.AiProperties;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ChatAiClient {
 
@@ -72,8 +71,8 @@ public class ChatAiClient {
         }
 
         public String chat(String message) {
-            log.warn("Chat functionality requires LangChain4j dependencies. " +
-                    "Please add langchain4j dependencies to your project to enable AI features.");
+            log.warn("Chat functionality requires LangChain4j dependencies. "
+                    + "Please add langchain4j dependencies to your project to enable AI features.");
             return "AI chat is not available. Please add LangChain4j dependencies to enable this feature.";
         }
     }

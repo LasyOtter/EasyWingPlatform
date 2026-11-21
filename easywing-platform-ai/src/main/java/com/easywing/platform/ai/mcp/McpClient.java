@@ -1,14 +1,12 @@
 package com.easywing.platform.ai.mcp;
 
+import java.time.Duration;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
-
-import java.time.Duration;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component
@@ -28,7 +26,8 @@ public class McpClient {
                 .method(McpRequest.METHOD_INITIALIZE)
                 .build();
 
-        return webClient.post()
+        return webClient
+                .post()
                 .uri(serverUrl)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
@@ -41,7 +40,8 @@ public class McpClient {
     }
 
     public Mono<McpResponse> sendRequest(String serverUrl, McpRequest request) {
-        return webClient.post()
+        return webClient
+                .post()
                 .uri(serverUrl)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)

@@ -15,11 +15,10 @@
  */
 package com.easywing.platform.gray.properties;
 
-import lombok.Data;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
 import java.util.HashMap;
 import java.util.Map;
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * 灰度发布配置属性
@@ -55,10 +54,10 @@ public class GrayProperties {
      * 灰度规则类型
      */
     public enum RuleType {
-        HEADER,    // 基于请求头
+        HEADER, // 基于请求头
         PARAMETER, // 基于请求参数
-        COOKIE,    // 基于 Cookie
-        USER_ID,   // 基于用户ID
-        IP         // 基于IP地址
+        COOKIE, // 基于 Cookie
+        USER_ID, // 基于用户ID
+        IP // 基于IP地址
     }
 }

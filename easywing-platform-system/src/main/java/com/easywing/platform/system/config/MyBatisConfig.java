@@ -12,5 +12,4 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 @MapperScan(value = "com.easywing.platform.system.mapper", annotationClass = Mapper.class)
-public class MyBatisConfig {
-}
+public class MyBatisConfig {}

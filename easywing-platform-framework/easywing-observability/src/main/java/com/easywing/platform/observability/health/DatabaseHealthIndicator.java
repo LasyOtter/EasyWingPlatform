@@ -2,12 +2,11 @@ package com.easywing.platform.observability.health;
 
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariPoolMXBean;
+import java.sql.Connection;
+import javax.sql.DataSource;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.stereotype.Component;
-
-import javax.sql.DataSource;
-import java.sql.Connection;
 
 @Component
 public class DatabaseHealthIndicator implements HealthIndicator {
@@ -47,9 +46,7 @@ public class DatabaseHealthIndicator implements HealthIndicator {
                         .build();
             }
         } catch (Exception e) {
-            return Health.down()
-                    .withException(e)
-                    .build();
+            return Health.down().withException(e).build();
         }
     }
 }

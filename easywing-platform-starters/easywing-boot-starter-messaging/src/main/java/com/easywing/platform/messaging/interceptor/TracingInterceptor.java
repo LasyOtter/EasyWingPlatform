@@ -18,7 +18,6 @@ package com.easywing.platform.messaging.interceptor;
 import com.easywing.platform.messaging.core.Message;
 import com.easywing.platform.messaging.core.MessageHeaders;
 import com.easywing.platform.messaging.core.SendResult;
-
 import java.util.UUID;
 
 public class TracingInterceptor implements MessageInterceptor {
@@ -29,22 +28,21 @@ public class TracingInterceptor implements MessageInterceptor {
     @Override
     public Message<?> preSend(Message<?> message) {
         MessageHeaders headers = message.getHeaders();
-        
+
         String traceId = headers.get(TRACE_ID, String.class);
         if (traceId == null) {
             traceId = UUID.randomUUID().toString();
             headers.set(TRACE_ID, traceId);
         }
-        
+
         String spanId = UUID.randomUUID().toString();
         headers.set(SPAN_ID, spanId);
-        
+
         return message;
     }
 
     @Override
-    public void postSend(Message<?> message, SendResult result) {
-    }
+    public void postSend(Message<?> message, SendResult result) {}
 
     @Override
     public Message<?> preReceive(Message<?> message) {
@@ -52,8 +50,7 @@ public class TracingInterceptor implements MessageInterceptor {
     }
 
     @Override
-    public void postReceive(Message<?> message, Object result) {
-    }
+    public void postReceive(Message<?> message, Object result) {}
 
     @Override
     public int getOrder() {

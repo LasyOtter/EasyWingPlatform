@@ -21,6 +21,15 @@ import com.easywing.platform.gateway.properties.GatewayProperties;
 import com.easywing.platform.gateway.properties.GrayProperties;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -32,17 +41,6 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
-
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.time.Duration;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 灰度发布全局过滤器
@@ -92,26 +90,28 @@ public class GrayReleaseFilter implements GlobalFilter, Ordered {
         }
 
         String grayVersion = resolveGrayVersion(exchange);
-        
+
         if (grayVersion == null) {
             String userId = exchange.getRequest().getHeaders().getFirst(HttpHeaders.X_USER_ID);
-            Route route = exchange.getAttribute(org.springframework.cloud.gateway.support.ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR);
-            
+            Route route = exchange.getAttribute(
+                    org.springframework.cloud.gateway.support.ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR);
+
             if (route != null && userId != null) {
                 grayVersion = resolveVersionByStrategy(route.getId(), userId, exchange);
             }
         }
-        
+
         if (grayVersion != null) {
             exchange.getAttributes().put(GRAY_VERSION_ATTR, grayVersion);
-            
-            ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
+
+            ServerHttpRequest mutatedRequest = exchange.getRequest()
+                    .mutate()
                     .header(properties.getHeaderName(), grayVersion)
                     .build();
-            
+
             return chain.filter(exchange.mutate().request(mutatedRequest).build());
         }
-        
+
         return chain.filter(exchange);
     }
 
@@ -120,12 +120,12 @@ public class GrayReleaseFilter implements GlobalFilter, Ordered {
         if (version != null) {
             return version;
         }
-        
+
         version = resolveFromCookie(exchange);
         if (version != null) {
             return version;
         }
-        
+
         version = resolveFromParameter(exchange);
         return version;
     }
@@ -150,29 +150,29 @@ public class GrayReleaseFilter implements GlobalFilter, Ordered {
         if (serviceConfig == null) {
             return properties.getDefaultVersion();
         }
-        
+
         String cachedVersion = userVersionCache.getIfPresent(userId);
         if (cachedVersion != null) {
             return cachedVersion;
         }
-        
+
         String version = null;
-        
+
         for (GrayProperties.RuleConfig rule : serviceConfig.getRules()) {
             if (matchesRule(rule, userId, exchange)) {
                 version = rule.getTargetVersion();
                 break;
             }
         }
-        
+
         if (version == null) {
             version = selectByWeight(serviceId, userId, serviceConfig);
         }
-        
+
         if (version != null) {
             userVersionCache.put(userId, version);
         }
-        
+
         return version != null ? version : serviceConfig.getDefaultVersion();
     }
 
@@ -205,10 +205,10 @@ public class GrayReleaseFilter implements GlobalFilter, Ordered {
         if (config.getVersions().isEmpty()) {
             return config.getDefaultVersion();
         }
-        
-        WeightedSelector selector = serviceSelectors.computeIfAbsent(serviceId, 
-                k -> new WeightedSelector(config.getVersions()));
-        
+
+        WeightedSelector selector =
+                serviceSelectors.computeIfAbsent(serviceId, k -> new WeightedSelector(config.getVersions()));
+
         int hash = consistentHash(userId);
         return selector.select(hash);
     }
@@ -221,10 +221,10 @@ public class GrayReleaseFilter implements GlobalFilter, Ordered {
             // 仅用于一致性哈希分片，使用 SHA-256 避免 MD5 的弱算法风险
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] digest = md.digest(key.getBytes(StandardCharsets.UTF_8));
-            return ((digest[0] & 0xFF) << 24) | 
-                   ((digest[1] & 0xFF) << 16) | 
-                   ((digest[2] & 0xFF) << 8) | 
-                   (digest[3] & 0xFF);
+            return ((digest[0] & 0xFF) << 24)
+                    | ((digest[1] & 0xFF) << 16)
+                    | ((digest[2] & 0xFF) << 8)
+                    | (digest[3] & 0xFF);
         } catch (NoSuchAlgorithmException e) {
             return key.hashCode();
         }
@@ -271,8 +271,8 @@ public class GrayReleaseFilter implements GlobalFilter, Ordered {
 
         String select(int hash) {
             int value = Math.abs(hash % totalWeight);
-            return weightMap.ceilingEntry(value + 1) != null 
-                    ? weightMap.ceilingEntry(value + 1).getValue() 
+            return weightMap.ceilingEntry(value + 1) != null
+                    ? weightMap.ceilingEntry(value + 1).getValue()
                     : weightMap.lastEntry().getValue();
         }
     }

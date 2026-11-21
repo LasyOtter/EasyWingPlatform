@@ -16,10 +16,16 @@
 package com.easywing.platform.gateway.filter.ratelimit;
 
 import com.easywing.platform.core.constant.HttpHeaders;
+import com.easywing.platform.gateway.constants.CacheConstants;
+import com.easywing.platform.gateway.constants.GatewayConstants;
+import com.easywing.platform.gateway.error.ProblemDetailSupport;
 import com.easywing.platform.gateway.properties.GatewayProperties;
 import com.easywing.platform.gateway.properties.RateLimitProperties;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import jakarta.annotation.PreDestroy;
+import java.util.Collections;
+import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -31,12 +37,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
-import jakarta.annotation.PreDestroy;
-
-import java.time.Duration;
-import java.util.Collections;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 限流全局过滤器
@@ -72,15 +72,16 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
     private final RedisScript<Long> rateLimitScript;
     private final Cache<String, LocalTokenBucket> localBuckets;
 
-    public RateLimitFilter(GatewayProperties gatewayProperties, 
-                          ReactiveStringRedisTemplate redisTemplate,
-                          RedisScript<Long> rateLimitScript) {
+    public RateLimitFilter(
+            GatewayProperties gatewayProperties,
+            ReactiveStringRedisTemplate redisTemplate,
+            RedisScript<Long> rateLimitScript) {
         this.properties = gatewayProperties.getRateLimit();
         this.redisTemplate = redisTemplate;
         this.rateLimitScript = rateLimitScript;
         this.localBuckets = Caffeine.newBuilder()
                 .maximumSize(properties.getLocalCacheSize())
-                .expireAfterAccess(Duration.ofMinutes(10))
+                .expireAfterAccess(CacheConstants.RateLimit.LOCAL_CACHE_TTL)
                 .build();
     }
 
@@ -92,17 +93,17 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
 
         String key = resolveKey(exchange);
         RateLimitProperties.RuleConfig rule = findMatchingRule(exchange);
-        
+
         int rate = rule != null ? rule.getRate() : properties.getDefaultRate();
         int capacity = rule != null ? rule.getCapacity() : properties.getDefaultCapacity();
-        
+
         LocalTokenBucket localBucket = localBuckets.get(key, k -> new LocalTokenBucket(capacity, rate));
-        
+
         if (localBucket.tryConsume()) {
             addRateLimitHeaders(exchange, localBucket);
             return chain.filter(exchange);
         }
-        
+
         return checkDistributedRateLimit(key, rate, capacity)
                 .flatMap(allowed -> {
                     if (allowed) {
@@ -114,7 +115,8 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
                 .onErrorResume(e -> {
                     log.warn("Rate limit check failed, using fallback: {}", e.getMessage());
                     if (properties.isEnableFallback()) {
-                        LocalTokenBucket fallbackBucket = localBuckets.get(key + ":fallback",
+                        LocalTokenBucket fallbackBucket = localBuckets.get(
+                                key + GatewayConstants.RATE_LIMIT_FALLBACK_SUFFIX,
                                 k -> new LocalTokenBucket(properties.getFallbackRate(), properties.getFallbackRate()));
                         if (fallbackBucket.tryConsume()) {
                             return chain.filter(exchange);
@@ -127,11 +129,11 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
     private String resolveKey(ServerWebExchange exchange) {
         String userId = exchange.getRequest().getHeaders().getFirst(HttpHeaders.X_USER_ID);
         if (userId != null && !userId.isEmpty()) {
-            return "rate_limit:user:" + userId;
+            return GatewayConstants.RATE_LIMIT_KEY_PREFIX + "user:" + userId;
         }
-        
+
         String ip = getClientIp(exchange);
-        return "rate_limit:ip:" + ip;
+        return GatewayConstants.RATE_LIMIT_KEY_PREFIX + "ip:" + ip;
     }
 
     private String getClientIp(ServerWebExchange exchange) {
@@ -139,16 +141,16 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
         if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
             return xForwardedFor.split(",")[0].trim();
         }
-        
+
         String xRealIp = exchange.getRequest().getHeaders().getFirst(HttpHeaders.X_REAL_IP);
         if (xRealIp != null && !xRealIp.isEmpty()) {
             return xRealIp;
         }
-        
+
         if (exchange.getRequest().getRemoteAddress() != null) {
             return exchange.getRequest().getRemoteAddress().getAddress().getHostAddress();
         }
-        
+
         return "unknown";
     }
 
@@ -164,18 +166,12 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
 
     private Mono<Boolean> checkDistributedRateLimit(String key, int rate, int capacity) {
         long now = System.currentTimeMillis();
-        long requested = 1;
-        
-        return redisTemplate.execute(
+
+        return redisTemplate
+                .execute(
                         rateLimitScript,
                         Collections.singletonList(key),
-                        java.util.Arrays.asList(
-                                String.valueOf(rate),
-                                String.valueOf(capacity),
-                                String.valueOf(now),
-                                String.valueOf(requested)
-                        )
-                )
+                        java.util.List.of(String.valueOf(rate), String.valueOf(capacity), String.valueOf(now), "1"))
                 .next()
                 .map(result -> result != null && result >= 0)
                 .defaultIfEmpty(true);
@@ -189,11 +185,8 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
     }
 
     private Mono<Void> tooManyRequests(ServerWebExchange exchange) {
-        ServerHttpResponse response = exchange.getResponse();
-        response.setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
-        response.getHeaders().add("Content-Type", "application/json");
-        String body = "{\"error\":\"rate_limit_exceeded\",\"message\":\"Too many requests\"}";
-        return response.writeWith(Mono.just(response.bufferFactory().wrap(body.getBytes())));
+        return ProblemDetailSupport.writeTooManyRequests(
+                exchange, "请求过于频繁，请稍后重试", exchange.getResponse());
     }
 
     @Override
@@ -245,7 +238,7 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
             long elapsed = now - lastRefill;
 
             if (elapsed > 0) {
-                long newTokens = elapsed * rate / 1000;
+                long newTokens = elapsed * rate / GatewayConstants.MILLIS_PER_SECOND;
                 if (newTokens > 0) {
                     // 先原子更新 tokens
                     tokens.updateAndGet(current -> Math.min(capacity, current + newTokens));
@@ -265,7 +258,7 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
         }
 
         long getResetTime() {
-            return System.currentTimeMillis() + 1000;
+            return System.currentTimeMillis() + GatewayConstants.TOKEN_REFILL_MIN_INTERVAL_MILLIS;
         }
     }
 }

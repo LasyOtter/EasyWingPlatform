@@ -13,14 +13,12 @@ import com.easywing.platform.system.mapper.SysDictTypeMapper;
 import com.easywing.platform.system.mapper.struct.DictTypeMapper;
 import com.easywing.platform.system.service.SysDictTypeService;
 import com.easywing.platform.system.util.PageUtil;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,7 +32,10 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
     public Page<SysDictTypeVO> selectDictTypePage(Page<SysDictType> page, SysDictTypeDTO dictTypeDTO) {
         LambdaQueryWrapper<SysDictType> wrapper = new LambdaQueryWrapper<>();
         if (dictTypeDTO != null) {
-            wrapper.like(StrUtil.isNotBlank(dictTypeDTO.getDictName()), SysDictType::getDictName, dictTypeDTO.getDictName())
+            wrapper.like(
+                            StrUtil.isNotBlank(dictTypeDTO.getDictName()),
+                            SysDictType::getDictName,
+                            dictTypeDTO.getDictName())
                     .eq(dictTypeDTO.getStatus() != null, SysDictType::getStatus, dictTypeDTO.getStatus());
         }
         Page<SysDictType> dictTypePage = dictTypeMapper.selectPage(page, wrapper);
@@ -43,7 +44,8 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
 
     @Override
     public List<SysDictTypeVO> selectDictTypeAll() {
-        List<SysDictType> dictTypes = dictTypeMapper.selectList(new LambdaQueryWrapper<SysDictType>().eq(SysDictType::getStatus, 0));
+        List<SysDictType> dictTypes =
+                dictTypeMapper.selectList(new LambdaQueryWrapper<SysDictType>().eq(SysDictType::getStatus, 0));
         return dictTypeMapperStruct.toVOList(dictTypes);
     }
 

@@ -58,6 +58,5 @@ public class ValidationException extends RuntimeException {
     /**
      * 验证错误详情
      */
-    public record ValidationError(String field, String message) {
-    }
+    public record ValidationError(String field, String message) {}
 }

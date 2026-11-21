@@ -37,8 +37,7 @@ public class DynamicDataSourceContextHolder {
      */
     public static final String SLAVE = "slave";
 
-    private DynamicDataSourceContextHolder() {
-    }
+    private DynamicDataSourceContextHolder() {}
 
     /**
      * 设置当前线程使用的数据源key
