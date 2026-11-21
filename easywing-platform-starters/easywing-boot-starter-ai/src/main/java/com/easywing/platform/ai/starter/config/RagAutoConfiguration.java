@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -56,13 +57,25 @@ public class RagAutoConfiguration {
         return new DocumentByParagraphSplitter(chunkSize, chunkOverlap);
     }
 
+    /**
+     * RAG 服务。
+     *
+     * <p>{@code EmbeddingModel} 是可选依赖：当所有 Embedding 供应商（openai/qwen/local）都未配置时，
+     * {@link EmbeddingModelAutoConfiguration} 不会注册任何候选 Bean。此处用 {@link ObjectProvider} 兜底，
+     * 保证 RAG 相关的基础设施（向量库、文档切分）在纯检索场景下仍可装配，
+     * 仅在真正调用嵌入接口时才失败。
+     */
     @Bean
     @ConditionalOnMissingBean
     public RagService ragService(
-            EmbeddingModel embeddingModel,
+            ObjectProvider<EmbeddingModel> embeddingModelProvider,
             EmbeddingStore<TextSegment> embeddingStore,
             DocumentSplitter documentSplitter,
             AiProperties properties) {
+        EmbeddingModel embeddingModel = embeddingModelProvider.getIfAvailable();
+        if (embeddingModel == null) {
+            log.warn("未配置任何 EmbeddingModel（openai/qwen/local 均未启用），RagService 已降级创建，向量检索功能不可用");
+        }
         log.info("Creating RagService");
         return new RagService(embeddingModel, embeddingStore, documentSplitter, properties);
     }
