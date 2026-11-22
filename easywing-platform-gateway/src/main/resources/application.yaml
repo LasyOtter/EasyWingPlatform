@@ -144,6 +144,8 @@ easywing:
         - /api/health
         - /health
         - /api/v1/ai/health
+        # 会话共享链接只读视图：令牌即凭据，公开但受限流保护
+        - /api/v1/ai/shared/**
       user-id-claim-name: sub
       username-claim-name: preferred_username
       roles-claim-name: roles

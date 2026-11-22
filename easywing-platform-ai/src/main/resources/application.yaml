@@ -173,6 +173,17 @@ easywing:
       defaultTtlSeconds: 86400
       maxConversationsPerUser: 100
 
+    # 会话共享链接（PRD 4.7 / 5.2）：默认关闭，密钥不参与；限流与上限可配
+    # storageType=redis 时多实例共享；memory 仅用于本地开发
+    share:
+      enabled: ${AI_SHARE_ENABLED:false}
+      storageType: ${AI_SHARE_STORAGE:memory}
+      defaultTtlHours: 168
+      maxTtlHours: 720
+      maxLinksPerSession: 5
+      rateLimitPerMinute: 30
+      maxMessages: 500
+
     # Compression Configuration
     compression:
       enabled: true
@@ -303,6 +314,7 @@ easywing:
     public-paths:
       - /actuator/**
       - /api/v1/ai/health
+      - /api/v1/ai/shared/**
       - /swagger-ui/**
       - /v3/api-docs/**
     oauth2:

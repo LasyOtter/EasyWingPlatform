@@ -43,6 +43,8 @@ import com.easywing.platform.ai.session.SessionForkService;
 import com.easywing.platform.ai.session.SessionManager;
 import com.easywing.platform.ai.session.SessionSearchHit;
 import com.easywing.platform.ai.session.SessionSearchService;
+import com.easywing.platform.ai.session.ShareLink;
+import com.easywing.platform.ai.session.ShareLinkService;
 import com.easywing.platform.ai.skill.AgentSkill;
 import com.easywing.platform.ai.skill.SkillContext;
 import com.easywing.platform.ai.skill.SkillRegistry;
@@ -117,6 +119,7 @@ public class AiGatewayController {
     private final ObjectProvider<CodeExecutionSandbox> codeExecutionSandbox;
     private final MultiModalService multiModalService;
     private final ImageGenerationService imageGenerationService;
+    private final com.easywing.platform.ai.session.ShareLinkService shareLinkService;
 
     public AiGatewayController(
             AiProviderRegistry providerRegistry,
@@ -148,7 +151,8 @@ public class AiGatewayController {
             com.easywing.platform.ai.compression.SessionCompactionService sessionCompactionService,
             ObjectProvider<CodeExecutionSandbox> codeExecutionSandbox,
             MultiModalService multiModalService,
-            ImageGenerationService imageGenerationService) {
+            ImageGenerationService imageGenerationService,
+            com.easywing.platform.ai.session.ShareLinkService shareLinkService) {
         this.providerRegistry = providerRegistry;
         this.agentExecutor = agentExecutor;
         this.toolExecutor = toolExecutor;
@@ -179,6 +183,7 @@ public class AiGatewayController {
         this.codeExecutionSandbox = codeExecutionSandbox;
         this.multiModalService = multiModalService;
         this.imageGenerationService = imageGenerationService;
+        this.shareLinkService = shareLinkService;
     }
 
     @PostMapping("/chat/completions")
@@ -1367,6 +1372,56 @@ public class AiGatewayController {
                 .map(ResponseEntity::ok);
     }
 
+    // ========== 会话共享链接（PRD 4.7 / 5.2） ==========
+
+    /**
+     * 创建共享链接。需 JWT 且会话归属当前用户/租户。
+     */
+    @PostMapping("/sessions/{sessionId}/share")
+    public Mono<ResponseEntity<ShareLinkResponse>> createShare(
+            @PathVariable String sessionId,
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody(required = false) @Valid CreateShareRequest request) {
+        CreateShareRequest body = request == null ? new CreateShareRequest() : request;
+        return shareLinkService
+                .create(sessionId, requiredUserId(jwt), tenantId(jwt), body.getTtlHours(), body.getMaxAccesses())
+                .map(link -> ResponseEntity.ok(new ShareLinkResponse(
+                        link.getId(),
+                        link.getSessionId(),
+                        link.getCreatedAt(),
+                        link.getExpiresAt(),
+                        link.getMaxAccesses())));
+    }
+
+    /**
+     * 列出当前用户/租户在某会话下的共享链接。
+     */
+    @GetMapping("/sessions/{sessionId}/shares")
+    public Mono<ResponseEntity<List<ShareLink>>> listShares(
+            @PathVariable String sessionId, @AuthenticationPrincipal Jwt jwt) {
+        return shareLinkService
+                .listBySession(sessionId, requiredUserId(jwt), tenantId(jwt))
+                .map(ResponseEntity::ok);
+    }
+
+    /**
+     * 撤销共享链接。仅创建者可撤销。
+     */
+    @DeleteMapping("/shares/{shareId}")
+    public Mono<ResponseEntity<Void>> revokeShare(@PathVariable String shareId, @AuthenticationPrincipal Jwt jwt) {
+        return shareLinkService
+                .revoke(shareId, requiredUserId(jwt), tenantId(jwt))
+                .then(Mono.just(ResponseEntity.ok().<Void>build()));
+    }
+
+    /**
+     * 通过共享令牌读取会话只读视图。公开接口（网关与 AI 服务均需放行），带限流。
+     */
+    @GetMapping("/shared/{token}")
+    public Mono<ResponseEntity<ShareLinkService.SharedSessionView>> getShared(@PathVariable String token) {
+        return shareLinkService.getShared(token).map(ResponseEntity::ok);
+    }
+
     private Mono<ConversationSession> ownedSession(String sessionId, Jwt jwt) {
         String userId = requiredUserId(jwt);
         String tenantId = tenantId(jwt);
@@ -1475,6 +1530,32 @@ public class AiGatewayController {
         /** 完整保留的最近消息条数；为空时取 keep-last-messages */
         @Min(0)
         private Integer keepLastMessages;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CreateShareRequest {
+
+        /** 有效期（小时）；为空时取 easywing.ai.share.default-ttl-hours，0 表示永不过期 */
+        @Min(0)
+        private Integer ttlHours;
+
+        /** 最大访问次数；为空或 0 表示不限 */
+        @Min(0)
+        private Integer maxAccesses;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ShareLinkResponse {
+
+        private String shareId;
+        private String sessionId;
+        private long createdAt;
+        private long expiresAt;
+        private int maxAccesses;
     }
 
     @Data
