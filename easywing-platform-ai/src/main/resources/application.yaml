@@ -194,6 +194,23 @@ easywing:
       rateLimitPerMinute: 30
       maxMessages: 500
 
+    # Attached Workspaces（PRD 4.2 实验性能力）：允许 Agent 在托管/个人工作区查看目录树、
+    # 读写文件、执行 Bash。属高危能力，默认整体关闭；Bash 另需 allowBash=true 且
+    # 调用方持有 workspace-management 权限。文件落盘在 base-dir（缺省 ~/easywing/workspaces）。
+    workspace:
+      enabled: ${AI_WORKSPACE_ENABLED:false}
+      storage-type: ${AI_WORKSPACE_STORAGE_TYPE:memory}
+      base-dir: ${AI_WORKSPACE_BASE_DIR:}
+      max-file-size: ${AI_WORKSPACE_MAX_FILE_SIZE:1048576}
+      max-files-per-workspace: ${AI_WORKSPACE_MAX_FILES:500}
+      max-tree-depth: ${AI_WORKSPACE_MAX_TREE_DEPTH:8}
+      max-path-length: ${AI_WORKSPACE_MAX_PATH_LENGTH:4096}
+      max-workspaces-per-user: ${AI_WORKSPACE_MAX_PER_USER:20}
+      allow-bash: ${AI_WORKSPACE_ALLOW_BASH:false}
+      bash-timeout-ms: ${AI_WORKSPACE_BASH_TIMEOUT_MS:15000}
+      bash-max-output-size: ${AI_WORKSPACE_BASH_MAX_OUTPUT:65536}
+      admin-scope: ${AI_WORKSPACE_ADMIN_SCOPE:workspace-management}
+
     # Compression Configuration
     compression:
       enabled: true

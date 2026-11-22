@@ -13,6 +13,7 @@
 | 5 | Subagents | 已有 `TaskDecompositionAgent`，子任务独立构造 AgentRequest | 暴露 `/subagents/delegate` API，并应用常开 Skills。 |
 | 6 | 认证、安全与注册开关 | RS256 JWT、登录/刷新/吊销、角色和租户 Claim、网关限流 | 增加邮箱格式账号注册端点，默认由 `ALLOW_REGISTRATION=false` 关闭；开启后仅授予普通用户角色。新增 OAuth2/OIDC 外部登录（`easywing.auth.oauth2.enabled=true`，显式端点配置，不做 issuer 自动发现）与 LDAP 绑定认证（`easywing.auth.ldap.enabled=true`，先按过滤器搜索 DN 再绑定）；外部用户本地密码登录被拒绝。用户库持久化到 Redis（`easywing.auth.user-store=redis`），用户名/邮箱索引与播种幂等标记使多实例共享同一份用户数据；内置账号仅播种一次。邮箱验证与密码恢复流程（`TokenController` 的验证/忘记密码/重置密码端点 + 可插拔 `MailNotifier`，SMTP 经环境变量注入，默认仅记日志）。Trace/缓存/模型配置管理 API 限管理员；会话及记忆 API 根据 JWT 做用户/租户隔离。 |
 | 7 | 运维与接口 | Actuator health、Prometheus、springdoc/OpenAPI | 沿用现有探针和 OpenAPI 配置；生产 profile 的会话/记忆/技能/用量账本/追踪存储切到 Redis。成本账本可持久化到 Redis（`easywing.ai.usage.storage-type=redis`），Hash 存记录本体、ZSET 按时间维护顺序并按 `max-records` 淘汰最旧记录，多实例共享同一份 Token/成本视图。 |
+| 8 | Agent 定义管理 API | `AgentDefinition` 数据模型、Provider 路由 | 新增 `agentdef/` 包：`AgentDefinition`/`AgentDefinitionRequest`/`AgentDefinitionShareRequest`/`AgentVisibility`（PRIVATE/USER/GROUP/PUBLIC）、`AgentDefinitionStore`/`InMemoryAgentDefinitionStore`/`RedisAgentDefinitionStore`（`easywing.ai.agent-def.storage-type`）、`AgentDefinitionService`、`AgentDefinitionController`。端点 `/api/v1/ai/agents`：列举/详情/创建/更新/删除 + `POST|DELETE /{id}/share`，全部按 JWT 用户 + 租户做归属校验，被共享用户/群组与 PUBLIC 可读取，跨用户或跨租户统一 404。机器客户端走 `/admin/**`（`scope=agent-management`，client_credentials，`easywing.auth.oauth2.machine-clients`）。 |
 
 ## 后续优先级
 
@@ -32,6 +33,7 @@
 
 ### P2
 
+- Attached Workspaces（实验性）：已完成（默认关闭）。新增 `workspace/` 包：`WorkspaceProperties`（前缀 `easywing.ai.workspace`）、`Workspace`/`WorkspaceType`（PERSONAL/MANAGED）、`WorkspaceStore`/`InMemoryWorkspaceStore`/`RedisWorkspaceStore`、`WorkspaceService`、`WorkspaceController`。工作区按用户 + 租户归属，端点 `/api/v1/ai/workspaces` 提供工作区 CRUD、`GET /{id}/tree`、`GET|PUT|DELETE /{id}/files?path=`、`POST /{id}/bash`。文件路径归一化后必须落在工作区根目录内（拒绝绝对路径与 `..` 穿越），单文件大小/文件数量/目录深度/路径长度均有上限；Bash 走宿主进程（`cmd /c` 或 `sh -c`），要求 `allow-bash=true` 且调用方持有 `workspace-management` 权限，带超时与输出截断，非容器隔离。整个控制器由 `easywing.ai.workspace.enabled=true` 控制注册，默认不暴露端点；机器客户端 `/admin/**` 需 `scope=workspace-management`。
 - 消息全文搜索：已完成。新增 `SessionSearchService`/`SessionSearchHit`，按用户与租户过滤（`SessionOwnership`），支持大小写不敏感匹配、会话名命中（`messageIndex=-1`，`role=session`）、命中片段截断（默认 160，结果长度严格 ≤ 上限）、`limit` 上限（默认 50）。端点 `GET /api/v1/ai/sessions/search?q=&limit=`。配置 `easywing.ai.session-search.*`。
 - 对话导出：已完成。新增 `SessionExportService`，支持 JSON（含会话元数据与消息）与 Markdown 两种格式，文件名清洗保留 Unicode 字母/数字（`[^\p{L}\p{N}._-]`），并记录 `ExportedSession` 审计事件。端点 `GET /api/v1/ai/sessions/{id}/export?format=json|markdown`（带 `Content-Disposition`）。
 - 会话共享链接（PRD 4.7 / 5.2）：已完成。新增 `session/ShareLink`（随机 48 位十六进制令牌、sessionId、userId、tenantId、createdAt、expiresAt、revoked、maxAccesses、accessCount）、`ShareLinkStore`/`InMemoryShareLinkStore`（默认）/`RedisShareLinkStore`（`easywing.ai.share.storage-type=redis`，Hash `ai:share-links` 多实例共享）、`ShareLinkProperties`（前缀 `easywing.ai.share`）、`ShareLinkService`。创建/列举/撤销按 JWT 用户+租户做归属校验；公开读取 `GET /api/v1/ai/shared/{token}` 返回只读视图（不含 userId、消息元数据），并做每令牌每分钟固定窗口限流（超限 429）。过期、撤销、访问次数耗尽统一返回 404，不泄露资源存在性。功能默认关闭（`easywing.ai.share.enabled=false`），`defaultTtlHours`/`maxTtlHours`/`maxLinksPerSession`/`rateLimitPerMinute`/`maxMessages` 可配。AI 服务 `easywing.security.public-paths` 与网关 `easywing.gateway.jwt.ignore-paths` 均已放行 `/api/v1/ai/shared/**`（令牌即凭据）。端点：`POST /api/v1/ai/sessions/{id}/share`（body 可选 `ttlHours`、`maxAccesses`）、`GET /api/v1/ai/sessions/{id}/shares`、`DELETE /api/v1/ai/shares/{shareId}`、`GET /api/v1/ai/shared/{token}`。
@@ -48,6 +50,8 @@
 - `easywing.ai.session.storage-type=redis`、`easywing.ai.memory.type=redis`、`easywing.ai.skill.storage-type=redis`：生产 Redis 会话/记忆/技能目录。
 - `easywing.ai.prompt.storage-type=redis`：多实例共享 Prompt 库；`memory` 仅本地开发。
 - `easywing.ai.share.*`：`enabled`（默认 false）、`storage-type`（memory/redis）、`default-ttl-hours`（168）、`max-ttl-hours`（720）、`max-links-per-session`（5）、`rate-limit-per-minute`（30）、`max-messages`（500）。
+- `easywing.ai.agent-def.*`：`enabled`（默认 true）、`storage-type`（memory/redis）、`default-visibility`、`max-tools-per-agent`、`max-skills-per-agent`、`max-shared-users`、`max-shared-groups`；机器客户端另见 `easywing.auth.oauth2.machine-clients`（`client-id`/`client-secret`/`scopes`）。
+- `easywing.ai.workspace.*`：`enabled`（默认 false）、`storage-type`、`base-dir`（缺省 `~/easywing/workspaces`）、`max-file-size`、`max-files-per-workspace`、`max-tree-depth`、`max-path-length`、`max-workspaces-per-user`、`allow-bash`（默认 false）、`bash-timeout-ms`、`bash-max-output-size`、`admin-scope`（默认 `workspace-management`）。
 - `easywing.ai.context-usage.default-context-window`：模型目录缺 `contextWindow` 时的兜底窗口。
 - `easywing.ai.multimodal.*`：`enabled`（默认 true）、`default-model`、`detail`（high/low）。
 - `easywing.ai.image-generation.*`：`enabled`（默认 false）、`provider` / `default-model` / `models`、`default-size`、`default-n` / `max-n`、`timeout-ms`；密钥仅经环境变量注入。
