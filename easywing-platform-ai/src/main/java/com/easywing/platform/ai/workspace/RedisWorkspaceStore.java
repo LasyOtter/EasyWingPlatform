@@ -71,7 +71,10 @@ public class RedisWorkspaceStore implements WorkspaceStore {
     public List<Workspace> listAll() {
         List<Workspace> result = new ArrayList<>();
         for (Object value : redisTemplate.opsForHash().entries(WORKSPACE_KEY).values()) {
-            result.add(deserialize(value));
+            Workspace workspace = deserialize(value);
+            if (workspace != null) {
+                result.add(workspace);
+            }
         }
         return result;
     }

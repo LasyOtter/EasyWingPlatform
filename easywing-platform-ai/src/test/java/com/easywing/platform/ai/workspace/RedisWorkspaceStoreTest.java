@@ -140,15 +140,29 @@ class RedisWorkspaceStoreTest {
     }
 
     @Test
-    void listAllKeepsSlotForCorruptEntry() {
+    void listAllSkipsCorruptEntry() {
         data.computeIfAbsent(KEY, key -> new HashMap<>()).put("ws-bad", "{not-json");
         store.save(workspace("ws-good", "ws-good", "user-1", "tenant-a", 100L));
 
-        assertThat(store.listAll()).hasSize(2);
-        assertThat(store.listAll())
-                .filteredOn(java.util.Objects::nonNull)
+        assertThat(store.listAll()).extracting(Workspace::getId).containsExactly("ws-good");
+    }
+
+    @Test
+    void listByOwnerSurvivesCorruptEntry() {
+        data.computeIfAbsent(KEY, key -> new HashMap<>()).put("ws-bad", "{not-json");
+        store.save(workspace("ws-good", "ws-good", "user-1", "tenant-a", 100L));
+
+        assertThat(store.listByOwner("user-1", "tenant-a"))
                 .extracting(Workspace::getId)
                 .containsExactly("ws-good");
+    }
+
+    @Test
+    void countByOwnerSurvivesCorruptEntry() {
+        data.computeIfAbsent(KEY, key -> new HashMap<>()).put("ws-bad", "{not-json");
+        store.save(workspace("ws-good", "ws-good", "user-1", "tenant-a", 100L));
+
+        assertThat(store.countByOwner("user-1", "tenant-a")).isEqualTo(1);
     }
 
     @Test
