@@ -107,7 +107,9 @@ public class AgentDefinitionService {
                     result.add(definition);
                 }
             }
-            result.sort(Comparator.comparingLong(AgentDefinition::getUpdatedAt).reversed());
+            result.sort(Comparator.comparingLong(AgentDefinition::getUpdatedAt)
+                    .thenComparing(AgentDefinition::getId)
+                    .reversed());
             return result;
         });
     }
@@ -176,7 +178,9 @@ public class AgentDefinitionService {
         return Mono.fromCallable(() -> store.listAll().stream()
                 .filter(definition -> SessionOwnership.normalizeTenant(definition.getTenantId())
                         .equals(tenant))
-                .sorted(Comparator.comparingLong(AgentDefinition::getUpdatedAt).reversed())
+                .sorted(Comparator.comparingLong(AgentDefinition::getUpdatedAt)
+                        .thenComparing(AgentDefinition::getId)
+                        .reversed())
                 .toList());
     }
 

@@ -61,10 +61,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -1464,39 +1462,7 @@ public class AiGatewayController {
         if (jwt == null || !StringUtils.hasText(jwt.getSubject())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
-        return new AgentCaller(jwt.getSubject(), tenantId(jwt), groups(jwt));
-    }
-
-    private List<String> groups(Jwt jwt) {
-        Set<String> result = new LinkedHashSet<>();
-        result.addAll(claimAsList(jwt, "groups"));
-        result.addAll(claimAsList(jwt, "roles"));
-        return new ArrayList<>(result);
-    }
-
-    private static List<String> claimAsList(Jwt jwt, String claim) {
-        if (jwt == null) {
-            return List.of();
-        }
-        Object value = jwt.getClaim(claim);
-        if (value == null) {
-            return List.of();
-        }
-        List<String> result = new ArrayList<>();
-        if (value instanceof List<?> list) {
-            for (Object item : list) {
-                appendToken(result, item == null ? null : item.toString());
-            }
-        } else {
-            appendToken(result, value.toString());
-        }
-        return result;
-    }
-
-    private static void appendToken(List<String> target, String value) {
-        if (value != null && !value.isBlank()) {
-            target.add(value);
-        }
+        return AgentCaller.fromJwt(jwt);
     }
 
     private void appendAssistantMessage(ConversationSession session, ChatCompletionResponse response) {

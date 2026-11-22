@@ -78,7 +78,9 @@ public class RedisAgentDefinitionStore implements AgentDefinitionStore {
                 log.error("Failed to deserialize agent definition entry", e);
             }
         }
-        result.sort(Comparator.comparingLong(AgentDefinition::getUpdatedAt).reversed());
+        result.sort(Comparator.comparingLong(AgentDefinition::getUpdatedAt)
+                .thenComparing(AgentDefinition::getId)
+                .reversed());
         return result;
     }
 }

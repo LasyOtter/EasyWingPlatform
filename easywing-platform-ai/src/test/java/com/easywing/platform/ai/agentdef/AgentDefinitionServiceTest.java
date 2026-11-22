@@ -9,6 +9,7 @@ import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.skill.AgentSkill;
 import com.easywing.platform.ai.skill.SkillRegistry;
 import com.easywing.platform.ai.skill.store.InMemorySkillDefinitionStore;
+import java.util.Comparator;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -203,7 +204,11 @@ class AgentDefinitionServiceTest {
                 service.create(caller("u1", "default"), request("第二个")).block();
 
         List<AgentDefinition> visible = service.list(caller("u1", "default")).block();
-        assertThat(visible).extracting(AgentDefinition::getName).containsExactly("第二个", "第一个");
+        assertThat(visible).extracting(AgentDefinition::getName).containsExactlyInAnyOrder("第二个", "第一个");
+        assertThat(visible)
+                .isSortedAccordingTo(Comparator.comparingLong(AgentDefinition::getUpdatedAt)
+                        .thenComparing(AgentDefinition::getId)
+                        .reversed());
 
         List<AgentDefinition> otherUser = service.list(caller("u2", "default")).block();
         assertThat(otherUser).isEmpty();

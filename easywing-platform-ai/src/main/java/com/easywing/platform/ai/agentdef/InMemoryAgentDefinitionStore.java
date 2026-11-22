@@ -55,7 +55,9 @@ public class InMemoryAgentDefinitionStore implements AgentDefinitionStore {
     @Override
     public List<AgentDefinition> listAll() {
         List<AgentDefinition> result = new ArrayList<>(definitions.values());
-        result.sort(Comparator.comparingLong(AgentDefinition::getUpdatedAt).reversed());
+        result.sort(Comparator.comparingLong(AgentDefinition::getUpdatedAt)
+                .thenComparing(AgentDefinition::getId)
+                .reversed());
         return result;
     }
 }
