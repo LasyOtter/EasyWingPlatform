@@ -128,8 +128,8 @@ public class FunctionCallingAgent {
             return Mono.just(messages);
         }
 
-        // 获取可用工具并转换为 Function 格式
-        List<ToolDefinition> tools = toolExecutor.getAvailableTools();
+        // 获取可用工具并转换为 Function 格式（按当前 Agent 白名单过滤）
+        List<ToolDefinition> tools = ToolExecutor.filterByAllowed(toolExecutor.getAvailableTools(), config.getTools());
         List<FunctionCallingConverter.FunctionDefinition> functions = converter.convertToFunctions(tools);
 
         // 构建请求（注意：这里简化了，实际需要根据不同提供商调整）

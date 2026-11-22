@@ -121,7 +121,7 @@ public class StreamingReactAgent {
             return reactor.core.publisher.Mono.just("已达到最大工具调用次数限制。");
         }
 
-        String prompt = buildReactPrompt(input, iterations);
+        String prompt = buildReactPrompt(input, iterations, config.getTools());
 
         ChatCompletionRequest completionRequest = ChatCompletionRequest.builder()
                 .model(config.getModel())
@@ -175,7 +175,7 @@ public class StreamingReactAgent {
             // 执行工具
             Map<String, Object> finalActionInput = actionInput;
             return toolExecutor
-                    .executeTool(action, actionInput)
+                    .executeTool(action, actionInput, config.getTools())
                     .flatMap(result -> {
                         String observation = formatObservation(result);
 
@@ -207,8 +207,8 @@ public class StreamingReactAgent {
         });
     }
 
-    private String buildReactPrompt(String input, List<AgentIteration> iterations) {
-        List<ToolDefinition> tools = toolExecutor.getAvailableTools();
+    private String buildReactPrompt(String input, List<AgentIteration> iterations, List<String> allowedTools) {
+        List<ToolDefinition> tools = ToolExecutor.filterByAllowed(toolExecutor.getAvailableTools(), allowedTools);
 
         String toolNames = tools.stream()
                 .map(ToolDefinition::getName)

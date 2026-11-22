@@ -5,6 +5,7 @@ import com.easywing.platform.ai.agent.AgentRequest;
 import com.easywing.platform.ai.agent.AgentResponse;
 import com.easywing.platform.ai.agent.AgentStreamEvent;
 import com.easywing.platform.ai.agent.TaskDecompositionAgent;
+import com.easywing.platform.ai.agentdef.AgentCaller;
 import com.easywing.platform.ai.artifact.Artifact;
 import com.easywing.platform.ai.artifact.ArtifactService;
 import com.easywing.platform.ai.config.AiProperties;
@@ -60,8 +61,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -75,6 +78,7 @@ import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -120,6 +124,7 @@ public class AiGatewayController {
     private final MultiModalService multiModalService;
     private final ImageGenerationService imageGenerationService;
     private final com.easywing.platform.ai.session.ShareLinkService shareLinkService;
+    private final com.easywing.platform.ai.agentdef.AgentDefinitionService agentDefinitionService;
 
     public AiGatewayController(
             AiProviderRegistry providerRegistry,
@@ -152,7 +157,8 @@ public class AiGatewayController {
             ObjectProvider<CodeExecutionSandbox> codeExecutionSandbox,
             MultiModalService multiModalService,
             ImageGenerationService imageGenerationService,
-            com.easywing.platform.ai.session.ShareLinkService shareLinkService) {
+            com.easywing.platform.ai.session.ShareLinkService shareLinkService,
+            com.easywing.platform.ai.agentdef.AgentDefinitionService agentDefinitionService) {
         this.providerRegistry = providerRegistry;
         this.agentExecutor = agentExecutor;
         this.toolExecutor = toolExecutor;
@@ -184,6 +190,7 @@ public class AiGatewayController {
         this.multiModalService = multiModalService;
         this.imageGenerationService = imageGenerationService;
         this.shareLinkService = shareLinkService;
+        this.agentDefinitionService = agentDefinitionService;
     }
 
     @PostMapping("/chat/completions")
@@ -464,16 +471,20 @@ public class AiGatewayController {
             request.setSessionId(UUID.randomUUID().toString());
         }
 
-        return agentExecutor.execute(request).map(ResponseEntity::ok).onErrorResume(e -> {
-            log.error("Agent execution failed", e);
-            return Mono.just(ResponseEntity.internalServerError()
-                    .body(AgentResponse.builder()
-                            .agentId(request.getAgentId())
-                            .sessionId(request.getSessionId())
-                            .completed(false)
-                            .finishReason("error: " + e.getMessage())
-                            .build()));
-        });
+        return agentDefinitionService
+                .apply(agentCaller(jwt), request)
+                .flatMap(agentExecutor::execute)
+                .map(ResponseEntity::ok)
+                .onErrorResume(e -> {
+                    log.error("Agent execution failed", e);
+                    return Mono.just(ResponseEntity.internalServerError()
+                            .body(AgentResponse.builder()
+                                    .agentId(request.getAgentId())
+                                    .sessionId(request.getSessionId())
+                                    .completed(false)
+                                    .finishReason("error: " + e.getMessage())
+                                    .build()));
+                });
     }
 
     @PostMapping("/subagents/delegate")
@@ -484,7 +495,10 @@ public class AiGatewayController {
         }
         request.setTenantId(tenantId(jwt));
         applyAlwaysOnSkills(request);
-        return taskDecompositionAgent.executeWithDecomposition(request).map(ResponseEntity::ok);
+        return agentDefinitionService
+                .apply(agentCaller(jwt), request)
+                .flatMap(taskDecompositionAgent::executeWithDecomposition)
+                .map(ResponseEntity::ok);
     }
 
     @GetMapping(value = "/agent/execute/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -513,12 +527,14 @@ public class AiGatewayController {
                 .build();
         applyAlwaysOnSkills(request);
 
-        return streamingReactAgent
-                .executeStream(request)
-                .map(event -> org.springframework.http.codec.ServerSentEvent.<AgentStreamEvent>builder()
-                        .event(event.getType().name())
-                        .data(event)
-                        .build())
+        return agentDefinitionService
+                .apply(agentCaller(jwt), request)
+                .flatMapMany(applied -> streamingReactAgent
+                        .executeStream(applied)
+                        .map(event -> org.springframework.http.codec.ServerSentEvent.<AgentStreamEvent>builder()
+                                .event(event.getType().name())
+                                .data(event)
+                                .build()))
                 .onErrorResume(e -> {
                     log.error("Streaming execution failed", e);
                     return Flux.just(org.springframework.http.codec.ServerSentEvent.<AgentStreamEvent>builder()
@@ -1442,6 +1458,45 @@ public class AiGatewayController {
     private String tenantId(Jwt jwt) {
         String tenantId = jwt.getClaimAsString("tenant_id");
         return tenantId == null || tenantId.isBlank() ? "default" : tenantId;
+    }
+
+    private AgentCaller agentCaller(Jwt jwt) {
+        if (jwt == null || !StringUtils.hasText(jwt.getSubject())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+        return new AgentCaller(jwt.getSubject(), tenantId(jwt), groups(jwt));
+    }
+
+    private List<String> groups(Jwt jwt) {
+        Set<String> result = new LinkedHashSet<>();
+        result.addAll(claimAsList(jwt, "groups"));
+        result.addAll(claimAsList(jwt, "roles"));
+        return new ArrayList<>(result);
+    }
+
+    private static List<String> claimAsList(Jwt jwt, String claim) {
+        if (jwt == null) {
+            return List.of();
+        }
+        Object value = jwt.getClaim(claim);
+        if (value == null) {
+            return List.of();
+        }
+        List<String> result = new ArrayList<>();
+        if (value instanceof List<?> list) {
+            for (Object item : list) {
+                appendToken(result, item == null ? null : item.toString());
+            }
+        } else {
+            appendToken(result, value.toString());
+        }
+        return result;
+    }
+
+    private static void appendToken(List<String> target, String value) {
+        if (value != null && !value.isBlank()) {
+            target.add(value);
+        }
     }
 
     private void appendAssistantMessage(ConversationSession session, ChatCompletionResponse response) {

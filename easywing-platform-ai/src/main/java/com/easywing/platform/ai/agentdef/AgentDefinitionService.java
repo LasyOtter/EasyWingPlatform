@@ -1,15 +1,21 @@
 package com.easywing.platform.ai.agentdef;
 
+import com.easywing.platform.ai.agent.AgentRequest;
 import com.easywing.platform.ai.config.AiProperties;
 import com.easywing.platform.ai.config.AiProperties.AgentDefConfig;
+import com.easywing.platform.ai.model.ChatMessage;
 import com.easywing.platform.ai.session.SessionOwnership;
+import com.easywing.platform.ai.skill.AgentSkill;
+import com.easywing.platform.ai.skill.SkillRegistry;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -25,6 +31,7 @@ import reactor.core.publisher.Mono;
  * @author EasyWing Team
  * @since 1.0.0
  */
+@Slf4j
 @Service
 public class AgentDefinitionService {
 
@@ -36,10 +43,12 @@ public class AgentDefinitionService {
 
     private final AgentDefinitionStore store;
     private final AiProperties properties;
+    private final SkillRegistry skillRegistry;
 
-    public AgentDefinitionService(AgentDefinitionStore store, AiProperties properties) {
+    public AgentDefinitionService(AgentDefinitionStore store, AiProperties properties, SkillRegistry skillRegistry) {
         this.store = store;
         this.properties = properties;
+        this.skillRegistry = skillRegistry;
     }
 
     public Mono<AgentDefinition> create(AgentCaller caller, AgentDefinitionRequest request) {
@@ -185,6 +194,112 @@ public class AgentDefinitionService {
             }
             store.delete(id);
         });
+    }
+
+    /**
+     * 将 Agent 定义应用到执行请求，使「无代码搭建的自定义 Agent」真正可运行（PRD 4.2）。
+     * <p>仅当 {@code request.agentId} 命中一条当前调用者可读的定义时生效：
+     * <ul>
+     *   <li>{@code systemPrompt} 作为 system 消息前置（首条 system 消息内容相同时跳过）；</li>
+     *   <li>{@code model} 回填 {@code config.model}，调用方已显式指定时不覆盖；</li>
+     *   <li>{@code tools} 写入 {@code config.tools} 白名单，执行时未列入的工具会被拒绝；</li>
+     *   <li>{@code skills} 的提示词前置到用户 prompt。</li>
+     * </ul>
+     * 未命中任何定义时原样返回（保持既有 {@code agentId} 语义兼容）；命中定义但不可读时
+     * 返回 404，避免越权使用他人定义。
+     */
+    public Mono<AgentRequest> apply(AgentCaller caller, AgentRequest request) {
+        if (request == null || !StringUtils.hasText(request.getAgentId()) || "default".equals(request.getAgentId())) {
+            return Mono.just(request);
+        }
+        return Mono.fromCallable(() -> {
+            AgentDefinition definition = store.findById(request.getAgentId());
+            if (definition == null) {
+                log.debug("No agent definition matches agentId={}, skip applying", request.getAgentId());
+                return request;
+            }
+            if (!canRead(definition, caller, SessionOwnership.normalizeTenant(caller.tenantId()))) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Agent 定义不存在");
+            }
+            log.info("Applying agent definition {} to execution request", definition.getId());
+            return applyDefinition(definition, request);
+        });
+    }
+
+    private AgentRequest applyDefinition(AgentDefinition definition, AgentRequest request) {
+        boolean hasTools =
+                definition.getTools() != null && !definition.getTools().isEmpty();
+        boolean hasModel = StringUtils.hasText(definition.getModel())
+                && (request.getConfig() == null
+                        || !StringUtils.hasText(request.getConfig().getModel()));
+        if (hasTools || hasModel) {
+            boolean created = request.getConfig() == null;
+            AgentRequest.AgentConfig config = created ? defaultConfig() : request.getConfig();
+            if (created) {
+                request.setConfig(config);
+            }
+            if (hasModel) {
+                config.setModel(definition.getModel().trim());
+            }
+            if (hasTools) {
+                config.setTools(new ArrayList<>(definition.getTools()));
+            }
+        }
+
+        String systemPrompt = trimToNull(definition.getSystemPrompt());
+        if (systemPrompt != null) {
+            List<ChatMessage> messages =
+                    request.getMessages() == null ? new ArrayList<>() : new ArrayList<>(request.getMessages());
+            if (!hasSystemMessage(messages, systemPrompt)) {
+                messages.add(
+                        0,
+                        ChatMessage.builder()
+                                .role(ChatMessage.ROLE_SYSTEM)
+                                .content(systemPrompt)
+                                .build());
+                request.setMessages(messages);
+            }
+        }
+
+        String skillInstructions = resolveSkillInstructions(definition.getSkills());
+        if (!skillInstructions.isBlank() && StringUtils.hasText(request.getPrompt())) {
+            request.setPrompt(skillInstructions + "\n\n任务：\n" + request.getPrompt());
+        }
+        return request;
+    }
+
+    /**
+     * 未显式指定模型与工具时的默认执行参数，与 ReAct / Function Calling 的内置兜底一致。
+     */
+    private static AgentRequest.AgentConfig defaultConfig() {
+        return AgentRequest.AgentConfig.builder()
+                .maxIterations(10)
+                .maxToolCalls(20)
+                .timeoutMs(60000)
+                .temperature(0.7)
+                .build();
+    }
+
+    private static boolean hasSystemMessage(List<ChatMessage> messages, String systemPrompt) {
+        if (messages.isEmpty() || messages.get(0).getContent() == null) {
+            return false;
+        }
+        return ChatMessage.ROLE_SYSTEM.equalsIgnoreCase(messages.get(0).getRole())
+                && systemPrompt.equals(messages.get(0).getContent());
+    }
+
+    private String resolveSkillInstructions(List<String> skills) {
+        if (skills == null || skills.isEmpty()) {
+            return "";
+        }
+        return skills.stream()
+                .filter(StringUtils::hasText)
+                .map(skillRegistry::get)
+                .filter(Objects::nonNull)
+                .filter(AgentSkill::isEnabled)
+                .map(AgentSkill::getPromptTemplate)
+                .filter(template -> template != null && !template.isBlank())
+                .collect(Collectors.joining("\n\n"));
     }
 
     private AgentDefinition requireOwned(String id, AgentCaller caller) {

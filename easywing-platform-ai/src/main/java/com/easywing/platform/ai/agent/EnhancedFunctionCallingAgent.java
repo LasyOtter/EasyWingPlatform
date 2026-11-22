@@ -125,8 +125,8 @@ public class EnhancedFunctionCallingAgent {
             return Mono.just(messages);
         }
 
-        // 转换工具为 OpenAI Tools 格式
-        List<ToolDefinition> tools = toolExecutor.getAvailableTools();
+        // 转换工具为 OpenAI Tools 格式（按当前 Agent 白名单过滤）
+        List<ToolDefinition> tools = ToolExecutor.filterByAllowed(toolExecutor.getAvailableTools(), config.getTools());
         List<OpenAiTool> openAiTools = convertToOpenAiTools(tools);
 
         // 构建请求

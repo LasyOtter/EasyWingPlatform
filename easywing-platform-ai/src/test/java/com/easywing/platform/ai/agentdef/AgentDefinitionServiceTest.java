@@ -3,7 +3,12 @@ package com.easywing.platform.ai.agentdef;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.easywing.platform.ai.agent.AgentRequest;
 import com.easywing.platform.ai.config.AiProperties;
+import com.easywing.platform.ai.model.ChatMessage;
+import com.easywing.platform.ai.skill.AgentSkill;
+import com.easywing.platform.ai.skill.SkillRegistry;
+import com.easywing.platform.ai.skill.store.InMemorySkillDefinitionStore;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,10 +25,12 @@ import org.springframework.web.server.ResponseStatusException;
 class AgentDefinitionServiceTest {
 
     private AgentDefinitionService service;
+    private SkillRegistry skillRegistry;
 
     @BeforeEach
     void setUp() {
-        service = new AgentDefinitionService(new InMemoryAgentDefinitionStore(), new AiProperties());
+        skillRegistry = new SkillRegistry(new InMemorySkillDefinitionStore());
+        service = new AgentDefinitionService(new InMemoryAgentDefinitionStore(), new AiProperties(), skillRegistry);
     }
 
     private static AgentCaller caller(String userId, String tenant) {
@@ -237,6 +244,130 @@ class AgentDefinitionServiceTest {
                         .block())
                 .isInstanceOf(ResponseStatusException.class)
                 .hasFieldOrPropertyWithValue("statusCode", HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @DisplayName("apply 注入系统提示词、模型与工具白名单，并把技能提示词前置")
+    void appliesDefinitionToRequest() {
+        skillRegistry.register(AgentSkill.builder()
+                .name("data-analysis")
+                .enabled(true)
+                .promptTemplate("你是数据分析专家")
+                .build());
+        AgentDefinition created =
+                service.create(caller("u1", "default"), request("执行助手")).block();
+
+        AgentRequest applied = service.apply(
+                        caller("u1", "default"),
+                        AgentRequest.builder()
+                                .agentId(created.getId())
+                                .prompt("统计销量")
+                                .build())
+                .block();
+
+        assertThat(applied.getMessages()).hasSize(1);
+        assertThat(applied.getMessages().get(0).getRole()).isEqualTo(ChatMessage.ROLE_SYSTEM);
+        assertThat(applied.getMessages().get(0).getContent()).isEqualTo("你是助手");
+        assertThat(applied.getConfig().getModel()).isEqualTo("gpt-4o");
+        assertThat(applied.getConfig().getTools()).containsExactly("calculator");
+        assertThat(applied.getPrompt()).startsWith("你是数据分析专家").contains("任务：").contains("统计销量");
+    }
+
+    @Test
+    @DisplayName("apply 不覆盖调用方显式指定的模型，但仍写入工具白名单")
+    void keepsExplicitModel() {
+        AgentDefinition created =
+                service.create(caller("u1", "default"), request("模型助手")).block();
+
+        AgentRequest applied = service.apply(
+                        caller("u1", "default"),
+                        AgentRequest.builder()
+                                .agentId(created.getId())
+                                .prompt("统计销量")
+                                .config(AgentRequest.AgentConfig.builder()
+                                        .model("gpt-4o-mini")
+                                        .build())
+                                .build())
+                .block();
+
+        assertThat(applied.getConfig().getModel()).isEqualTo("gpt-4o-mini");
+        assertThat(applied.getConfig().getTools()).containsExactly("calculator");
+    }
+
+    @Test
+    @DisplayName("apply 已存在相同首条系统消息时不重复前置")
+    void deduplicatesSystemPrompt() {
+        AgentDefinition created =
+                service.create(caller("u1", "default"), request("去重助手")).block();
+
+        AgentRequest applied = service.apply(
+                        caller("u1", "default"),
+                        AgentRequest.builder()
+                                .agentId(created.getId())
+                                .prompt("统计销量")
+                                .messages(new java.util.ArrayList<>(List.of(ChatMessage.builder()
+                                        .role(ChatMessage.ROLE_SYSTEM)
+                                        .content("你是助手")
+                                        .build())))
+                                .build())
+                .block();
+
+        assertThat(applied.getMessages()).hasSize(1);
+        assertThat(applied.getMessages().get(0).getContent()).isEqualTo("你是助手");
+    }
+
+    @Test
+    @DisplayName("apply 命中他人定义但不可读时返回 404")
+    void applyRejectsUnreadableDefinition() {
+        AgentDefinition created =
+                service.create(caller("u1", "default"), request("私有执行助手")).block();
+
+        assertThatThrownBy(() -> service.apply(
+                                caller("u2", "default"),
+                                AgentRequest.builder()
+                                        .agentId(created.getId())
+                                        .prompt("越权")
+                                        .build())
+                        .block())
+                .isInstanceOf(ResponseStatusException.class)
+                .hasFieldOrPropertyWithValue("statusCode", HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("apply 未命中定义或 agentId=default 时原样返回")
+    void applyPassesThroughUnknownAgentId() {
+        AgentRequest request =
+                AgentRequest.builder().agentId("not-a-definition").prompt("hi").build();
+        assertThat(service.apply(caller("u1", "default"), request).block()).isSameAs(request);
+
+        AgentRequest defaultRequest =
+                AgentRequest.builder().agentId("default").prompt("hi").build();
+        assertThat(service.apply(caller("u1", "default"), defaultRequest).block())
+                .isSameAs(defaultRequest);
+    }
+
+    @Test
+    @DisplayName("apply 跳过未注册或已停用的技能")
+    void applySkipsUnknownAndDisabledSkills() {
+        AgentDefinitionRequest definition = request("技能过滤");
+        definition.setSkills(List.of("missing-skill", "disabled-skill"));
+        AgentDefinition created =
+                service.create(caller("u1", "default"), definition).block();
+        skillRegistry.register(AgentSkill.builder()
+                .name("disabled-skill")
+                .enabled(false)
+                .promptTemplate("不应出现")
+                .build());
+
+        AgentRequest applied = service.apply(
+                        caller("u1", "default"),
+                        AgentRequest.builder()
+                                .agentId(created.getId())
+                                .prompt("统计销量")
+                                .build())
+                .block();
+
+        assertThat(applied.getPrompt()).isEqualTo("统计销量");
     }
 
     private static AgentDefinitionShareRequest shareRequest(List<String> users, List<String> groups) {

@@ -64,5 +64,12 @@ public class AgentRequest {
         private double temperature;
 
         private Map<String, Object> metadata; // 用于传递额外配置，如 mode
+
+        /**
+         * 允许使用的工具名白名单；为空或 null 表示不限制。
+         * <p>由 Agent 定义（PRD 4.2）在执行前写入，ReAct / Function Calling 均按此过滤可用工具，
+         * 未列入名单的工具不会进入提示词，执行时也会被拒绝。
+         */
+        private List<String> tools;
     }
 }

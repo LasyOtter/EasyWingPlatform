@@ -143,7 +143,7 @@ public class ReactAgent {
         }
 
         // 构建 ReAct 提示词
-        String prompt = buildReactPrompt(input, iterations);
+        String prompt = buildReactPrompt(input, iterations, config.getTools());
 
         // 调用 LLM
         ChatCompletionRequest completionRequest = ChatCompletionRequest.builder()
@@ -221,7 +221,7 @@ public class ReactAgent {
 
         // 执行工具
         return toolExecutor
-                .executeTool(action, actionInput)
+                .executeTool(action, actionInput, config.getTools())
                 .map(result -> {
                     String observation = formatObservation(result);
                     iteration.setObservation(observation);
@@ -243,8 +243,8 @@ public class ReactAgent {
     /**
      * 构建 ReAct 提示词
      */
-    private String buildReactPrompt(String input, List<AgentIteration> iterations) {
-        List<ToolDefinition> tools = toolExecutor.getAvailableTools();
+    private String buildReactPrompt(String input, List<AgentIteration> iterations, List<String> allowedTools) {
+        List<ToolDefinition> tools = ToolExecutor.filterByAllowed(toolExecutor.getAvailableTools(), allowedTools);
 
         String toolNames = tools.stream().map(ToolDefinition::getName).collect(Collectors.joining(", "));
 

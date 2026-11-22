@@ -87,7 +87,9 @@ public class PlanningAgent {
      * 制定执行计划
      */
     private Mono<ExecutionPlan> createPlan(AgentRequest request) {
-        List<ToolDefinition> availableTools = toolExecutor.getAvailableTools();
+        List<ToolDefinition> availableTools = ToolExecutor.filterByAllowed(
+                toolExecutor.getAvailableTools(),
+                request.getConfig() != null ? request.getConfig().getTools() : null);
 
         String planningPrompt = buildPlanningPrompt(request.getPrompt(), availableTools);
 

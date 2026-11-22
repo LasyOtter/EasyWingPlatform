@@ -10,6 +10,9 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -63,6 +66,20 @@ public class ToolExecutor {
             return cache.executeCached(toolName, arguments);
         }
         return executeToolDirectly(toolName, arguments);
+    }
+
+    /**
+     * 执行工具，并校验工具是否在当前 Agent 的白名单内（PRD 4.2）。
+     *
+     * @param allowedTools 允许的工具名白名单；为空或 null 表示不限制
+     */
+    public Mono<Map<String, Object>> executeTool(
+            String toolName, Map<String, Object> arguments, List<String> allowedTools) {
+        if (isNotAllowed(toolName, allowedTools)) {
+            log.warn("Tool {} is not in the allowed tool list of the current agent", toolName);
+            return Mono.just(createErrorResponse(toolName, "工具不在当前 Agent 的允许列表中: " + toolName));
+        }
+        return executeTool(toolName, arguments);
     }
 
     /**
@@ -166,5 +183,28 @@ public class ToolExecutor {
         response.put("toolName", toolName);
         response.put("error", error);
         return response;
+    }
+
+    /**
+     * 按白名单过滤工具；白名单为空或 null 表示不限制。
+     *
+     * @param tools        候选工具
+     * @param allowedTools 允许的工具名白名单
+     */
+    public static List<ToolDefinition> filterByAllowed(List<ToolDefinition> tools, List<String> allowedTools) {
+        if (allowedTools == null || allowedTools.isEmpty()) {
+            return tools;
+        }
+        Set<String> allowed =
+                allowedTools.stream().filter(Objects::nonNull).map(String::trim).collect(Collectors.toSet());
+        return tools.stream().filter(tool -> allowed.contains(tool.getName())).collect(Collectors.toList());
+    }
+
+    private static boolean isNotAllowed(String toolName, List<String> allowedTools) {
+        if (allowedTools == null || allowedTools.isEmpty()) {
+            return false;
+        }
+        return allowedTools.stream()
+                .noneMatch(name -> name != null && name.trim().equalsIgnoreCase(toolName));
     }
 }
