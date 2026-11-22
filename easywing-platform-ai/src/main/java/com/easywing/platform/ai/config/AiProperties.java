@@ -67,6 +67,23 @@ public class AiProperties {
 
     private SkillConfig skill = new SkillConfig();
 
+    /**
+     * Prompt 库配置。
+     * <p>
+     * 默认内存存储（重启丢失、集群不共享）；多实例共享需配置 {@code storage-type=redis}。
+     */
+    private PromptConfig prompt = new PromptConfig();
+
+    /**
+     * 消息全文搜索配置。
+     */
+    private SessionSearchConfig sessionSearch = new SessionSearchConfig();
+
+    /**
+     * Context Usage 面板配置。
+     */
+    private ContextUsageConfig contextUsage = new ContextUsageConfig();
+
     private McpConfig mcp = new McpConfig();
 
     private WebSocket websocket = new WebSocket();
@@ -80,6 +97,16 @@ public class AiProperties {
      * 密钥只经配置或环境变量注入，禁止硬编码。
      */
     private WebSearchConfig webSearch = new WebSearchConfig();
+
+    /**
+     * 多模态理解（图像）配置，PRD 4.6。默认开启，但要求至少一个视觉模型可用。
+     */
+    private MultimodalConfig multimodal = new MultimodalConfig();
+
+    /**
+     * 图像生成（文生图 / 图生图）配置，默认关闭；密钥只经配置或环境变量注入。
+     */
+    private ImageGenerationConfig imageGeneration = new ImageGenerationConfig();
 
     @Data
     public static class ProviderConfig {
@@ -211,6 +238,9 @@ public class AiProperties {
         private String strategy = "smart";
         private int targetTokens = 8000;
         private double compressionRatio = 0.5;
+
+        /** 压缩时完整保留的最近消息条数（不含 system 消息）。 */
+        private int keepLastMessages = 6;
     }
 
     @Data
@@ -292,6 +322,30 @@ public class AiProperties {
     public static class SkillConfig {
         private boolean enabled = true;
         private String scanPackage = "com.easywing.platform.ai.skill";
+    }
+
+    @Data
+    public static class PromptConfig {
+        private boolean enabled = true;
+        private String storageType = "memory";
+    }
+
+    @Data
+    public static class SessionSearchConfig {
+        private boolean enabled = true;
+        private int maxResults = 50;
+        private int snippetLength = 160;
+    }
+
+    /**
+     * Context Usage 面板配置（PRD 4.8）。
+     */
+    @Data
+    public static class ContextUsageConfig {
+        private boolean enabled = true;
+
+        /** 模型目录缺 contextWindow 时的兜底窗口 */
+        private int defaultContextWindow = 128_000;
     }
 
     @Data
@@ -378,5 +432,49 @@ public class AiProperties {
             private String apiKey;
             private String model = "jina-reranker-v2-base-multilingual";
         }
+    }
+
+    /**
+     * 多模态理解配置。
+     */
+    @Data
+    public static class MultimodalConfig {
+
+        private boolean enabled = true;
+
+        /**
+         * 缺省视觉模型；留空时自动选取第一个声明 {@code supportsVision} 的模型。
+         */
+        private String defaultModel;
+
+        /** 图像细节档位：low / high / auto，缺省由模型决定 */
+        private String detail;
+    }
+
+    /**
+     * 图像生成配置（文生图 / 图生图）。默认关闭。
+     * <p>
+     * 走 OpenAI 兼容的 {@code /images/generations} 与 {@code /images/editions}。
+     * {@code provider} 取 providers 中的 key（如 {@code openai}）或 customEndpoints 中的 key。
+     */
+    @Data
+    public static class ImageGenerationConfig {
+
+        private boolean enabled = false;
+
+        /** 提供方名称，对应 providers 或 customEndpoints 中的 key */
+        private String provider = "openai";
+
+        private String defaultModel = "gpt-image-1";
+
+        private List<String> models = new ArrayList<>();
+
+        private String defaultSize = "1024x1024";
+
+        private int defaultN = 1;
+
+        private int maxN = 4;
+
+        private long timeoutMs = 120_000;
     }
 }

@@ -24,6 +24,12 @@
       <artifactId>easywing-core</artifactId>
     </dependency>
 
+    <!-- EasyWing Observability：OpenTelemetry SDK/Tracer，用于导出 Agent 链路 span -->
+    <dependency>
+      <groupId>com.easywing.platform</groupId>
+      <artifactId>easywing-observability</artifactId>
+    </dependency>
+
     <!-- Spring Boot Web -->
     <dependency>
       <groupId>org.springframework.boot</groupId>

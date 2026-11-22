@@ -113,6 +113,27 @@ easywing:
         models:
           - deepseek-chat
 
+    # 多模态图片理解（PRD 4.6）：把 ChatMessage.contentParts 中的图片交给视觉模型，
+    # 由 Provider 序列化为各家协议（OpenAI / Anthropic / Gemini）。默认开启，
+    # 但需要至少一个 supportsVision 的模型可用；AUDIO/VIDEO/DOCUMENT 会显式报错而非返回模拟数据。
+    multimodal:
+      enabled: ${AI_MULTIMODAL_ENABLED:true}
+      default-model: ${AI_MULTIMODAL_MODEL:gpt-4o}
+      detail: ${AI_MULTIMODAL_DETAIL:high}
+
+    # 文生图 / 图生图（PRD 4.6）：走 OpenAI 兼容的 /images/generations 与 /images/editions，
+    # provider 可指向 providers 中的 OpenAI 兼容端点或 customEndpoints 中的任意兼容服务
+    # （Stable Diffusion WebUI / Flux 等）。默认关闭，密钥只经环境变量/配置注入。
+    image-generation:
+      enabled: ${AI_IMAGE_GENERATION_ENABLED:false}
+      provider: ${AI_IMAGE_GENERATION_PROVIDER:openai}
+      default-model: ${AI_IMAGE_GENERATION_MODEL:gpt-image-1}
+      models: ${AI_IMAGE_GENERATION_MODELS:}
+      default-size: ${AI_IMAGE_GENERATION_SIZE:1024x1024}
+      default-n: ${AI_IMAGE_GENERATION_N:1}
+      max-n: ${AI_IMAGE_GENERATION_MAX_N:4}
+      timeout-ms: ${AI_IMAGE_GENERATION_TIMEOUT_MS:120000}
+
     mcp:
       # MCP server 配置：名称 -> 传输配置（http 或 stdio）
       servers: {}
@@ -158,6 +179,8 @@ easywing:
       strategy: smart
       targetTokens: 8000
       compressionRatio: 0.5
+      # 压缩时完整保留的最近消息条数（不含 system 消息）
+      keepLastMessages: 6
 
     # Gateway Configuration
     gateway:
@@ -205,6 +228,26 @@ easywing:
       # storage-type=redis 让多实例共享技能目录；memory 仅用于本地开发（重启丢失，集群不共享）
       storage-type: ${AI_SKILL_STORAGE:memory}
 
+    # Prompt Library Configuration（Prompt 库）
+    prompt:
+      enabled: true
+      # storage-type=redis 让多实例共享同一份 Prompt 库；memory 仅用于本地开发（重启丢失，集群不共享）
+      storage-type: ${AI_PROMPT_STORAGE:memory}
+
+    # Session Search Configuration（消息全文搜索）
+    session-search:
+      enabled: true
+      # 单次搜索返回的最大命中条数
+      max-results: ${AI_SEARCH_MAX_RESULTS:50}
+      # 命中片段的最大长度
+      snippet-length: ${AI_SEARCH_SNIPPET_LENGTH:160}
+
+    # Context Usage Panel（上下文占用面板，PRD 4.8）
+    context-usage:
+      enabled: true
+      # 模型目录缺 contextWindow 时的兜底窗口
+      default-context-window: ${AI_CONTEXT_WINDOW:128000}
+
     # Usage Ledger Configuration（Token / 成本账本）
     usage:
       # 账本存储：redis 让多实例共享同一份用量与成本统计；memory 仅本实例（默认）
@@ -218,6 +261,17 @@ easywing:
       storage-type: ${AI_TRACE_STORAGE:memory}
       # 最多保留的追踪条数（超出按开始时间淘汰最旧记录）
       max-records: ${AI_TRACE_MAX_RECORDS:1000}
+      # 终态追踪导出：none（默认，不导出）/ langfuse / otel
+      exporter: ${AI_TRACE_EXPORTER:none}
+
+    # Langfuse 链路摄取配置（exporter=langfuse 时生效）
+    langfuse:
+      # 例：https://cloud.langfuse.com ；自建实例填 http://<host>:3000
+      base-url: ${LANGFUSE_BASE_URL:}
+      public-key: ${LANGFUSE_PUBLIC_KEY:}
+      secret-key: ${LANGFUSE_SECRET_KEY:}
+      # 连接与请求超时（毫秒）
+      timeout-ms: ${LANGFUSE_TIMEOUT_MS:2000}
 
     # WebSocket Configuration
     websocket:

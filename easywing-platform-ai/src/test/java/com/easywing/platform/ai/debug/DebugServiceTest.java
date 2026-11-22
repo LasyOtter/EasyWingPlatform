@@ -4,14 +4,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.easywing.platform.ai.agent.AgentIteration;
 import com.easywing.platform.ai.agent.AgentResponse;
+import com.easywing.platform.ai.debug.export.AiTraceExporter;
+import com.easywing.platform.ai.debug.export.NoOpAiTraceExporter;
 import com.easywing.platform.ai.model.ChatMessage;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class DebugServiceTest {
 
     private final InMemoryTraceStore store = new InMemoryTraceStore(100);
-    private final DebugService service = new DebugService(store);
+    private final DebugService service = new DebugService(store, new NoOpAiTraceExporter());
 
     @Test
     void startTracePersistsRunningTraceWithTimeline() {
@@ -131,8 +135,8 @@ class DebugServiceTest {
     @Test
     void tracesAreSharedAcrossServiceInstances() {
         InMemoryTraceStore shared = new InMemoryTraceStore(100);
-        DebugService instanceA = new DebugService(shared);
-        DebugService instanceB = new DebugService(shared);
+        DebugService instanceA = new DebugService(shared, new NoOpAiTraceExporter());
+        DebugService instanceB = new DebugService(shared, new NoOpAiTraceExporter());
 
         String traceId = instanceA.startTrace("agent-1", "session-1", "hello");
         instanceA.recordToolCall(traceId, "calculator", 7L, true);
@@ -153,5 +157,51 @@ class DebugServiceTest {
         service.clearAllTraces();
 
         assertThat(service.getAllTraces()).isEmpty();
+    }
+
+    @Test
+    void completedTraceIsForwardedToExporter() {
+        RecordingExporter exporter = new RecordingExporter();
+        DebugService exporting = new DebugService(store, exporter);
+
+        String traceId = exporting.startTrace("agent-1", "session-1", "hello");
+        exporting.completeTrace(traceId, AgentResponse.builder().build());
+
+        assertThat(exporter.exported).containsExactly(traceId);
+    }
+
+    @Test
+    void failedTraceIsForwardedToExporter() {
+        RecordingExporter exporter = new RecordingExporter();
+        DebugService exporting = new DebugService(store, exporter);
+
+        String traceId = exporting.startTrace("agent-1", "session-1", "hello");
+        exporting.failTrace(traceId, "boom");
+
+        assertThat(exporter.exported).containsExactly(traceId);
+    }
+
+    @Test
+    void exporterFailureDoesNotBreakTraceCompletion() {
+        DebugService exporting = new DebugService(store, trace -> {
+            throw new IllegalStateException("exporter down");
+        });
+
+        String traceId = exporting.startTrace("agent-1", "session-1", "hello");
+        exporting.completeTrace(traceId, AgentResponse.builder().build());
+
+        assertThat(exporting.getTrace(traceId)).isPresent();
+        assertThat(exporting.getTrace(traceId).orElseThrow().getStatus())
+                .isEqualTo(AgentTrace.ExecutionStatus.COMPLETED);
+    }
+
+    private static final class RecordingExporter implements AiTraceExporter {
+
+        private final List<String> exported = new ArrayList<>();
+
+        @Override
+        public void export(AgentTrace trace) {
+            exported.add(trace.getTraceId());
+        }
     }
 }

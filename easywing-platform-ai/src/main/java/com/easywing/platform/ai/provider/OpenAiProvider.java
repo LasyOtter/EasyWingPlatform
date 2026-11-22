@@ -313,14 +313,7 @@ public class OpenAiProvider extends AbstractAiProvider {
 
     private List<Map<String, Object>> convertMessages(List<ChatMessage> messages) {
         if (messages == null) return List.of();
-        return messages.stream()
-                .map(msg -> {
-                    Map<String, Object> message = new HashMap<>();
-                    message.put("role", msg.getRole());
-                    message.put("content", msg.getContent());
-                    return message;
-                })
-                .toList();
+        return messages.stream().map(OpenAiContentFormatter::message).toList();
     }
 
     private ChatCompletionResponse parseResponse(String json, String defaultModel) {

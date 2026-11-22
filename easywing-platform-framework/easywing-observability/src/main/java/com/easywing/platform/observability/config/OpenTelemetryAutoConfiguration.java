@@ -16,7 +16,9 @@
 package com.easywing.platform.observability.config;
 
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.context.propagation.TextMapPropagator;
 import io.opentelemetry.extension.trace.propagation.JaegerPropagator;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
@@ -32,6 +34,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 
 /**
  * OpenTelemetry自动配置
@@ -89,11 +92,20 @@ public class OpenTelemetryAutoConfiguration {
         };
     }
 
+    /**
+     * 平台统一的传播器。必须标 {@code @Primary}：Spring Boot 的
+     * {@code OpenTelemetryPropagationConfigurations} 也会注册 {@code textMapPropagatorWithBaggage}，
+     * 两者并存时 {@code openTelemetry(...)} 按类型注入会因候选歧义导致启动失败。
+     * 这里显式组合 W3C TraceContext + Baggage + Jaeger，保证跨服务链路上下文可传播。
+     */
     @Bean
+    @Primary
     @ConditionalOnMissingBean
     public TextMapPropagator otelTextMapPropagator() {
         return TextMapPropagator.composite(
-                io.opentelemetry.context.propagation.TextMapPropagator.composite(JaegerPropagator.getInstance()));
+                W3CTraceContextPropagator.getInstance(),
+                W3CBaggagePropagator.getInstance(),
+                JaegerPropagator.getInstance());
     }
 
     @Bean

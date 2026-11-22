@@ -337,9 +337,19 @@ const ws = new WebSocket(`ws://localhost:8082/ws/agent?token=${accessToken}`);
 其实现为 `ProcessBuilder` 子进程隔离，无容器边界，字符串黑名单可被 base64 / 反射绕过，
 启用前必须自行评估风险。
 
+配置绑定 `easywing.ai.sandbox.*`（`SandboxProperties`）：`mode`（当前仅 `process`）、`max-execution-time`、
+`max-memory-mb`、`max-output-size`、`allow-network-access`、`allow-file-system-access`，以及输入/输出文件限额
+（`max-input-files` / `max-input-file-size` / `max-input-total-bytes` / `max-output-files` / `max-output-file-size` /
+`max-output-total-bytes`）。`POST /api/v1/ai/sandbox/execute` 除 JSON 外还支持 `multipart/form-data`：上传文件写入
+沙箱工作目录，程序产生/修改的文件以 `outputFiles`（base64）返回；安全检查按配置分级（文件/网络特征仅在对应
+能力关闭时拦截，高危调用始终拦截）。
+
 `EmbeddingService` 在配置 OpenAI API Key 时调用真实 `/v1/embeddings`；未配置时退化为
 **确定性随机向量**（无语义，RAG 检索结果不可用，启动时打印 WARN）。
-`MultiModalService` 的图像/音频/文档处理器仍返回模拟数据。
+`MultiModalService` 已支持真实的 TEXT+IMAGE 视觉理解：图片按 `ImageUrl`（URL 或 base64，base64 经魔数探测
+png/jpeg/gif/webp）作为视觉内容块交给视觉模型，OpenAI/Anthropic/Gemini 各自 formatter 负责序列化；
+AUDIO/VIDEO/DOCUMENT 返回 400，不再返回模拟数据。图像生成/编辑由 `ImageGenerationService` 走 OpenAI 兼容
+`POST /images/generations` 与 multipart `POST /images/editions`（默认关闭）。
 
 ## License
 

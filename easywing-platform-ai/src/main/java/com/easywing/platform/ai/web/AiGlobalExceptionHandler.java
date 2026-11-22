@@ -271,6 +271,39 @@ public class AiGlobalExceptionHandler {
     }
 
     /**
+     * 处理参数校验失败（业务代码主动抛出的 {@link IllegalArgumentException}）。
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ProblemDetail> handleIllegalArgumentException(
+            IllegalArgumentException ex, HttpServletRequest request) {
+        log.warn("Invalid argument: {}", ex.getMessage());
+        return build(
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                ex.getMessage(),
+                ErrorCode.VALIDATION_ERROR,
+                request,
+                null);
+    }
+
+    /**
+     * 处理 {@link ResponseStatusException}，保留其状态码与原因。
+     * <p>
+     * 可选能力未启用（503）、参数非法（400）、上游服务失败（502）都走这里。
+     */
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<ProblemDetail> handleResponseStatusException(
+            org.springframework.web.server.ResponseStatusException ex, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
+        if (status == null) {
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
+        }
+        String errorCode = status.value() >= 500 ? ErrorCode.SYSTEM_ERROR : ErrorCode.VALIDATION_ERROR;
+        log.warn("Response status {}: {}", status.value(), ex.getReason());
+        return build(status.value(), status.getReasonPhrase(), ex.getReason(), errorCode, request, null);
+    }
+
+    /**
      * 处理所有未预期的异常
      */
     @ExceptionHandler(Exception.class)

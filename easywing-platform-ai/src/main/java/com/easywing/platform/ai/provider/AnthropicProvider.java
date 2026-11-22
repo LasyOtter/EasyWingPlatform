@@ -237,9 +237,7 @@ public class AnthropicProvider extends AbstractAiProvider {
                     } else {
                         message.put("role", role);
                     }
-                    if (msg.getContent() != null) {
-                        message.put("content", msg.getContent());
-                    }
+                    message.put("content", AnthropicContentFormatter.content(msg));
                     return message;
                 })
                 .toList();

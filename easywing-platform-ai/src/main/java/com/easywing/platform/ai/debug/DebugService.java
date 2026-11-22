@@ -2,6 +2,7 @@ package com.easywing.platform.ai.debug;
 
 import com.easywing.platform.ai.agent.AgentIteration;
 import com.easywing.platform.ai.agent.AgentResponse;
+import com.easywing.platform.ai.debug.export.AiTraceExporter;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -16,8 +17,11 @@ public class DebugService {
 
     private final TraceStore traceStore;
 
-    public DebugService(TraceStore traceStore) {
+    private final AiTraceExporter traceExporter;
+
+    public DebugService(TraceStore traceStore, AiTraceExporter traceExporter) {
         this.traceStore = traceStore;
+        this.traceExporter = traceExporter;
     }
 
     /**
@@ -130,6 +134,7 @@ public class DebugService {
         addTimelineEvent(trace, "COMPLETE", "Agent execution completed", null);
         traceStore.save(trace);
         log.info("Completed trace: {}, duration: {}ms", traceId, metrics.getTotalDurationMs());
+        exportTrace(trace);
     }
 
     /**
@@ -148,6 +153,7 @@ public class DebugService {
         addTimelineEvent(trace, "ERROR", "Agent execution failed", Map.of("error", error));
         traceStore.save(trace);
         log.error("Failed trace: {}, error: {}", traceId, error);
+        exportTrace(trace);
     }
 
     /**
@@ -208,6 +214,18 @@ public class DebugService {
         int count = traceStore.loadAll().size();
         traceStore.clear();
         log.info("Cleared {} traces", count);
+    }
+
+    /**
+     * 导出终态追踪到外部系统（Langfuse / OpenTelemetry）。
+     * 导出失败只记录告警，不影响已保存的追踪与主流程。
+     */
+    private void exportTrace(AgentTrace trace) {
+        try {
+            traceExporter.export(trace);
+        } catch (Exception ex) {
+            log.warn("Trace export failed for trace {}: {}", trace.getTraceId(), ex.getMessage());
+        }
     }
 
     /**

@@ -226,14 +226,59 @@ final class GeminiProtocol {
             Map<String, Object> content = new HashMap<>();
             content.put("role", "user".equals(msg.getRole()) ? "user" : "model");
 
-            List<Map<String, Object>> parts = new ArrayList<>();
-            if (msg.getContent() != null) {
-                parts.add(Map.of("text", msg.getContent()));
-            }
-            content.put("parts", parts);
+            content.put("parts", geminiParts(msg));
             contents.add(content);
         }
         return contents;
+    }
+
+    /**
+     * 构造 Gemini 内容块：无内容块配置时退化为文本块；图像支持 base64 Data URI
+     * （{@code inlineData}）与普通 URL（{@code fileData}）。
+     */
+    static List<Map<String, Object>> geminiParts(ChatMessage msg) {
+        if (msg.getContentParts() == null || msg.getContentParts().isEmpty()) {
+            return msg.getContent() == null ? List.of() : List.of(Map.of("text", msg.getContent()));
+        }
+        List<Map<String, Object>> parts = new ArrayList<>();
+        for (ChatMessage.ContentPart part : msg.getContentParts()) {
+            if (part == null || part.getType() == null) {
+                continue;
+            }
+            switch (part.getType()) {
+                case "text" -> parts.add(Map.of("text", part.getText() == null ? "" : part.getText()));
+                case "image_url" -> {
+                    Map<String, Object> image = geminiImage(part);
+                    if (image != null) {
+                        parts.add(image);
+                    }
+                }
+                default -> {
+                    // 未知内容块类型直接忽略
+                }
+            }
+        }
+        return parts;
+    }
+
+    private static Map<String, Object> geminiImage(ChatMessage.ContentPart part) {
+        ChatMessage.ImageUrl imageUrl = part.getImageUrl();
+        if (imageUrl == null || imageUrl.getUrl() == null || imageUrl.getUrl().isBlank()) {
+            return null;
+        }
+        String url = imageUrl.getUrl();
+        if (url.startsWith("data:")) {
+            int comma = url.indexOf(',');
+            if (comma < 0) {
+                return null;
+            }
+            String mimeType = url.substring(0, comma).substring(5).replace(";base64", "");
+            Map<String, Object> inlineData = new HashMap<>();
+            inlineData.put("mimeType", mimeType);
+            inlineData.put("data", url.substring(comma + 1));
+            return Map.of("inlineData", inlineData);
+        }
+        return Map.of("fileData", Map.of("fileUri", url));
     }
 
     static void addSystemInstruction(Map<String, Object> body, List<ChatMessage> messages) {

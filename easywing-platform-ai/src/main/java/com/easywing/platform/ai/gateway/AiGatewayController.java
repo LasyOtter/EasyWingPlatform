@@ -10,6 +10,7 @@ import com.easywing.platform.ai.artifact.ArtifactService;
 import com.easywing.platform.ai.config.AiProperties;
 import com.easywing.platform.ai.debug.AgentTrace;
 import com.easywing.platform.ai.debug.DebugService;
+import com.easywing.platform.ai.image.ImageGenerationService;
 import com.easywing.platform.ai.mcp.McpClient;
 import com.easywing.platform.ai.mcp.McpResponse;
 import com.easywing.platform.ai.mcp.McpServerConfig;
@@ -22,17 +23,26 @@ import com.easywing.platform.ai.model.ConversationContext;
 import com.easywing.platform.ai.model.ModelInfo;
 import com.easywing.platform.ai.multiagent.MultiAgentRequest;
 import com.easywing.platform.ai.multiagent.MultiAgentResponse;
+import com.easywing.platform.ai.multimodal.MultiModalService;
+import com.easywing.platform.ai.prompt.PromptDefinition;
+import com.easywing.platform.ai.prompt.PromptRenderRequest;
+import com.easywing.platform.ai.prompt.PromptRequest;
+import com.easywing.platform.ai.prompt.PromptService;
 import com.easywing.platform.ai.provider.AiProviderRegistry;
 import com.easywing.platform.ai.rag.DocumentRecord;
 import com.easywing.platform.ai.rag.FileDocumentService;
 import com.easywing.platform.ai.rag.RagService;
+import com.easywing.platform.ai.sandbox.CodeExecutionSandbox;
 import com.easywing.platform.ai.search.WebSearchPipeline;
 import com.easywing.platform.ai.search.WebSearchRequest;
 import com.easywing.platform.ai.search.WebSearchResponse;
 import com.easywing.platform.ai.session.BranchDiff;
 import com.easywing.platform.ai.session.ConversationSession;
+import com.easywing.platform.ai.session.SessionExportService;
 import com.easywing.platform.ai.session.SessionForkService;
 import com.easywing.platform.ai.session.SessionManager;
+import com.easywing.platform.ai.session.SessionSearchHit;
+import com.easywing.platform.ai.session.SessionSearchService;
 import com.easywing.platform.ai.skill.AgentSkill;
 import com.easywing.platform.ai.skill.SkillContext;
 import com.easywing.platform.ai.skill.SkillRegistry;
@@ -44,8 +54,10 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -53,7 +65,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -95,6 +109,14 @@ public class AiGatewayController {
     private final com.easywing.platform.ai.observability.UsageLedger usageLedger;
     private final WebSearchPipeline webSearchPipeline;
     private final ArtifactService artifactService;
+    private final SessionSearchService sessionSearchService;
+    private final SessionExportService sessionExportService;
+    private final PromptService promptService;
+    private final com.easywing.platform.ai.observability.ContextUsageService contextUsageService;
+    private final com.easywing.platform.ai.compression.SessionCompactionService sessionCompactionService;
+    private final ObjectProvider<CodeExecutionSandbox> codeExecutionSandbox;
+    private final MultiModalService multiModalService;
+    private final ImageGenerationService imageGenerationService;
 
     public AiGatewayController(
             AiProviderRegistry providerRegistry,
@@ -118,7 +140,15 @@ public class AiGatewayController {
             TaskDecompositionAgent taskDecompositionAgent,
             com.easywing.platform.ai.observability.UsageLedger usageLedger,
             WebSearchPipeline webSearchPipeline,
-            ArtifactService artifactService) {
+            ArtifactService artifactService,
+            SessionSearchService sessionSearchService,
+            SessionExportService sessionExportService,
+            PromptService promptService,
+            com.easywing.platform.ai.observability.ContextUsageService contextUsageService,
+            com.easywing.platform.ai.compression.SessionCompactionService sessionCompactionService,
+            ObjectProvider<CodeExecutionSandbox> codeExecutionSandbox,
+            MultiModalService multiModalService,
+            ImageGenerationService imageGenerationService) {
         this.providerRegistry = providerRegistry;
         this.agentExecutor = agentExecutor;
         this.toolExecutor = toolExecutor;
@@ -141,6 +171,14 @@ public class AiGatewayController {
         this.usageLedger = usageLedger;
         this.webSearchPipeline = webSearchPipeline;
         this.artifactService = artifactService;
+        this.sessionSearchService = sessionSearchService;
+        this.sessionExportService = sessionExportService;
+        this.promptService = promptService;
+        this.contextUsageService = contextUsageService;
+        this.sessionCompactionService = sessionCompactionService;
+        this.codeExecutionSandbox = codeExecutionSandbox;
+        this.multiModalService = multiModalService;
+        this.imageGenerationService = imageGenerationService;
     }
 
     @PostMapping("/chat/completions")
@@ -756,6 +794,101 @@ public class AiGatewayController {
                         .body(body));
     }
 
+    // ========== Session Search / Export API ==========
+
+    @GetMapping("/sessions/search")
+    public Mono<ResponseEntity<List<SessionSearchHit>>> searchSessions(
+            @RequestParam("q") String query,
+            @RequestParam(defaultValue = "0") int limit,
+            @AuthenticationPrincipal Jwt jwt) {
+        return sessionSearchService
+                .search(requiredUserId(jwt), tenantId(jwt), query, limit)
+                .map(ResponseEntity::ok);
+    }
+
+    @GetMapping("/sessions/{sessionId}/export")
+    public Mono<ResponseEntity<String>> exportSession(
+            @PathVariable String sessionId,
+            @RequestParam(defaultValue = "json") String format,
+            @AuthenticationPrincipal Jwt jwt) {
+        return sessionExportService
+                .export(sessionId, requiredUserId(jwt), tenantId(jwt), format)
+                .map(result -> ResponseEntity.ok()
+                        .header("Content-Disposition", "attachment; filename=\"" + result.fileName() + "\"")
+                        .header("Content-Type", result.contentType())
+                        .body(result.body()));
+    }
+
+    // ========== Prompt Library API ==========
+
+    @GetMapping("/prompts")
+    public Mono<ResponseEntity<List<PromptDefinition>>> listPrompts(@AuthenticationPrincipal Jwt jwt) {
+        return promptService.list(requiredUserId(jwt), tenantId(jwt)).map(ResponseEntity::ok);
+    }
+
+    @PostMapping("/prompts")
+    public Mono<ResponseEntity<PromptDefinition>> createPrompt(
+            @Valid @RequestBody PromptRequest request, @AuthenticationPrincipal Jwt jwt) {
+        return promptService
+                .create(requiredUserId(jwt), tenantId(jwt), request.title(), request.content(), request.category())
+                .map(ResponseEntity::ok);
+    }
+
+    @GetMapping("/prompts/{id}")
+    public Mono<ResponseEntity<PromptDefinition>> getPrompt(@PathVariable String id, @AuthenticationPrincipal Jwt jwt) {
+        return promptService.get(requiredUserId(jwt), tenantId(jwt), id).map(ResponseEntity::ok);
+    }
+
+    @PutMapping("/prompts/{id}")
+    public Mono<ResponseEntity<PromptDefinition>> updatePrompt(
+            @PathVariable String id, @Valid @RequestBody PromptRequest request, @AuthenticationPrincipal Jwt jwt) {
+        return promptService
+                .update(requiredUserId(jwt), tenantId(jwt), id, request.title(), request.content(), request.category())
+                .map(ResponseEntity::ok);
+    }
+
+    @DeleteMapping("/prompts/{id}")
+    public Mono<ResponseEntity<Void>> deletePrompt(@PathVariable String id, @AuthenticationPrincipal Jwt jwt) {
+        return promptService
+                .delete(requiredUserId(jwt), tenantId(jwt), id)
+                .then(Mono.just(ResponseEntity.ok().<Void>build()));
+    }
+
+    @PostMapping("/prompts/{id}/render")
+    public Mono<ResponseEntity<String>> renderPrompt(
+            @PathVariable String id,
+            @RequestBody(required = false) PromptRenderRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        return promptService
+                .render(requiredUserId(jwt), tenantId(jwt), id, request == null ? Map.of() : request.variables())
+                .map(ResponseEntity::ok);
+    }
+
+    // ========== Context Usage API（PRD 4.8） ==========
+
+    @GetMapping("/sessions/{sessionId}/context-usage")
+    public Mono<ResponseEntity<com.easywing.platform.ai.observability.ContextUsageService.ContextUsage>>
+            getSessionContextUsage(@PathVariable String sessionId, @AuthenticationPrincipal Jwt jwt) {
+        return contextUsageService
+                .getSessionUsage(sessionId, requiredUserId(jwt), tenantId(jwt))
+                .map(ResponseEntity::ok);
+    }
+
+    @GetMapping("/context-usage")
+    public Mono<ResponseEntity<com.easywing.platform.ai.observability.ContextUsageService.ContextUsageSummary>>
+            getCurrentUserContextUsage(@AuthenticationPrincipal Jwt jwt) {
+        return contextUsageService
+                .getUserUsage(requiredUserId(jwt), tenantId(jwt))
+                .map(ResponseEntity::ok);
+    }
+
+    @GetMapping("/admin/context-usage")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Mono<ResponseEntity<com.easywing.platform.ai.observability.ContextUsageService.ContextUsageSummary>>
+            getAdminContextUsage() {
+        return contextUsageService.getPlatformUsage().map(ResponseEntity::ok);
+    }
+
     // ========== Multi-Agent API ==========
 
     @PostMapping("/multiagent/sequential")
@@ -1105,6 +1238,108 @@ public class AiGatewayController {
         });
     }
 
+    @GetMapping("/sandbox/languages")
+    public Mono<ResponseEntity<Map<String, Object>>> sandboxLanguages(@AuthenticationPrincipal Jwt jwt) {
+        CodeExecutionSandbox sandbox = codeExecutionSandbox.getIfAvailable();
+        if (sandbox == null) {
+            return Mono.just(ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("enabled", false, "languages", List.of())));
+        }
+        return Mono.just(ResponseEntity.ok(Map.of("enabled", true, "languages", sandbox.getSupportedLanguages())));
+    }
+
+    @PostMapping("/sandbox/execute")
+    public Mono<ResponseEntity<?>> executeSandbox(
+            @Valid @RequestBody SandboxExecuteRequest request, @AuthenticationPrincipal Jwt jwt) {
+        CodeExecutionSandbox sandbox = codeExecutionSandbox.getIfAvailable();
+        if (sandbox == null) {
+            return Mono.just(ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("error", "代码沙箱未启用：easywing.ai.sandbox.enabled=false")));
+        }
+        CodeExecutionSandbox.SandboxConfig config = sandbox.configWithOverrides(
+                request.getAllowFileSystemAccess(), request.getAllowNetworkAccess(), request.getMaxExecutionTime());
+        return sandbox.executeCode(request.getCode(), request.getLanguage(), request.getInput(), Map.of(), config)
+                .onErrorResume(
+                        IllegalArgumentException.class,
+                        e -> Mono.just(CodeExecutionSandbox.ExecutionResult.builder()
+                                .success(false)
+                                .error(e.getMessage())
+                                .build()))
+                .map(AiGatewayController::sandboxResponse);
+    }
+
+    /**
+     * 带文件上传的沙箱执行（PRD 4.3「文件上传、处理与结果下载」）。
+     * <p>
+     * multipart 字段：{@code code}、{@code language} 必填；{@code input}、{@code files} 可选；
+     * {@code allowFileSystemAccess} / {@code allowNetworkAccess} / {@code maxExecutionTime} 为请求级覆盖。
+     * 程序产生或修改的文件以 base64 形式随 {@code outputFiles} 返回，可直接下载。
+     */
+    @PostMapping(value = "/sandbox/execute", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Mono<ResponseEntity<?>> executeSandboxWithFiles(
+            @RequestParam("code") @NotBlank String code,
+            @RequestParam("language") @NotBlank String language,
+            @RequestParam(value = "input", required = false) String input,
+            @RequestParam(value = "files", required = false) List<MultipartFile> files,
+            @RequestParam(value = "allowFileSystemAccess", defaultValue = "false") boolean allowFileSystemAccess,
+            @RequestParam(value = "allowNetworkAccess", defaultValue = "false") boolean allowNetworkAccess,
+            @RequestParam(value = "maxExecutionTime", required = false) Long maxExecutionTime,
+            @AuthenticationPrincipal Jwt jwt) {
+        CodeExecutionSandbox sandbox = codeExecutionSandbox.getIfAvailable();
+        if (sandbox == null) {
+            return Mono.just(ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("error", "代码沙箱未启用：easywing.ai.sandbox.enabled=false")));
+        }
+        Map<String, byte[]> fileMap = new LinkedHashMap<>();
+        if (files != null) {
+            for (MultipartFile file : files) {
+                if (file == null || file.isEmpty()) {
+                    continue;
+                }
+                try {
+                    fileMap.put(file.getOriginalFilename(), file.getBytes());
+                } catch (IOException e) {
+                    return Mono.just(ResponseEntity.badRequest()
+                            .body(Map.of("error", "读取上传文件失败: " + file.getOriginalFilename())));
+                }
+            }
+        }
+        CodeExecutionSandbox.SandboxConfig config =
+                sandbox.configWithOverrides(allowFileSystemAccess, allowNetworkAccess, maxExecutionTime);
+        return sandbox.executeCode(code, language, input, fileMap, config)
+                .onErrorResume(
+                        IllegalArgumentException.class,
+                        e -> Mono.just(CodeExecutionSandbox.ExecutionResult.builder()
+                                .success(false)
+                                .error(e.getMessage())
+                                .build()))
+                .map(AiGatewayController::sandboxResponse);
+    }
+
+    private static ResponseEntity<?> sandboxResponse(CodeExecutionSandbox.ExecutionResult result) {
+        if (result.isSuccess()) {
+            return ResponseEntity.ok(result);
+        }
+        return ResponseEntity.badRequest().body(result);
+    }
+
+    @PostMapping("/sessions/{sessionId}/compact")
+    public Mono<ResponseEntity<com.easywing.platform.ai.compression.SessionCompactionService.CompactionResult>>
+            compactSession(
+                    @PathVariable String sessionId,
+                    @AuthenticationPrincipal Jwt jwt,
+                    @RequestBody(required = false) @Valid CompactSessionRequest request) {
+        CompactSessionRequest body = request == null ? new CompactSessionRequest() : request;
+        return sessionCompactionService
+                .compact(
+                        sessionId,
+                        requiredUserId(jwt),
+                        tenantId(jwt),
+                        body.getTargetTokens(),
+                        body.getKeepLastMessages())
+                .map(ResponseEntity::ok);
+    }
+
     @PostMapping("/sessions/{sessionId}/fork")
     public Mono<ResponseEntity<ConversationSession>> forkSession(
             @PathVariable String sessionId,
@@ -1201,6 +1436,45 @@ public class AiGatewayController {
         private String userId;
 
         private String sessionName;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SandboxExecuteRequest {
+
+        @NotBlank(message = "代码不能为空")
+        private String code;
+
+        @NotBlank(message = "语言不能为空")
+        private String language;
+
+        /** 标准输入内容，可选 */
+        private String input;
+
+        /** 请求级覆盖：是否允许文件系统访问；为空时取 easywing.ai.sandbox.allow-file-system-access */
+        private Boolean allowFileSystemAccess;
+
+        /** 请求级覆盖：是否允许网络访问；为空时取 easywing.ai.sandbox.allow-network-access */
+        private Boolean allowNetworkAccess;
+
+        /** 请求级覆盖：执行超时（毫秒），必须为正数 */
+        @Min(value = 1, message = "maxExecutionTime 必须为正数")
+        private Long maxExecutionTime;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CompactSessionRequest {
+
+        /** 目标 token 预算；为空时取 easywing.ai.compression.target-tokens */
+        @Min(1)
+        private Integer targetTokens;
+
+        /** 完整保留的最近消息条数；为空时取 keep-last-messages */
+        @Min(0)
+        private Integer keepLastMessages;
     }
 
     @Data
@@ -1338,5 +1612,48 @@ public class AiGatewayController {
     public Mono<ResponseEntity<Void>> clearUsage() {
         usageLedger.clear();
         return Mono.just(ResponseEntity.noContent().build());
+    }
+
+    // ========== 多模态与图像 API（PRD 4.6） ==========
+
+    /**
+     * 多模态理解：TEXT + IMAGE（URL 或 base64 字节），结果由视觉模型真实返回。
+     */
+    @PostMapping("/multimodal")
+    public Mono<ResponseEntity<MultiModalService.MultiModalResponse>> processMultiModal(
+            @Valid @RequestBody MultiModalService.MultiModalInput request, @AuthenticationPrincipal Jwt jwt) {
+        if (request.getUserId() == null) {
+            request.setUserId(requiredUserId(jwt));
+        }
+        if (request.getTenantId() == null) {
+            request.setTenantId(tenantId(jwt));
+        }
+        return multiModalService.processMultiModal(request).map(ResponseEntity::ok);
+    }
+
+    /**
+     * 文生图。图像生成默认关闭，未启用时返回 503。
+     */
+    @PostMapping("/image/generate")
+    public Mono<ResponseEntity<ImageGenerationService.ImageGenerationResponse>> generateImage(
+            @Valid @RequestBody ImageGenerationService.ImageGenerationRequest request) {
+        return imageGenerationService.generate(request).map(ResponseEntity::ok);
+    }
+
+    /**
+     * 图生图（multipart 语义，JSON 中以 base64 传 {@code image}）。
+     */
+    @PostMapping("/image/edit")
+    public Mono<ResponseEntity<ImageGenerationService.ImageGenerationResponse>> editImage(
+            @Valid @RequestBody ImageGenerationService.ImageEditRequest request) {
+        return imageGenerationService.edit(request).map(ResponseEntity::ok);
+    }
+
+    /**
+     * 当前可用的出图模型清单。
+     */
+    @GetMapping("/image/models")
+    public Mono<ResponseEntity<List<ImageGenerationService.ImageModelInfo>>> imageModels() {
+        return Mono.just(ResponseEntity.ok(imageGenerationService.models()));
     }
 }

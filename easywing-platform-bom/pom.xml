@@ -91,6 +91,26 @@
     
     <dependencyManagement>
         <dependencies>
+            <!-- ==================== OpenTelemetry ====================
+                 必须先行声明：Maven 对同一 artifacts 的 dependencyManagement 取“首个声明生效”，
+                 spring-boot-dependencies 内置 opentelemetry-bom 1.49.0，若其后声明会被覆盖，
+                 导致 opentelemetry-spring-boot-starter 2.25.0（需 SDK 1.59.0）在装配期缺类。 -->
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-bom</artifactId>
+                <version>${opentelemetry.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>io.opentelemetry.instrumentation</groupId>
+                <artifactId>opentelemetry-instrumentation-bom</artifactId>
+                <version>${opentelemetry-instrumentation.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
             <!-- ==================== Spring Boot Dependencies ==================== -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
@@ -265,23 +285,6 @@
                 <version>${langchain4j-embeddings.version}</version>
             </dependency>
 
-            <!-- ==================== OpenTelemetry ==================== -->
-            <dependency>
-                <groupId>io.opentelemetry</groupId>
-                <artifactId>opentelemetry-bom</artifactId>
-                <version>${opentelemetry.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            
-            <dependency>
-                <groupId>io.opentelemetry.instrumentation</groupId>
-                <artifactId>opentelemetry-instrumentation-bom</artifactId>
-                <version>${opentelemetry-instrumentation.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            
             <!-- ==================== Resilience4j ==================== -->
             <dependency>
                 <groupId>io.github.resilience4j</groupId>
