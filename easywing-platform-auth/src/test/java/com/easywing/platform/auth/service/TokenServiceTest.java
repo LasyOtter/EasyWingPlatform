@@ -25,6 +25,7 @@ import com.easywing.platform.auth.config.AuthProperties;
 import com.easywing.platform.auth.domain.AuthUser;
 import com.easywing.platform.auth.dto.TokenResponse;
 import com.easywing.platform.auth.metrics.AuthMetrics;
+import com.easywing.platform.auth.store.InMemoryUserStore;
 import com.easywing.platform.core.exception.BizException;
 import com.easywing.platform.core.exception.ErrorCode;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -90,7 +91,7 @@ class TokenServiceTest {
         properties.getJwt().setRefreshTokenTtl(Duration.ofDays(7));
         properties.getJwt().setKeyId("test-key");
 
-        userDetailsService = new UserDetailsService(new BCryptPasswordEncoder());
+        userDetailsService = new UserDetailsService(new InMemoryUserStore(new BCryptPasswordEncoder()));
 
         when(redisTemplate.hasKey(anyString())).thenReturn(false);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);

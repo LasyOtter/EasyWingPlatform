@@ -41,43 +41,45 @@ public class RagService {
 
         // 1. 生成查询的 embedding
         return embeddingService.embed(request.getQuery()).flatMap(queryEmbedding -> {
-            // 2. 检索相关文档
-            return vectorStore.search(queryEmbedding, request.getTopK()).flatMap(chunks -> {
-                if (chunks.isEmpty()) {
-                    log.warn("No relevant documents found");
-                    return generateWithoutContext(request);
-                }
+            // 2. 检索相关文档（按用户/租户归属与请求过滤条件）
+            return vectorStore
+                    .searchWithFilter(queryEmbedding, request.getTopK(), buildFilter(request))
+                    .flatMap(chunks -> {
+                        if (chunks.isEmpty()) {
+                            log.warn("No relevant documents found");
+                            return generateWithoutContext(request);
+                        }
 
-                // 3. 构建带上下文的提示词
-                String context = buildContext(chunks);
-                String prompt = buildPrompt(request.getQuery(), context);
+                        // 3. 构建带上下文的提示词
+                        String context = buildContext(chunks);
+                        String prompt = buildPrompt(request.getQuery(), context);
 
-                // 4. 调用 LLM 生成答案
-                ChatCompletionRequest completionRequest = ChatCompletionRequest.builder()
-                        .model(request.getModel() != null ? request.getModel() : "gpt-4o")
-                        .messages(List.of(ChatMessage.builder()
-                                .role("user")
-                                .content(prompt)
-                                .build()))
-                        .temperature(request.getTemperature())
-                        .build();
+                        // 4. 调用 LLM 生成答案
+                        ChatCompletionRequest completionRequest = ChatCompletionRequest.builder()
+                                .model(request.getModel() != null ? request.getModel() : "gpt-4o")
+                                .messages(List.of(ChatMessage.builder()
+                                        .role("user")
+                                        .content(prompt)
+                                        .build()))
+                                .temperature(request.getTemperature())
+                                .build();
 
-                return providerRegistry.chat(completionRequest).map(response -> {
-                    long totalTime = System.currentTimeMillis() - startTime;
+                        return providerRegistry.chat(completionRequest).map(response -> {
+                            long totalTime = System.currentTimeMillis() - startTime;
 
-                    String answer = response.getChoices() != null
-                                    && !response.getChoices().isEmpty()
-                            ? response.getChoices().get(0).getMessage().getContent()
-                            : "无法生成答案";
+                            String answer = response.getChoices() != null
+                                            && !response.getChoices().isEmpty()
+                                    ? response.getChoices().get(0).getMessage().getContent()
+                                    : "无法生成答案";
 
-                    return RagResponse.builder()
-                            .answer(answer)
-                            .sources(chunks)
-                            .retrievedCount(chunks.size())
-                            .totalExecutionTimeMs(totalTime)
-                            .build();
-                });
-            });
+                            return RagResponse.builder()
+                                    .answer(answer)
+                                    .sources(chunks)
+                                    .retrievedCount(chunks.size())
+                                    .totalExecutionTimeMs(totalTime)
+                                    .build();
+                        });
+                    });
         });
     }
 
@@ -105,7 +107,7 @@ public class RagService {
                                         .title(doc.getTitle())
                                         .content(chunkText)
                                         .embedding(embedding)
-                                        .metadata(doc.getMetadata())
+                                        .metadata(withOwnership(doc))
                                         .chunkIndex(index)
                                         .createdAt(System.currentTimeMillis())
                                         .source(doc.getSource())
@@ -122,6 +124,23 @@ public class RagService {
      */
     public Mono<Void> deleteDocument(String documentId) {
         return vectorStore.deleteDocument(documentId);
+    }
+
+    /**
+     * 构建检索过滤条件：请求自带的 filter 叠加用户与租户归属，避免跨用户命中。
+     */
+    private Map<String, Object> buildFilter(RagRequest request) {
+        Map<String, Object> filter = new java.util.HashMap<>();
+        if (request.getFilter() != null) {
+            filter.putAll(request.getFilter());
+        }
+        if (request.getUserId() != null && !request.getUserId().isBlank()) {
+            filter.put("userId", request.getUserId());
+        }
+        if (request.getTenantId() != null && !request.getTenantId().isBlank()) {
+            filter.put("tenantId", request.getTenantId());
+        }
+        return filter;
     }
 
     /**
@@ -206,6 +225,23 @@ public class RagService {
     }
 
     /**
+     * 把文档归属合并进 metadata，供向量检索按用户/租户过滤。
+     */
+    private Map<String, Object> withOwnership(Document doc) {
+        Map<String, Object> metadata = new java.util.HashMap<>();
+        if (doc.getMetadata() != null) {
+            metadata.putAll(doc.getMetadata());
+        }
+        if (doc.getUserId() != null && !doc.getUserId().isBlank()) {
+            metadata.put("userId", doc.getUserId());
+        }
+        if (doc.getTenantId() != null && !doc.getTenantId().isBlank()) {
+            metadata.put("tenantId", doc.getTenantId());
+        }
+        return metadata;
+    }
+
+    /**
      * 文档类
      */
     @lombok.Data
@@ -222,6 +258,12 @@ public class RagService {
         private String source;
         private Map<String, Object> metadata;
         private List<String> tags;
+
+        /** 文档归属用户；为空表示公共知识库文档 */
+        private String userId;
+
+        /** 文档归属租户；为空表示默认租户 */
+        private String tenantId;
     }
 
     /**
@@ -246,6 +288,12 @@ public class RagService {
         private double temperature = 0.7;
 
         private Map<String, Object> filter;
+
+        /** 检索归属用户；非空时仅命中该用户的文档 */
+        private String userId;
+
+        /** 检索归属租户；非空时仅命中该租户的文档 */
+        private String tenantId;
     }
 
     /**

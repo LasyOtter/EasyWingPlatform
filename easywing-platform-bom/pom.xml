@@ -25,6 +25,8 @@
         
         <!-- ==================== 安全框架版本 ==================== -->
         <nimbus-jose-jwt.version>9.37.3</nimbus-jose-jwt.version>
+        <!-- 与 Spring Boot 3.5.16 管理的 spring-security.version 保持一致 -->
+        <spring-security-ldap.version>6.5.11</spring-security-ldap.version>
         
         <!-- ==================== 数据访问层版本 ==================== -->
         <mybatis-plus.version>3.5.6</mybatis-plus.version>
@@ -82,6 +84,9 @@
         <!-- embeddings 单独发版，1.23.0-beta33 是该 artifact 在 Maven Central 的最新 release，
              不存在 1.23.0 正式版，因此与 langchain4j.version 不同属正常现象 -->
         <langchain4j-embeddings.version>1.23.0-beta33</langchain4j-embeddings.version>
+
+        <!-- AWS SDK v2：Bedrock Runtime（Converse 协议）与同步 HTTP 客户端 -->
+        <aws-sdk.version>2.59.7</aws-sdk.version>
     </properties>
     
     <dependencyManagement>
@@ -429,6 +434,13 @@
                 <artifactId>nimbus-jose-jwt</artifactId>
                 <version>${nimbus-jose-jwt.version}</version>
             </dependency>
+
+            <!-- ==================== LDAP 认证（Boot BOM 未管理，需显式版本） ==================== -->
+            <dependency>
+                <groupId>org.springframework.security</groupId>
+                <artifactId>spring-security-ldap</artifactId>
+                <version>${spring-security-ldap.version}</version>
+            </dependency>
             
             <dependency>
                 <groupId>io.jsonwebtoken</groupId>
@@ -475,6 +487,20 @@
                 <groupId>com.networknt</groupId>
                 <artifactId>json-schema-validator</artifactId>
                 <version>${json-schema-validator.version}</version>
+            </dependency>
+
+            <!-- AWS SDK v2：Bedrock Converse 协议与异步 Netty HTTP 客户端
+                 （该版本 SDK 的同步客户端已移除流式接口，流式必须走异步客户端） -->
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bedrockruntime</artifactId>
+                <version>${aws-sdk.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>netty-nio-client</artifactId>
+                <version>${aws-sdk.version}</version>
             </dependency>
 
             <dependency>

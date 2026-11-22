@@ -94,6 +94,8 @@ public class SelfReflectionAgent {
                                 .content(reflectionPrompt)
                                 .build()))
                 .temperature(0.3) // 低温度，更客观
+                .userId(request.getUserId())
+                .tenantId(request.getTenantId())
                 .build();
 
         return providerRegistry

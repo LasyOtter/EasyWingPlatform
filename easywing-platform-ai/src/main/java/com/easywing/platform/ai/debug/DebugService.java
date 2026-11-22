@@ -3,7 +3,6 @@ package com.easywing.platform.ai.debug;
 import com.easywing.platform.ai.agent.AgentIteration;
 import com.easywing.platform.ai.agent.AgentResponse;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,8 +14,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class DebugService {
 
-    private final Map<String, AgentTrace> traces = new ConcurrentHashMap<>();
-    private final Map<String, List<AgentTrace.TimelineEvent>> timelines = new ConcurrentHashMap<>();
+    private final TraceStore traceStore;
+
+    public DebugService(TraceStore traceStore) {
+        this.traceStore = traceStore;
+    }
 
     /**
      * 开始追踪
@@ -35,10 +37,8 @@ public class DebugService {
                 .status(AgentTrace.ExecutionStatus.RUNNING)
                 .build();
 
-        traces.put(traceId, trace);
-        timelines.put(traceId, new ArrayList<>());
-
-        addTimelineEvent(traceId, "START", "Agent execution started", null);
+        addTimelineEvent(trace, "START", "Agent execution started", null);
+        traceStore.save(trace);
         log.info("Started trace: {}", traceId);
 
         return traceId;
@@ -48,24 +48,29 @@ public class DebugService {
      * 记录迭代
      */
     public void recordIteration(String traceId, AgentIteration iteration) {
-        AgentTrace trace = traces.get(traceId);
-        if (trace != null) {
-            trace.getIterations().add(iteration);
-
-            addTimelineEvent(
-                    traceId, "ITERATION", String.format("Iteration %d", iteration.getIterationNumber()), iteration);
+        AgentTrace trace = traceStore.load(traceId).orElse(null);
+        if (trace == null) {
+            return;
         }
+        ensureCollections(trace);
+        trace.getIterations().add(iteration);
+
+        addTimelineEvent(trace, "ITERATION", String.format("Iteration %d", iteration.getIterationNumber()), iteration);
+        traceStore.save(trace);
     }
 
     /**
      * 记录工具调用
      */
     public void recordToolCall(String traceId, String toolName, long durationMs, boolean success) {
-        AgentTrace trace = traces.get(traceId);
-        if (trace == null) return;
+        AgentTrace trace = traceStore.load(traceId).orElse(null);
+        if (trace == null) {
+            return;
+        }
+        ensureCollections(trace);
 
         addTimelineEvent(
-                traceId,
+                trace,
                 "TOOL_CALL",
                 String.format("Tool: %s (%s)", toolName, success ? "success" : "failed"),
                 Map.of("toolName", toolName, "duration", durationMs, "success", success));
@@ -102,14 +107,17 @@ public class DebugService {
 
             return stats;
         });
+        traceStore.save(trace);
     }
 
     /**
      * 完成追踪
      */
     public void completeTrace(String traceId, AgentResponse response) {
-        AgentTrace trace = traces.get(traceId);
-        if (trace == null) return;
+        AgentTrace trace = traceStore.load(traceId).orElse(null);
+        if (trace == null) {
+            return;
+        }
 
         trace.setResponse(response);
         trace.setEndTime(System.currentTimeMillis());
@@ -119,7 +127,8 @@ public class DebugService {
         AgentTrace.PerformanceMetrics metrics = calculateMetrics(trace);
         trace.setMetrics(metrics);
 
-        addTimelineEvent(traceId, "COMPLETE", "Agent execution completed", null);
+        addTimelineEvent(trace, "COMPLETE", "Agent execution completed", null);
+        traceStore.save(trace);
         log.info("Completed trace: {}, duration: {}ms", traceId, metrics.getTotalDurationMs());
     }
 
@@ -127,14 +136,17 @@ public class DebugService {
      * 标记追踪失败
      */
     public void failTrace(String traceId, String error) {
-        AgentTrace trace = traces.get(traceId);
-        if (trace == null) return;
+        AgentTrace trace = traceStore.load(traceId).orElse(null);
+        if (trace == null) {
+            return;
+        }
 
         trace.setEndTime(System.currentTimeMillis());
         trace.setStatus(AgentTrace.ExecutionStatus.FAILED);
         trace.setError(error);
 
-        addTimelineEvent(traceId, "ERROR", "Agent execution failed", Map.of("error", error));
+        addTimelineEvent(trace, "ERROR", "Agent execution failed", Map.of("error", error));
+        traceStore.save(trace);
         log.error("Failed trace: {}, error: {}", traceId, error);
     }
 
@@ -142,21 +154,21 @@ public class DebugService {
      * 获取追踪信息
      */
     public Optional<AgentTrace> getTrace(String traceId) {
-        return Optional.ofNullable(traces.get(traceId));
+        return traceStore.load(traceId);
     }
 
     /**
      * 获取所有追踪
      */
     public List<AgentTrace> getAllTraces() {
-        return new ArrayList<>(traces.values());
+        return traceStore.loadAll();
     }
 
     /**
      * 获取最近的追踪
      */
     public List<AgentTrace> getRecentTraces(int limit) {
-        return traces.values().stream()
+        return traceStore.loadAll().stream()
                 .sorted(Comparator.comparingLong(AgentTrace::getStartTime).reversed())
                 .limit(limit)
                 .collect(Collectors.toList());
@@ -166,7 +178,7 @@ public class DebugService {
      * 获取调试报告
      */
     public DebugReport generateReport(String traceId) {
-        AgentTrace trace = traces.get(traceId);
+        AgentTrace trace = traceStore.load(traceId).orElse(null);
         if (trace == null) {
             return null;
         }
@@ -185,8 +197,7 @@ public class DebugService {
      * 清除追踪
      */
     public void clearTrace(String traceId) {
-        traces.remove(traceId);
-        timelines.remove(traceId);
+        traceStore.delete(traceId);
         log.info("Cleared trace: {}", traceId);
     }
 
@@ -194,29 +205,33 @@ public class DebugService {
      * 清除所有追踪
      */
     public void clearAllTraces() {
-        int count = traces.size();
-        traces.clear();
-        timelines.clear();
+        int count = traceStore.loadAll().size();
+        traceStore.clear();
         log.info("Cleared {} traces", count);
     }
 
     /**
      * 添加时间线事件
      */
-    private void addTimelineEvent(String traceId, String type, String description, Object data) {
-        List<AgentTrace.TimelineEvent> timeline = timelines.get(traceId);
-        if (timeline != null) {
-            timeline.add(AgentTrace.TimelineEvent.builder()
-                    .timestamp(System.currentTimeMillis())
-                    .type(type)
-                    .description(description)
-                    .data(data)
-                    .build());
+    private void addTimelineEvent(AgentTrace trace, String type, String description, Object data) {
+        trace.getTimeline()
+                .add(AgentTrace.TimelineEvent.builder()
+                        .timestamp(System.currentTimeMillis())
+                        .type(type)
+                        .description(description)
+                        .data(data)
+                        .build());
+    }
 
-            AgentTrace trace = traces.get(traceId);
-            if (trace != null) {
-                trace.setTimeline(timeline);
-            }
+    /**
+     * 确保追踪的集合字段可用（Redis 反序列化后可能缺失）
+     */
+    private void ensureCollections(AgentTrace trace) {
+        if (trace.getIterations() == null) {
+            trace.setIterations(new ArrayList<>());
+        }
+        if (trace.getTimeline() == null) {
+            trace.setTimeline(new ArrayList<>());
         }
     }
 

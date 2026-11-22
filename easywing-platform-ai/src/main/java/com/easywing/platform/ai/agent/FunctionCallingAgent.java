@@ -137,6 +137,8 @@ public class FunctionCallingAgent {
                 .model(config.getModel())
                 .messages(messages)
                 .temperature(config.getTemperature())
+                .userId(config.getUserId())
+                .tenantId(config.getTenantId())
                 .build();
 
         long iterationStartTime = System.currentTimeMillis();

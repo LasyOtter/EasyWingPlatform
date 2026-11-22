@@ -41,6 +41,19 @@ public class AgentExecutor {
     public Mono<AgentResponse> execute(AgentRequest request) {
         String agentId = request.getAgentId() != null ? request.getAgentId() : "default";
 
+        // 集中归一化调用方身份：顶层字段与 AgentConfig 互为兜底，供各 Agent 透传到 ChatCompletionRequest
+        AgentRequest.AgentConfig config = request.getConfig();
+        String userId =
+                request.getUserId() != null ? request.getUserId() : (config != null ? config.getUserId() : null);
+        String tenantId =
+                request.getTenantId() != null ? request.getTenantId() : (config != null ? config.getTenantId() : null);
+        request.setUserId(userId);
+        request.setTenantId(tenantId);
+        if (config != null) {
+            config.setUserId(userId);
+            config.setTenantId(tenantId);
+        }
+
         // 检查是否需要使用工具
         boolean useTools = shouldUseToolMode(request);
 
@@ -82,6 +95,8 @@ public class AgentExecutor {
                                 : "gpt-4o")
                 .messages(messages)
                 .temperature(request.getConfig() != null ? request.getConfig().getTemperature() : 0.7)
+                .userId(request.getUserId())
+                .tenantId(request.getTenantId())
                 .build();
 
         String finalAgentId = agentId;

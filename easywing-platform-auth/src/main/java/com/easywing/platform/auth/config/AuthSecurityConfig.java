@@ -17,6 +17,7 @@ package com.easywing.platform.auth.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -38,6 +39,7 @@ import org.springframework.security.web.SecurityFilterChain;
 public class AuthSecurityConfig {
 
     @Bean
+    @Order(2)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -45,7 +47,11 @@ public class AuthSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth.requestMatchers(
                                 "/api/v1/token/login",
+                                "/api/v1/token/register",
                                 "/api/v1/token/refresh",
+                                // 邮箱验证与密码重置为自助流程，必须匿名可访问
+                                "/api/v1/token/email/**",
+                                "/api/v1/token/password/**",
                                 "/.well-known/jwks.json",
                                 "/actuator/**",
                                 "/swagger-ui/**",

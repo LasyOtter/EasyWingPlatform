@@ -68,7 +68,9 @@ public class InMemorySessionManager implements SessionManager {
 
     @Override
     public Mono<ConversationSession> updateSession(ConversationSession session) {
-        session.setUpdatedAt(System.currentTimeMillis());
+        long now = System.currentTimeMillis();
+        session.setUpdatedAt(now);
+        session.setLastActiveAt(now);
         sessions.put(session.getId(), session);
         return Mono.just(session);
     }

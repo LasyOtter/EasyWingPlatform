@@ -67,6 +67,12 @@ public class ChatCompletionRequest {
 
     private String provider;
 
+    /** 调用方用户标识，由网关注入，用于用量与成本归属。 */
+    private String userId;
+
+    /** 调用方租户标识，由网关注入，用于多租户用量隔离。 */
+    private String tenantId;
+
     private boolean thinkingEnabled;
 
     private Integer thinkingBudgetTokens;

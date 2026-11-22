@@ -70,6 +70,8 @@ public final class ErrorCode {
     public static final String TOKEN_INVALID = "AUTH003";
     public static final String TOKEN_MISSING = "AUTH004";
     public static final String INVALID_CREDENTIALS = "AUTH005";
+    /** 一次性链接（邮箱验证 / 密码重置）无效或已过期 */
+    public static final String INVALID_OR_EXPIRED_TOKEN = "AUTH006";
 
     // ==================== 安全错误 ====================
     public static final String FORBIDDEN = "SEC001";
@@ -78,6 +80,8 @@ public final class ErrorCode {
     public static final String WEAK_PASSWORD = "SEC004";
     public static final String PASSWORD_REUSED = "SEC005";
     public static final String ACCOUNT_LOCKED = "SEC006";
+    /** 邮箱尚未通过验证 */
+    public static final String EMAIL_NOT_VERIFIED = "SEC007";
 
     // ==================== 业务错误 ====================
     public static final String RESOURCE_NOT_FOUND = "BIZ001";
@@ -121,6 +125,7 @@ public final class ErrorCode {
         register(TOKEN_INVALID, UNAUTHORIZED_STATUS, "Token Invalid", "无效的令牌");
         register(TOKEN_MISSING, UNAUTHORIZED_STATUS, "Token Missing", "缺少认证令牌");
         register(INVALID_CREDENTIALS, UNAUTHORIZED_STATUS, "Invalid Credentials", "用户名或密码错误");
+        register(INVALID_OR_EXPIRED_TOKEN, BAD_REQUEST_STATUS, "Invalid Or Expired Token", "链接无效或已过期");
 
         // 安全错误
         register(FORBIDDEN, FORBIDDEN_STATUS, "Forbidden", "禁止访问");
@@ -129,6 +134,7 @@ public final class ErrorCode {
         register(WEAK_PASSWORD, BAD_REQUEST_STATUS, "Weak Password", "密码强度不足");
         register(PASSWORD_REUSED, BAD_REQUEST_STATUS, "Password Reused", "密码近期已使用");
         register(ACCOUNT_LOCKED, FORBIDDEN_STATUS, "Account Locked", "账户已锁定");
+        register(EMAIL_NOT_VERIFIED, FORBIDDEN_STATUS, "Email Not Verified", "邮箱尚未验证");
 
         // 业务错误
         register(RESOURCE_NOT_FOUND, NOT_FOUND_STATUS, "Resource Not Found", "请求的资源不存在");

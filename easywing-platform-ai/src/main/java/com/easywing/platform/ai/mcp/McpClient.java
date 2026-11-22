@@ -1,66 +1,62 @@
 package com.easywing.platform.ai.mcp;
 
-import java.time.Duration;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+/**
+ * MCP 客户端门面，按 Server 配置的传输方式路由到具体 {@link McpTransport} 实现。
+ */
 @Slf4j
 @Component
 public class McpClient {
 
-    private final WebClient webClient;
-    private final ConcurrentHashMap<String, Session> sessions = new ConcurrentHashMap<>();
+    private final McpTransportRegistry transportRegistry;
 
-    public McpClient(WebClient webClient) {
-        this.webClient = webClient;
+    public McpClient(McpTransportRegistry transportRegistry) {
+        this.transportRegistry = transportRegistry;
     }
 
-    public Mono<Boolean> connect(String serverUrl) {
-        McpRequest request = McpRequest.builder()
-                .jsonrpc("2.0")
-                .id("1")
-                .method(McpRequest.METHOD_INITIALIZE)
-                .build();
-
-        return webClient
-                .post()
-                .uri(serverUrl)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(request)
-                .retrieve()
-                .bodyToMono(McpResponse.class)
-                .map(response -> response.getResult() != null)
-                .timeout(Duration.ofSeconds(30))
-                .doOnSuccess(v -> log.info("Connected to MCP server: {}", serverUrl))
-                .doOnError(e -> log.error("Failed to connect to MCP server: {}", serverUrl, e));
+    /** 建立连接并完成 initialize 能力协商。 */
+    public Mono<Boolean> connect(McpServerConfig server) {
+        server.validate(server.getName());
+        return transportRegistry.forServer(server).initialize(server);
     }
 
-    public Mono<McpResponse> sendRequest(String serverUrl, McpRequest request) {
-        return webClient
-                .post()
-                .uri(serverUrl)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(request)
-                .retrieve()
-                .bodyToMono(McpResponse.class)
-                .timeout(Duration.ofSeconds(30));
+    public Mono<McpResponse> listTools(McpServerConfig server) {
+        return send(
+                server,
+                McpRequest.builder()
+                        .jsonrpc(McpRequest.JSONRPC_VERSION)
+                        .id(UUID.randomUUID().toString())
+                        .method(McpRequest.METHOD_TOOLS_LIST)
+                        .params(Map.of())
+                        .build());
     }
 
-    public void disconnect(String sessionId) {
-        sessions.remove(sessionId);
+    public Mono<McpResponse> callTool(McpServerConfig server, String toolName, Map<String, Object> arguments) {
+        return send(
+                server,
+                McpRequest.builder()
+                        .jsonrpc(McpRequest.JSONRPC_VERSION)
+                        .id(UUID.randomUUID().toString())
+                        .method(McpRequest.METHOD_TOOLS_CALL)
+                        .params(Map.of("name", toolName, "arguments", arguments == null ? Map.of() : arguments))
+                        .build());
     }
 
-    private static class Session {
-        final String id;
-        final String serverUrl;
+    public Mono<McpResponse> sendRequest(McpServerConfig server, McpRequest request) {
+        return send(server, request);
+    }
 
-        Session(String id, String serverUrl) {
-            this.id = id;
-            this.serverUrl = serverUrl;
-        }
+    public void close(McpServerConfig server) {
+        transportRegistry.forServer(server).close(server);
+    }
+
+    private Mono<McpResponse> send(McpServerConfig server, McpRequest request) {
+        server.validate(server.getName());
+        return transportRegistry.forServer(server).send(server, request, false);
     }
 }

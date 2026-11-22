@@ -25,19 +25,34 @@ import java.util.List;
  */
 public class AuthUser {
 
-    private String userId;
-    private String username;
-    private String passwordHash;
-    private List<String> roles;
-    private String tenantId;
+    private final String userId;
+    private final String username;
+    private final String passwordHash;
+    private final List<String> roles;
+    private final String tenantId;
+    private final String email;
+    private boolean emailVerified;
     private boolean enabled;
 
     public AuthUser(String userId, String username, String passwordHash, List<String> roles, String tenantId) {
+        this(userId, username, passwordHash, roles, tenantId, null, true);
+    }
+
+    public AuthUser(
+            String userId,
+            String username,
+            String passwordHash,
+            List<String> roles,
+            String tenantId,
+            String email,
+            boolean emailVerified) {
         this.userId = userId;
         this.username = username;
         this.passwordHash = passwordHash;
         this.roles = roles != null ? List.copyOf(roles) : List.of();
         this.tenantId = tenantId;
+        this.email = email;
+        this.emailVerified = emailVerified;
         this.enabled = true;
     }
 
@@ -59,6 +74,26 @@ public class AuthUser {
 
     public String getTenantId() {
         return tenantId;
+    }
+
+    /**
+     * 账号邮箱（自助注册时写入，内置/外部身份用户可能为空）。
+     */
+    public String getEmail() {
+        return email;
+    }
+
+    /**
+     * 邮箱是否已验证。
+     * <p>
+     * 内置账号与 LDAP/OAuth2 外部身份默认视为已验证；自助注册默认未验证。
+     */
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
     }
 
     public boolean isEnabled() {

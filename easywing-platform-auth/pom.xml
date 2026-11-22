@@ -39,6 +39,18 @@
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
 
+    <!-- Spring Security OAuth2 Client：外部 OIDC 登录（easywing.auth.oauth2.enabled=true 时生效） -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-oauth2-client</artifactId>
+    </dependency>
+
+    <!-- Spring Security LDAP：LDAP 绑定认证（easywing.auth.ldap.enabled=true 时生效） -->
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-ldap</artifactId>
+    </dependency>
+
     <!-- Nacos Discovery -->
     <dependency>
       <groupId>com.alibaba.cloud</groupId>
@@ -55,6 +67,12 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-redis</artifactId>
+    </dependency>
+
+    <!-- Mail：邮箱验证与密码重置（未配置 SMTP 时退化为日志通知器） -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-mail</artifactId>
     </dependency>
 
     <!-- JWT - Nimbus JOSE -->

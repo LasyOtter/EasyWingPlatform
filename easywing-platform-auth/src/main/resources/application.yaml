@@ -67,6 +67,25 @@ logging:
 
 easywing:
   auth:
+    # 用户库实现：memory（默认，单实例开发）或 redis（多实例共享，需 Redis 可用）
+    user-store: ${USER_STORE:memory}
+    registration:
+      enabled: ${ALLOW_REGISTRATION:false}
+      # 注册后是否必须验证邮箱才能登录
+      require-email-verification: ${REQUIRE_EMAIL_VERIFICATION:true}
+      default-tenant: ${REGISTRATION_DEFAULT_TENANT:default}
+    # 邮箱验证与密码重置（默认关闭，链接写入日志；开启后走 SMTP）
+    email:
+      enabled: ${EMAIL_ENABLED:false}
+      from: ${EMAIL_FROM:no-reply@easywing.com}
+      verify-base-url: ${EMAIL_VERIFY_BASE_URL:http://localhost:5173}
+      verification-token-ttl: ${EMAIL_VERIFY_TTL:24h}
+      reset-token-ttl: ${EMAIL_RESET_TTL:1h}
+      smtp-host: ${EMAIL_SMTP_HOST:}
+      smtp-port: ${EMAIL_SMTP_PORT:587}
+      smtp-username: ${EMAIL_SMTP_USERNAME:}
+      smtp-password: ${EMAIL_SMTP_PASSWORD:}
+      smtp-start-tls: ${EMAIL_SMTP_START_TLS:true}
     jwt:
       issuer: ${JWT_ISSUER:https://auth.easywing.com}
       access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:30m}
@@ -76,3 +95,21 @@ easywing:
       # key-path: ${JWT_KEY_PATH:}
       roles-claim-name: roles
       tenant-id-claim-name: tenant_id
+    # LDAP 绑定认证（默认关闭，开启后注册 POST /api/v1/token/ldap/login）
+    ldap:
+      enabled: ${LDAP_ENABLED:false}
+      url: ${LDAP_URL:ldap://localhost:389}
+      base-dn: ${LDAP_BASE_DN:}
+      user-search-base: ${LDAP_USER_SEARCH_BASE:}
+      user-search-filter: ${LDAP_USER_SEARCH_FILTER:(uid={0})}
+      # 只读账号（可选）；未配置时以匿名方式搜索
+      manager-dn: ${LDAP_MANAGER_DN:}
+      manager-password: ${LDAP_MANAGER_PASSWORD:}
+      default-tenant: ${LDAP_DEFAULT_TENANT:default}
+      default-roles:
+        - ROLE_USER
+    # 外部 OAuth2/OIDC 登录（默认关闭，开启后开放 /oauth2/authorization/{id}）
+    oauth2:
+      enabled: ${OAUTH2_ENABLED:false}
+      default-tenant: ${OAUTH2_DEFAULT_TENANT:default}
+      providers: {}

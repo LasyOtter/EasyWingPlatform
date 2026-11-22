@@ -12,6 +12,37 @@ spring:
       discovery:
         enabled: ${NACOS_DISCOVERY_ENABLED:true}
 
+easywing:
+  ai:
+    session:
+      storage-type: redis
+    memory:
+      type: redis
+    skill:
+      storage-type: redis
+    usage:
+      storage-type: redis
+    trace:
+      storage-type: redis
+    responses:
+      enabled: ${RESPONSES_API_ENABLED:false}
+      api-key: ${RESPONSES_API_KEY:}
+      base-url: ${RESPONSES_API_BASE_URL:https://api.openai.com/v1}
+      models: ${RESPONSES_API_MODELS:}
+    vertex:
+      enabled: ${VERTEX_AI_ENABLED:false}
+      access-token: ${VERTEX_AI_ACCESS_TOKEN:}
+      base-url: ${VERTEX_AI_BASE_URL:}
+      models: ${VERTEX_AI_MODELS:}
+    bedrock:
+      enabled: ${BEDROCK_ENABLED:false}
+      region: ${BEDROCK_REGION:us-east-1}
+      access-key: ${BEDROCK_ACCESS_KEY:}
+      secret-key: ${BEDROCK_SECRET_KEY:}
+      session-token: ${BEDROCK_SESSION_TOKEN:}
+      endpoint: ${BEDROCK_ENDPOINT:}
+      models: ${BEDROCK_MODELS:}
+
 management:
   endpoint:
     health:

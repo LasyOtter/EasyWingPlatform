@@ -11,9 +11,13 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -88,6 +92,7 @@ public class AnthropicProvider extends AbstractAiProvider {
         Map<String, Object> body = new HashMap<>();
         body.put("model", request.getModel());
         body.put("messages", convertMessagesToAnthropicFormat(request.getMessages()));
+        addSystemInstruction(body, request.getMessages());
         body.put("stream", false);
         body.put("anthropic_version", API_VERSION);
 
@@ -118,7 +123,84 @@ public class AnthropicProvider extends AbstractAiProvider {
 
     @Override
     public Flux<ChatCompletionResponse> streamChat(ChatCompletionRequest request) {
-        return Flux.empty();
+        Map<String, Object> body = new HashMap<>();
+        body.put("model", request.getModel());
+        body.put("messages", convertMessagesToAnthropicFormat(request.getMessages()));
+        addSystemInstruction(body, request.getMessages());
+        body.put("stream", true);
+        body.put("max_tokens", request.getMaxTokens() > 0 ? request.getMaxTokens() : 4096);
+        if (request.getTemperature() > 0) {
+            body.put("temperature", request.getTemperature());
+        }
+
+        return webClient
+                .post()
+                .uri(getApiBaseUrl() + "/messages")
+                .header("x-api-key", getApiKey())
+                .header("anthropic-version", API_VERSION)
+                .accept(MediaType.TEXT_EVENT_STREAM)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(body)
+                .retrieve()
+                .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<String>>() {})
+                .map(ServerSentEvent::data)
+                .filter(Objects::nonNull)
+                .map(this::parseStreamEvent)
+                .filter(Objects::nonNull)
+                .doOnError(e -> log.error("Anthropic stream error: {}", e.getMessage()));
+    }
+
+    private ChatCompletionResponse parseStreamEvent(String json) {
+        try {
+            JsonNode root = objectMapper.readTree(json);
+            String type = root.path("type").asText();
+            String id = root.path("message").path("id").asText(UUID.randomUUID().toString());
+            String model = root.path("message").path("model").asText("");
+            String content = "";
+            String finishReason = null;
+            ChatCompletionResponse.Usage usage = null;
+            if ("content_block_delta".equals(type)) {
+                JsonNode delta = root.path("delta");
+                if (!"text_delta".equals(delta.path("type").asText())) {
+                    return null;
+                }
+                content = delta.path("text").asText("");
+            } else if ("message_delta".equals(type)) {
+                String stopReason = root.path("delta").path("stop_reason").asText("");
+                finishReason = switch (stopReason) {
+                    case "end_turn", "stop_sequence" -> "stop";
+                    case "max_tokens" -> "length";
+                    case "tool_use" -> "tool_calls";
+                    default -> null;};
+                JsonNode tokens = root.path("usage");
+                if (tokens.has("output_tokens")) {
+                    usage = ChatCompletionResponse.Usage.builder()
+                            .promptTokens(0)
+                            .completionTokens(tokens.path("output_tokens").asInt())
+                            .totalTokens(tokens.path("output_tokens").asInt())
+                            .build();
+                }
+            } else if (!"message_start".equals(type)) {
+                return null;
+            }
+            ChatMessage delta =
+                    ChatMessage.builder().role("assistant").content(content).build();
+            return ChatCompletionResponse.builder()
+                    .id(id)
+                    .object("chat.completion.chunk")
+                    .created(Instant.now().getEpochSecond())
+                    .model(model.isBlank() ? null : model)
+                    .choices(List.of(ChatCompletionResponse.Choice.builder()
+                            .index(0)
+                            .delta(delta)
+                            .finishReason(finishReason)
+                            .build()))
+                    .usage(usage)
+                    .build();
+        } catch (Exception e) {
+            log.debug("Ignoring malformed Anthropic stream event", e);
+            return null;
+        }
     }
 
     @Override
@@ -144,6 +226,7 @@ public class AnthropicProvider extends AbstractAiProvider {
     private List<Map<String, Object>> convertMessagesToAnthropicFormat(List<ChatMessage> messages) {
         if (messages == null) return List.of();
         return messages.stream()
+                .filter(msg -> !ChatMessage.ROLE_SYSTEM.equals(msg.getRole()))
                 .map(msg -> {
                     Map<String, Object> message = new HashMap<>();
                     String role = msg.getRole();
@@ -160,6 +243,20 @@ public class AnthropicProvider extends AbstractAiProvider {
                     return message;
                 })
                 .toList();
+    }
+
+    private void addSystemInstruction(Map<String, Object> body, List<ChatMessage> messages) {
+        if (messages == null) {
+            return;
+        }
+        String system = messages.stream()
+                .filter(message -> ChatMessage.ROLE_SYSTEM.equals(message.getRole()))
+                .map(ChatMessage::getContent)
+                .filter(content -> content != null && !content.isBlank())
+                .collect(java.util.stream.Collectors.joining("\n\n"));
+        if (!system.isBlank()) {
+            body.put("system", system);
+        }
     }
 
     /**

@@ -4,6 +4,7 @@ import com.easywing.platform.ai.config.AiProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -86,12 +87,18 @@ public class RedisSessionManager implements SessionManager {
                         return Flux.empty();
                     }
                 })
-                .collectList();
+                .collectList()
+                .map(sessions -> sessions.stream()
+                        .sorted(Comparator.comparingLong(ConversationSession::getLastActiveAt)
+                                .reversed())
+                        .toList());
     }
 
     @Override
     public Mono<ConversationSession> updateSession(ConversationSession session) {
-        session.setUpdatedAt(Instant.now().toEpochMilli());
+        long now = Instant.now().toEpochMilli();
+        session.setUpdatedAt(now);
+        session.setLastActiveAt(now);
         return saveSession(session);
     }
 
@@ -118,7 +125,13 @@ public class RedisSessionManager implements SessionManager {
 
         try {
             String json = objectMapper.writeValueAsString(session);
-            return redisTemplate.opsForValue().set(key, json, ttl).thenReturn(session);
+            String userSessionsKey = USER_SESSIONS_KEY_PREFIX + session.getUserId();
+            return redisTemplate
+                    .opsForValue()
+                    .set(key, json, ttl)
+                    .then(redisTemplate.opsForSet().add(userSessionsKey, session.getId()))
+                    .then(redisTemplate.expire(userSessionsKey, ttl))
+                    .thenReturn(session);
         } catch (Exception e) {
             log.error("Failed to serialize session: {}", session.getId(), e);
             return Mono.error(e);

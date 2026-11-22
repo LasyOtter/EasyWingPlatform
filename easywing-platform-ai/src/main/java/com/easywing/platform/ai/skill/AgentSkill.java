@@ -44,6 +44,11 @@ public class AgentSkill {
     private boolean enabled;
 
     /**
+     * MANUAL, AUTO or ALWAYS_ON. Defaults to MANUAL for backward compatibility.
+     */
+    private String triggerMode;
+
+    /**
      * 优先级（数字越大优先级越高）
      */
     private int priority;

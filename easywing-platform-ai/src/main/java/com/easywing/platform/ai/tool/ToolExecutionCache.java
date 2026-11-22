@@ -65,7 +65,7 @@ public class ToolExecutionCache {
     private static final Set<String> NON_CACHEABLE_TOOLS = Set.of("current_time", "http_request");
 
     private boolean isCacheable(String toolName) {
-        return toolName != null && !NON_CACHEABLE_TOOLS.contains(toolName);
+        return toolName != null && !toolName.startsWith("mcp_") && !NON_CACHEABLE_TOOLS.contains(toolName);
     }
 
     /**

@@ -128,6 +128,8 @@ public class StreamingReactAgent {
                 .messages(List.of(
                         ChatMessage.builder().role("user").content(prompt).build()))
                 .temperature(config.getTemperature())
+                .userId(config.getUserId())
+                .tenantId(config.getTenantId())
                 .build();
 
         return providerRegistry.chat(completionRequest).flatMap(response -> {

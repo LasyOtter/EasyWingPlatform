@@ -136,6 +136,8 @@ public class EnhancedFunctionCallingAgent {
                 .temperature(config.getTemperature())
                 .tools(openAiTools)
                 .toolChoice("auto") // 自动决定是否调用工具
+                .userId(config.getUserId())
+                .tenantId(config.getTenantId())
                 .build();
 
         long iterationStartTime = System.currentTimeMillis();

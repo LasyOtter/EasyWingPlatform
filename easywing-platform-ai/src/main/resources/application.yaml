@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
   application:
     name: ai-service
   cloud:
@@ -54,6 +58,82 @@ easywing:
         model: gemini-2.0-flash-exp
         temperature: 0.7
         maxTokens: 2048
+
+    # Azure OpenAI：与公共 OpenAI 的鉴权头（api-key）和 deployment 路径不同，故单独配置。
+    # 默认关闭；apiKey 只经环境变量/配置注入，禁止硬编码。
+    azure:
+      enabled: ${AZURE_OPENAI_ENABLED:false}
+      api-key: ${AZURE_OPENAI_API_KEY:}
+      base-url: ${AZURE_OPENAI_BASE_URL:}
+      api-version: ${AZURE_OPENAI_API_VERSION:2024-06-01}
+      deployment: ${AZURE_OPENAI_DEPLOYMENT:gpt-4o}
+      # 对外暴露的逻辑模型名清单；留空时回退到 OpenAI 常用模型
+      models:
+        - gpt-4o
+        - gpt-4o-mini
+
+    # OpenAI Responses API：与 Chat Completions 不同的官方协议（POST /v1/responses）。
+    # 默认关闭；apiKey 只经环境变量/配置注入，禁止硬编码。
+    responses:
+      enabled: ${RESPONSES_API_ENABLED:false}
+      api-key: ${RESPONSES_API_KEY:}
+      base-url: ${RESPONSES_API_BASE_URL:https://api.openai.com/v1}
+      # 对外暴露的逻辑模型名清单；留空时回退到 Responses API 常用模型
+      models: ${RESPONSES_API_MODELS:}
+
+    # Vertex AI（Gemini on Vertex）：与 Google AI Studio 共用 Gemini 线协议，但用 OAuth2 访问令牌鉴权。
+    # baseUrl 需指向 .../locations/<region>/publishers/google/models；默认关闭，令牌只经环境变量注入。
+    vertex:
+      enabled: ${VERTEX_AI_ENABLED:false}
+      access-token: ${VERTEX_AI_ACCESS_TOKEN:}
+      base-url: ${VERTEX_AI_BASE_URL:}
+      # 对外暴露的逻辑模型名清单；留空时回退到 Gemini 常用模型
+      models: ${VERTEX_AI_MODELS:}
+
+    # AWS Bedrock（Converse / ConverseStream）：使用 AWS SDK v2 官方客户端，签名与 event-stream 解码由 SDK 负责。
+    # 默认关闭；accessKey/secretKey 只经环境变量/配置注入，禁止硬编码。
+    bedrock:
+      enabled: ${BEDROCK_ENABLED:false}
+      region: ${BEDROCK_REGION:us-east-1}
+      access-key: ${BEDROCK_ACCESS_KEY:}
+      secret-key: ${BEDROCK_SECRET_KEY:}
+      session-token: ${BEDROCK_SESSION_TOKEN:}
+      # 覆盖端点（本地模拟或 VPC 内部地址），留空使用 https://bedrock-runtime.<region>.amazonaws.com
+      endpoint: ${BEDROCK_ENDPOINT:}
+      # 对外暴露的逻辑模型名清单；留空时回退到常用 Bedrock 模型
+      models: ${BEDROCK_MODELS:}
+
+    # OpenAI-compatible custom endpoints can be added here without changing service code.
+    custom-endpoints:
+      deepseek:
+        enabled: ${DEEPSEEK_ENABLED:false}
+        name: DeepSeek
+        base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com/v1}
+        api-key: ${DEEPSEEK_API_KEY:}
+        models:
+          - deepseek-chat
+
+    mcp:
+      # MCP server 配置：名称 -> 传输配置（http 或 stdio）
+      servers: {}
+      # 旧版令牌配置（可选，优先级低于 server 内的 bearer-token）
+      server-tokens: {}
+      # 示例（stdio 本地子进程）：
+      # servers:
+      #   filesystem:
+      #     type: stdio
+      #     command: ${MCP_FS_COMMAND:npx}
+      #     args: ["-y", "@modelcontextprotocol/server-filesystem", "/data"]
+      #     env:
+      #       API_KEY: ${MCP_FS_API_KEY:}
+      #     allowed-tenants: [default]
+      #     allowed-roles: [ROLE_USER]
+      #     timeout-seconds: 30
+      # 示例（http 远程服务）：
+      #   remote:
+      #     type: http
+      #     url: ${MCP_REMOTE_URL:}
+      #     bearer-token: ${MCP_REMOTE_TOKEN:}
 
     # Memory Configuration
     # type=redis 需要可用 Redis；memory 仅用于本地开发（重启丢失，集群不共享）
@@ -122,6 +202,22 @@ easywing:
     skill:
       enabled: true
       scanPackage: com.easywing.platform.ai.skill
+      # storage-type=redis 让多实例共享技能目录；memory 仅用于本地开发（重启丢失，集群不共享）
+      storage-type: ${AI_SKILL_STORAGE:memory}
+
+    # Usage Ledger Configuration（Token / 成本账本）
+    usage:
+      # 账本存储：redis 让多实例共享同一份用量与成本统计；memory 仅本实例（默认）
+      storage-type: ${AI_USAGE_STORAGE:memory}
+      # 最多保留的用量记录条数（超出按时间淘汰最旧记录）
+      max-records: ${AI_USAGE_MAX_RECORDS:10000}
+
+    # Agent Trace Configuration（DebugService 执行追踪）
+    trace:
+      # 追踪存储：redis 让多实例共享同一份 Agent 执行链路；memory 仅本实例（默认）
+      storage-type: ${AI_TRACE_STORAGE:memory}
+      # 最多保留的追踪条数（超出按开始时间淘汰最旧记录）
+      max-records: ${AI_TRACE_MAX_RECORDS:1000}
 
     # WebSocket Configuration
     websocket:
@@ -130,6 +226,23 @@ easywing:
       requireToken: true
       allowed-origins:
         - http://localhost:8080
+
+    # 联网检索流水线（搜索提供商 → 内容抓取器 → 结果重排器）
+    # 默认关闭；启用需同时提供提供商密钥，密钥只经配置或环境变量注入
+    web-search:
+      enabled: ${AI_WEB_SEARCH_ENABLED:false}
+      provider: serper
+      serper-base-url: https://google.serper.dev
+      serper-api-key: ${SERPER_API_KEY:}
+      max-results: 5
+      fetch-limit: 5
+      max-content-chars: 20000
+      fetch-content: true
+      jina:
+        enabled: ${AI_JINA_ENABLED:false}
+        base-url: https://api.jina.ai/v1
+        api-key: ${JINA_API_KEY:}
+        model: jina-reranker-v2-base-multilingual
 
   # 资源服务器配置，与 system 服务保持同一前缀与形状
   security:

@@ -57,7 +57,7 @@ public class PlanningAgent {
             // 第二步：执行计划
             return executePlan(plan, request).flatMap(results -> {
                 // 第三步：验证结果
-                return verifyResults(results, request.getPrompt()).map(finalResult -> {
+                return verifyResults(results, request).map(finalResult -> {
                     long totalTime = System.currentTimeMillis() - startTime;
 
                     Map<String, Object> metadata = new HashMap<>();
@@ -103,6 +103,8 @@ public class PlanningAgent {
                                 .content(planningPrompt)
                                 .build()))
                 .temperature(0.3)
+                .userId(request.getUserId())
+                .tenantId(request.getTenantId())
                 .build();
 
         return providerRegistry.chat(completionRequest).map(response -> {
@@ -344,7 +346,7 @@ public class PlanningAgent {
     /**
      * 验证结果
      */
-    private Mono<String> verifyResults(List<StepResult> results, String originalTask) {
+    private Mono<String> verifyResults(List<StepResult> results, AgentRequest agentRequest) {
         // 汇总所有步骤的结果
         String summary = results.stream()
                 .filter(StepResult::isSuccess)
@@ -360,7 +362,7 @@ public class PlanningAgent {
 
                 请基于以上步骤结果，提供完整的最终答案。
                 """,
-                originalTask, summary);
+                agentRequest.getPrompt(), summary);
 
         ChatCompletionRequest request = ChatCompletionRequest.builder()
                 .model("gpt-4o")
@@ -369,6 +371,8 @@ public class PlanningAgent {
                         .content(verificationPrompt)
                         .build()))
                 .temperature(0.5)
+                .userId(agentRequest.getUserId())
+                .tenantId(agentRequest.getTenantId())
                 .build();
 
         return providerRegistry

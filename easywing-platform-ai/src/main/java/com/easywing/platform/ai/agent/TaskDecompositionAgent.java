@@ -112,59 +112,67 @@ public class TaskDecompositionAgent {
         log.info("Starting task decomposition for: {}", request.getPrompt());
 
         long startTime = System.currentTimeMillis();
+        String requestedModel =
+                request.getConfig() == null ? null : request.getConfig().getModel();
 
         // 第一步：分析任务
-        return analyzeTask(request.getPrompt()).flatMap(analysis -> {
-            log.info(
-                    "Task analysis complete, complexity: {}, estimated subtasks: {}",
-                    analysis.getComplexity(),
-                    analysis.getEstimatedSubtasks());
+        String userId = request.getUserId();
+        String tenantId = request.getTenantId();
+        return analyzeTask(request.getPrompt(), requestedModel, userId, tenantId)
+                .flatMap(analysis -> {
+                    log.info(
+                            "Task analysis complete, complexity: {}, estimated subtasks: {}",
+                            analysis.getComplexity(),
+                            analysis.getEstimatedSubtasks());
 
-            // 如果任务简单，直接执行
-            if (analysis.getComplexity().equals("simple")) {
-                return agentExecutor.execute(request).map(response -> TaskDecompositionResult.builder()
-                        .originalTask(request.getPrompt())
-                        .complexity("simple")
-                        .subtasks(List.of())
-                        .finalResult(response.getMessage().getContent())
-                        .totalExecutionTime(System.currentTimeMillis() - startTime)
-                        .build());
-            }
+                    // 如果任务简单，直接执行
+                    if (analysis.getComplexity().equals("simple")) {
+                        return agentExecutor.execute(request).map(response -> TaskDecompositionResult.builder()
+                                .originalTask(request.getPrompt())
+                                .complexity("simple")
+                                .subtasks(List.of())
+                                .finalResult(response.getMessage().getContent())
+                                .totalExecutionTime(System.currentTimeMillis() - startTime)
+                                .build());
+                    }
 
-            // 第二步：分解为子任务
-            return decomposeTask(request.getPrompt(), analysis).flatMap(subtasks -> {
-                log.info("Task decomposed into {} subtasks", subtasks.size());
+                    // 第二步：分解为子任务
+                    return decomposeTask(request.getPrompt(), analysis, requestedModel, userId, tenantId)
+                            .flatMap(subtasks -> {
+                                log.info("Task decomposed into {} subtasks", subtasks.size());
 
-                // 第三步：为每个子任务选择 Agent
-                return assignAgents(subtasks).flatMap(assignments -> {
-                    log.info("Agents assigned for all subtasks");
+                                // 第三步：为每个子任务选择 Agent
+                                return assignAgents(subtasks).flatMap(assignments -> {
+                                    log.info("Agents assigned for all subtasks");
 
-                    // 第四步：执行所有子任务
-                    return executeSubtasks(assignments, request).flatMap(results -> {
-                        // 第五步：合并结果
-                        return synthesizeResults(results, request.getPrompt()).map(finalResult -> {
-                            long totalTime = System.currentTimeMillis() - startTime;
+                                    // 第四步：执行所有子任务
+                                    return executeSubtasks(assignments, request).flatMap(results -> {
+                                        // 第五步：合并结果
+                                        return synthesizeResults(
+                                                        results, request.getPrompt(), requestedModel, userId, tenantId)
+                                                .map(finalResult -> {
+                                                    long totalTime = System.currentTimeMillis() - startTime;
 
-                            return TaskDecompositionResult.builder()
-                                    .originalTask(request.getPrompt())
-                                    .complexity(analysis.getComplexity())
-                                    .subtasks(subtasks)
-                                    .assignments(assignments)
-                                    .subtaskResults(results)
-                                    .finalResult(finalResult)
-                                    .totalExecutionTime(totalTime)
-                                    .build();
-                        });
-                    });
+                                                    return TaskDecompositionResult.builder()
+                                                            .originalTask(request.getPrompt())
+                                                            .complexity(analysis.getComplexity())
+                                                            .subtasks(subtasks)
+                                                            .assignments(assignments)
+                                                            .subtaskResults(results)
+                                                            .finalResult(finalResult)
+                                                            .totalExecutionTime(totalTime)
+                                                            .build();
+                                                });
+                                    });
+                                });
+                            });
                 });
-            });
-        });
     }
 
     /**
      * 分析任务
      */
-    private Mono<TaskAnalysis> analyzeTask(String task) {
+    private Mono<TaskAnalysis> analyzeTask(String task, String model, String userId, String tenantId) {
         String analysisPrompt = String.format(
                 """
                 请分析以下任务：
@@ -186,13 +194,14 @@ public class TaskDecompositionAgent {
                 """,
                 task);
 
-        return callLLM(analysisPrompt).map(this::parseTaskAnalysis);
+        return callLLM(analysisPrompt, model, userId, tenantId).map(this::parseTaskAnalysis);
     }
 
     /**
      * 分解任务
      */
-    private Mono<List<SubTask>> decomposeTask(String task, TaskAnalysis analysis) {
+    private Mono<List<SubTask>> decomposeTask(
+            String task, TaskAnalysis analysis, String model, String userId, String tenantId) {
         String decompositionPrompt = String.format(
                 """
                 任务: %s
@@ -214,7 +223,7 @@ public class TaskDecompositionAgent {
                 """,
                 task, analysis.getEstimatedSubtasks());
 
-        return callLLM(decompositionPrompt).map(this::parseSubTasks);
+        return callLLM(decompositionPrompt, model, userId, tenantId).map(this::parseSubTasks);
     }
 
     /**
@@ -325,7 +334,8 @@ public class TaskDecompositionAgent {
     /**
      * 合成结果
      */
-    private Mono<String> synthesizeResults(List<SubTaskResult> results, String originalTask) {
+    private Mono<String> synthesizeResults(
+            List<SubTaskResult> results, String originalTask, String model, String userId, String tenantId) {
         String successResults = results.stream()
                 .filter(SubTaskResult::isSuccess)
                 .map(r -> String.format("【%s】\n%s", r.getDescription(), r.getResult()))
@@ -342,18 +352,28 @@ public class TaskDecompositionAgent {
                 """,
                 originalTask, successResults);
 
-        return callLLM(synthesisPrompt);
+        return callLLM(synthesisPrompt, model, userId, tenantId);
     }
 
     /**
      * 调用 LLM
      */
-    private Mono<String> callLLM(String prompt) {
+    private Mono<String> callLLM(String prompt, String requestedModel, String userId, String tenantId) {
+        String model = requestedModel;
+        if (model == null || !providerRegistry.supportsModel(model)) {
+            model = providerRegistry
+                    .getDefaultProvider()
+                    .flatMap(provider -> provider.getSupportedModels().stream().findFirst())
+                    .map(com.easywing.platform.ai.model.ModelInfo::getId)
+                    .orElseThrow(() -> new IllegalStateException("No configured model is available for subagents"));
+        }
         ChatCompletionRequest request = ChatCompletionRequest.builder()
-                .model("gpt-4o")
+                .model(model)
                 .messages(List.of(
                         ChatMessage.builder().role("user").content(prompt).build()))
                 .temperature(0.5)
+                .userId(userId)
+                .tenantId(tenantId)
                 .build();
 
         return providerRegistry

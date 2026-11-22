@@ -3,7 +3,9 @@ package com.easywing.platform.ai.skill;
 import com.easywing.platform.ai.skill.impl.DataAnalysisSkill;
 import com.easywing.platform.ai.skill.impl.InformationRetrievalSkill;
 import com.easywing.platform.ai.skill.impl.TextProcessingSkill;
+import com.easywing.platform.ai.skill.store.SkillDefinitionStore;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -24,11 +26,19 @@ public class SkillAutoConfiguration {
     @ConditionalOnMissingBean
     public SkillInitializer skillInitializer(
             SkillRegistry skillRegistry,
+            SkillDefinitionStore skillDefinitionStore,
             InformationRetrievalSkill informationRetrievalSkill,
             DataAnalysisSkill dataAnalysisSkill,
             TextProcessingSkill textProcessingSkill) {
 
         log.info("Initializing built-in skills");
+
+        // 先恢复持久化定义，管理员对内置技能的启停与配置修改才能覆盖默认值
+        Map<String, SkillExecutor> executors = Map.of(
+                "information_retrieval", informationRetrievalSkill,
+                "data_analysis", dataAnalysisSkill,
+                "text_processing", textProcessingSkill);
+        skillRegistry.restore(skillDefinitionStore.loadAll(), executors::get);
 
         // 注册信息检索技能
         AgentSkill infoRetrievalSkill = AgentSkill.builder()
@@ -43,7 +53,7 @@ public class SkillAutoConfiguration {
                 .composable(true)
                 .tags(List.of("检索", "网络", "HTTP"))
                 .build();
-        skillRegistry.register(infoRetrievalSkill);
+        skillRegistry.registerIfAbsent(infoRetrievalSkill);
 
         // 注册数据分析技能
         AgentSkill dataAnalysisSkillDef = AgentSkill.builder()
@@ -58,7 +68,7 @@ public class SkillAutoConfiguration {
                 .composable(true)
                 .tags(List.of("分析", "统计", "数据"))
                 .build();
-        skillRegistry.register(dataAnalysisSkillDef);
+        skillRegistry.registerIfAbsent(dataAnalysisSkillDef);
 
         // 注册文本处理技能
         AgentSkill textProcessingSkillDef = AgentSkill.builder()
@@ -73,7 +83,7 @@ public class SkillAutoConfiguration {
                 .composable(true)
                 .tags(List.of("文本", "字符串", "处理"))
                 .build();
-        skillRegistry.register(textProcessingSkillDef);
+        skillRegistry.registerIfAbsent(textProcessingSkillDef);
 
         log.info("Skill initialization completed, {} skills registered", skillRegistry.size());
 

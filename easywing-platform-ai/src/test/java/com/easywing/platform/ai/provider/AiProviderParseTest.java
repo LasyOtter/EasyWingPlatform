@@ -103,19 +103,24 @@ class AiProviderParseTest {
         assertEquals("", firstContent(r));
     }
 
-    // ==================== Google Gemini ====================
+    @Test
+    @DisplayName("Anthropic: 将 text_delta 与结束原因映射为标准流式块")
+    void parsesAnthropicStreamEvents() throws Exception {
+        Method m = AnthropicProvider.class.getDeclaredMethod("parseStreamEvent", String.class);
+        m.setAccessible(true);
+        ChatCompletionResponse text = (ChatCompletionResponse) m.invoke(
+                anthropic(), "{\"type\":\"content_block_delta\",\"delta\":{\"type\":\"text_delta\",\"text\":\"hi\"}}");
+        ChatCompletionResponse end = (ChatCompletionResponse)
+                m.invoke(anthropic(), "{\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\"}}");
 
-    private GoogleAiProvider google() {
-        AiProperties.GoogleConfig config = new AiProperties.GoogleConfig();
-        config.setApiKey("test-key");
-        config.setBaseUrl("https://generativelanguage.googleapis.com/v1beta/models");
-        return new GoogleAiProvider(WebClient.builder().build(), config);
+        assertEquals("hi", text.getChoices().get(0).getDelta().getContent());
+        assertEquals("stop", finishReason(end));
     }
 
-    private ChatCompletionResponse googleParse(String json) throws Exception {
-        Method m = GoogleAiProvider.class.getDeclaredMethod("parseResponse", String.class);
-        m.setAccessible(true);
-        return (ChatCompletionResponse) m.invoke(google(), json);
+    // ==================== Google Gemini ====================
+
+    private ChatCompletionResponse googleParse(String json) {
+        return GeminiProtocol.parseContentResponse(json, "gemini-2.0-flash");
     }
 
     @Test

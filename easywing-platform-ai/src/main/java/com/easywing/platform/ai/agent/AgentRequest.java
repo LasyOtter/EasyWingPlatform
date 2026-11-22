@@ -22,6 +22,7 @@ public class AgentRequest {
 
     private String agentId;
     private String userId;
+    private String tenantId;
     private String sessionId;
 
     @NotBlank
@@ -51,6 +52,12 @@ public class AgentRequest {
 
         private boolean streamingEnabled;
         private String model;
+
+        /** 调用方用户标识，由各 Agent 透传到 {@code ChatCompletionRequest} 以归属成本。 */
+        private String userId;
+
+        /** 调用方租户标识。 */
+        private String tenantId;
 
         @DecimalMin("0.0")
         @DecimalMax("2.0")

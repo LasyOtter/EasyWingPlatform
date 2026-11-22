@@ -11,10 +11,13 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -70,6 +73,39 @@ public class OpenAiProvider extends AbstractAiProvider {
                         .supportsVision(true)
                         .inputCostPer1MTokens(0.15)
                         .outputCostPer1MTokens(0.60)
+                        .build(),
+                ModelInfo.builder()
+                        .id(OpenAiModels.GPT_4_TURBO)
+                        .provider(PROVIDER_NAME)
+                        .name("GPT-4 Turbo")
+                        .contextWindow(128000)
+                        .supportsStreaming(true)
+                        .supportsTools(true)
+                        .supportsVision(true)
+                        .inputCostPer1MTokens(10.0)
+                        .outputCostPer1MTokens(30.0)
+                        .build(),
+                ModelInfo.builder()
+                        .id(OpenAiModels.GPT_4)
+                        .provider(PROVIDER_NAME)
+                        .name("GPT-4")
+                        .contextWindow(8192)
+                        .supportsStreaming(true)
+                        .supportsTools(true)
+                        .supportsVision(false)
+                        .inputCostPer1MTokens(30.0)
+                        .outputCostPer1MTokens(60.0)
+                        .build(),
+                ModelInfo.builder()
+                        .id(OpenAiModels.GPT_35_TURBO)
+                        .provider(PROVIDER_NAME)
+                        .name("GPT-3.5 Turbo")
+                        .contextWindow(16385)
+                        .supportsStreaming(true)
+                        .supportsTools(true)
+                        .supportsVision(false)
+                        .inputCostPer1MTokens(0.5)
+                        .outputCostPer1MTokens(1.5)
                         .build());
     }
 
@@ -95,8 +131,8 @@ public class OpenAiProvider extends AbstractAiProvider {
 
     @Override
     public Mono<ChatCompletionResponse> chat(ChatCompletionRequest request) {
-        String url = getApiBaseUrl() + "/chat/completions";
-        String model = request.getModel();
+        String url = buildChatCompletionsUrl();
+        String model = resolveDeploymentModel(request.getModel());
 
         Map<String, Object> body = new HashMap<>();
         body.put("model", model);
@@ -113,7 +149,7 @@ public class OpenAiProvider extends AbstractAiProvider {
         return webClient
                 .post()
                 .uri(url)
-                .header("Authorization", "Bearer " + getApiKey())
+                .headers(headers -> buildAuthHeaders().forEach(headers::add))
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
                 .retrieve()
@@ -125,10 +161,10 @@ public class OpenAiProvider extends AbstractAiProvider {
 
     @Override
     public Flux<ChatCompletionResponse> streamChat(ChatCompletionRequest request) {
-        String url = getApiBaseUrl() + "/chat/completions";
+        String url = buildChatCompletionsUrl();
 
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", request.getModel());
+        requestBody.put("model", resolveDeploymentModel(request.getModel()));
         requestBody.put("messages", convertMessages(request.getMessages()));
         requestBody.put("stream", true);
 
@@ -147,16 +183,16 @@ public class OpenAiProvider extends AbstractAiProvider {
         return webClient
                 .post()
                 .uri(url)
-                .header("Authorization", "Bearer " + getApiKey())
+                .headers(headers -> buildAuthHeaders().forEach(headers::add))
+                .accept(MediaType.TEXT_EVENT_STREAM)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(requestBody)
                 .retrieve()
-                .bodyToMono(String.class)
-                .flatMapMany(s -> Flux.fromArray(s.split("\n")))
-                .filter(line -> !line.isEmpty() && line.startsWith("data: "))
-                .map(line -> line.substring(6))
-                .filter(line -> !"[DONE]".equals(line.trim()))
+                .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<String>>() {})
+                .map(ServerSentEvent::data)
+                .filter(data -> data != null && !"[DONE]".equals(data.trim()))
                 .map(this::parseStreamResponse)
+                .filter(Objects::nonNull)
                 .doOnNext(chunk -> {
                     if (chunk.getId() != null) {
                         responseId.set(chunk.getId());
@@ -235,12 +271,44 @@ public class OpenAiProvider extends AbstractAiProvider {
     public Mono<Boolean> validateConnection() {
         return webClient
                 .get()
-                .uri(getApiBaseUrl() + "/models")
-                .header("Authorization", "Bearer " + getApiKey())
+                .uri(buildModelsUrl())
+                .headers(headers -> buildAuthHeaders().forEach(headers::add))
                 .retrieve()
                 .bodyToMono(String.class)
                 .map(json -> json != null)
                 .onErrorReturn(false);
+    }
+
+    /**
+     * 构造 Chat Completions 请求 URL。
+     * <p>
+     * 默认 {@code {base}/chat/completions}；子类可覆写以适配不同协议（如 Azure 的 deployment 路径）。
+     */
+    protected String buildChatCompletionsUrl() {
+        return getApiBaseUrl() + "/chat/completions";
+    }
+
+    /**
+     * 构造模型列表请求 URL，默认 {@code {base}/models}。
+     */
+    protected String buildModelsUrl() {
+        return getApiBaseUrl() + "/models";
+    }
+
+    /**
+     * 鉴权请求头，默认 {@code Authorization: Bearer <apiKey>}；子类可覆写（如 Azure 使用 {@code api-key} 头）。
+     */
+    protected Map<String, String> buildAuthHeaders() {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", "Bearer " + getApiKey());
+        return headers;
+    }
+
+    /**
+     * 将逻辑模型名映射为实际请求使用的模型或部署名，默认原样返回。
+     */
+    protected String resolveDeploymentModel(String model) {
+        return model;
     }
 
     private List<Map<String, Object>> convertMessages(List<ChatMessage> messages) {
