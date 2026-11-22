@@ -113,3 +113,15 @@ easywing:
       enabled: ${OAUTH2_ENABLED:false}
       default-tenant: ${OAUTH2_DEFAULT_TENANT:default}
       providers: {}
+      # deployment-bound 机器客户端（client_credentials），默认空 = 关闭。
+      # 密钥只经配置/环境变量注入，禁止硬编码：
+      #   easywing.auth.oauth2.machine-clients.<name>.client-secret
+      # 示例：
+      #   agent-service:
+      #     enabled: true
+      #     client-id: agent-service
+      #     client-secret: ${AGENT_SERVICE_CLIENT_SECRET}
+      #     scopes: [agent-management]
+      #     tenant: default
+      #     token-ttl: PT1H
+      machine-clients: {}

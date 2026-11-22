@@ -17,10 +17,12 @@ package com.easywing.platform.auth.controller;
 
 import com.easywing.platform.auth.config.AuthProperties;
 import com.easywing.platform.auth.domain.AuthUser;
+import com.easywing.platform.auth.dto.ClientCredentialsRequest;
 import com.easywing.platform.auth.dto.LoginRequest;
 import com.easywing.platform.auth.dto.RefreshRequest;
 import com.easywing.platform.auth.dto.TokenResponse;
 import com.easywing.platform.auth.service.EmailVerificationService;
+import com.easywing.platform.auth.service.MachineClientService;
 import com.easywing.platform.auth.service.TokenService;
 import com.easywing.platform.auth.service.UserDetailsService;
 import com.easywing.platform.core.constant.HttpHeaders;
@@ -74,16 +76,19 @@ public class TokenController {
     private final UserDetailsService userDetailsService;
     private final AuthProperties authProperties;
     private final EmailVerificationService emailVerificationService;
+    private final MachineClientService machineClientService;
 
     public TokenController(
             TokenService tokenService,
             UserDetailsService userDetailsService,
             AuthProperties authProperties,
-            EmailVerificationService emailVerificationService) {
+            EmailVerificationService emailVerificationService,
+            MachineClientService machineClientService) {
         this.tokenService = tokenService;
         this.userDetailsService = userDetailsService;
         this.authProperties = authProperties;
         this.emailVerificationService = emailVerificationService;
+        this.machineClientService = machineClientService;
     }
 
     @PostMapping("/login")
@@ -103,6 +108,15 @@ public class TokenController {
         }
         TokenResponse response = tokenService.issueTokenPair(user);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/client-credentials")
+    @Operation(
+            summary = "机器客户端令牌",
+            description = "client_credentials（RFC 6749 §4.4 等价实现）：校验 deployment-bound 客户端凭据并按授权 scope 签发访问令牌")
+    @RateLimit(key = "#request.clientId", rate = 20, capacity = 20, message = "令牌申请过于频繁，请稍后再试")
+    public ResponseEntity<TokenResponse> clientCredentials(@Valid @RequestBody ClientCredentialsRequest request) {
+        return ResponseEntity.ok(machineClientService.issueClientCredentials(request));
     }
 
     @PostMapping("/register")

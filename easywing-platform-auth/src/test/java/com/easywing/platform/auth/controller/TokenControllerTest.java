@@ -31,6 +31,7 @@ import com.easywing.platform.auth.dto.LoginRequest;
 import com.easywing.platform.auth.dto.TokenResponse;
 import com.easywing.platform.auth.exception.AuthExceptionHandler;
 import com.easywing.platform.auth.service.EmailVerificationService;
+import com.easywing.platform.auth.service.MachineClientService;
 import com.easywing.platform.auth.service.TokenService;
 import com.easywing.platform.auth.service.UserDetailsService;
 import com.easywing.platform.core.exception.BizException;
@@ -74,6 +75,9 @@ class TokenControllerTest {
 
     @MockBean
     private EmailVerificationService emailVerificationService;
+
+    @MockBean
+    private MachineClientService machineClientService;
 
     @Test
     @DisplayName("Login with valid credentials - should return tokens")

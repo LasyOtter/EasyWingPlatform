@@ -108,6 +108,13 @@ public class AiProperties {
      */
     private ImageGenerationConfig imageGeneration = new ImageGenerationConfig();
 
+    /**
+     * Agent 定义管理配置（PRD 4.2）。
+     * <p>
+     * 默认内存存储且开启端点；多实例共享需配置 {@code storage-type=redis}。
+     */
+    private AgentDefConfig agentDef = new AgentDefConfig();
+
     @Data
     public static class ProviderConfig {
         private boolean enabled = false;
@@ -476,5 +483,31 @@ public class AiProperties {
         private int maxN = 4;
 
         private long timeoutMs = 120_000;
+    }
+
+    /**
+     * Agent 定义管理配置（PRD 4.2）。
+     * <p>
+     * {@code storage-type} 决定使用内存还是 Redis 存储；{@code enabled} 控制
+     * {@code /api/v1/ai/agents/**} 端点是否注册。凭据与敏感信息不在此处配置。
+     */
+    @Data
+    public static class AgentDefConfig {
+
+        private boolean enabled = true;
+
+        /** memory（默认，单实例） / redis（多实例共享） */
+        private String storageType = "memory";
+
+        /** 新建定义的缺省可见性：PRIVATE / USER / GROUP / PUBLIC */
+        private String defaultVisibility = "PRIVATE";
+
+        private int maxToolsPerAgent = 50;
+
+        private int maxSkillsPerAgent = 20;
+
+        private int maxSharedUsers = 100;
+
+        private int maxSharedGroups = 50;
     }
 }

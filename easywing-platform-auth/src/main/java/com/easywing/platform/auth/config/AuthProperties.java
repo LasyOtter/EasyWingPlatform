@@ -250,6 +250,14 @@ public class AuthProperties {
 
         private Map<String, Provider> providers = new LinkedHashMap<>();
 
+        /**
+         * deployment-bound 机器客户端（client_credentials 等价实现）。
+         * <p>
+         * 键为客户端名；仅 {@code enabled=true} 且配置了 client-id/client-secret 的条目参与认证。
+         * 密钥只经配置/环境变量注入，禁止硬编码。默认空 = 该能力关闭。
+         */
+        private Map<String, MachineClient> machineClients = new LinkedHashMap<>();
+
         public boolean isEnabled() {
             return enabled;
         }
@@ -272,6 +280,14 @@ public class AuthProperties {
 
         public void setProviders(Map<String, Provider> providers) {
             this.providers = providers;
+        }
+
+        public Map<String, MachineClient> getMachineClients() {
+            return machineClients;
+        }
+
+        public void setMachineClients(Map<String, MachineClient> machineClients) {
+            this.machineClients = machineClients;
         }
 
         /**
@@ -410,6 +426,76 @@ public class AuthProperties {
 
             public void setRoles(List<String> roles) {
                 this.roles = roles;
+            }
+        }
+
+        /**
+         * deployment-bound 机器客户端配置（client_credentials 等价实现）。
+         * <p>
+         * 该客户端代表一个部署/服务身份而非终端用户，令牌 subject 为 {@code client:<clientId>}，
+         * 并按 {@code scopes} 签发出 {@code scope} claim，供资源服务器映射为 {@code SCOPE_*} 权限。
+         * {@code clientSecret} 只经配置/环境变量注入，禁止硬编码；默认条目关闭。
+         */
+        public static class MachineClient {
+
+            private boolean enabled = false;
+
+            private String clientId;
+
+            private String clientSecret;
+
+            private List<String> scopes = List.of();
+
+            private String tenant = "default";
+
+            private Duration tokenTtl = Duration.ofHours(1);
+
+            public boolean isEnabled() {
+                return enabled;
+            }
+
+            public void setEnabled(boolean enabled) {
+                this.enabled = enabled;
+            }
+
+            public String getClientId() {
+                return clientId;
+            }
+
+            public void setClientId(String clientId) {
+                this.clientId = clientId;
+            }
+
+            public String getClientSecret() {
+                return clientSecret;
+            }
+
+            public void setClientSecret(String clientSecret) {
+                this.clientSecret = clientSecret;
+            }
+
+            public List<String> getScopes() {
+                return scopes;
+            }
+
+            public void setScopes(List<String> scopes) {
+                this.scopes = scopes;
+            }
+
+            public String getTenant() {
+                return tenant;
+            }
+
+            public void setTenant(String tenant) {
+                this.tenant = tenant;
+            }
+
+            public Duration getTokenTtl() {
+                return tokenTtl;
+            }
+
+            public void setTokenTtl(Duration tokenTtl) {
+                this.tokenTtl = tokenTtl;
             }
         }
     }

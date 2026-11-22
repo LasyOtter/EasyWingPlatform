@@ -31,8 +31,10 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import io.micrometer.core.instrument.Timer;
 import java.text.ParseException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -241,6 +243,48 @@ public class TokenService {
             return signedJWT.serialize();
         } catch (Exception e) {
             throw new SystemException(ErrorCode.SYSTEM_ERROR, "令牌签发失败", e);
+        }
+    }
+
+    /**
+     * 为机器客户端（deployment-bound 服务身份）签发访问令牌。
+     * <p>
+     * subject 为 {@code client:<clientId>}，携带 {@code client_id}、租户与 {@code scope} claim，
+     * 便于资源服务器映射为 {@code SCOPE_*} 权限；不签发刷新令牌（机器身份按 client_credentials 重新获取）。
+     *
+     * @param clientId 客户端 ID
+     * @param tenant   绑定租户
+     * @param scopes   已校验的 scope 集合
+     * @param ttl      令牌有效期
+     * @return 已签名序列化的 JWT
+     */
+    public String issueMachineToken(String clientId, String tenant, List<String> scopes, Duration ttl) {
+        try {
+            Instant now = Instant.now();
+            JWTClaimsSet.Builder claims = new JWTClaimsSet.Builder()
+                    .subject("client:" + clientId)
+                    .issuer(properties.getJwt().getIssuer())
+                    .claim("client_id", clientId)
+                    .claim(properties.getJwt().getTenantIdClaimName(), tenant)
+                    .claim("token_type", TOKEN_TYPE_ACCESS)
+                    .jwtID(UUID.randomUUID().toString())
+                    .issueTime(Date.from(now))
+                    .expirationTime(Date.from(now.plus(ttl)));
+            if (scopes != null && !scopes.isEmpty()) {
+                claims.claim("scope", String.join(" ", scopes));
+            }
+
+            JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
+                    .keyID(rsaKey.getKeyID())
+                    .build();
+
+            SignedJWT signedJWT = new SignedJWT(header, claims.build());
+            JWSSigner signer = new RSASSASigner(rsaKey.toRSAPrivateKey());
+            signedJWT.sign(signer);
+            return signedJWT.serialize();
+        } catch (Exception e) {
+            log.error("Machine token issuance failed for client: {}", clientId, e);
+            throw new SystemException(ErrorCode.SYSTEM_ERROR, "机器令牌签发失败", e);
         }
     }
 

@@ -30,6 +30,16 @@ easywing:
   ai:
     enabled: true
 
+    # Agent 定义管理（PRD 4.2）：默认内存存储；多实例共享改为 redis
+    agent-def:
+      enabled: ${AI_AGENT_DEF_ENABLED:true}
+      storage-type: ${AI_AGENT_DEF_STORAGE_TYPE:memory}
+      default-visibility: ${AI_AGENT_DEF_DEFAULT_VISIBILITY:PRIVATE}
+      max-tools-per-agent: ${AI_AGENT_DEF_MAX_TOOLS:50}
+      max-skills-per-agent: ${AI_AGENT_DEF_MAX_SKILLS:20}
+      max-shared-users: ${AI_AGENT_DEF_MAX_SHARED_USERS:100}
+      max-shared-groups: ${AI_AGENT_DEF_MAX_SHARED_GROUPS:50}
+
     # Provider Configuration
     providers:
       openai:

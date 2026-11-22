@@ -47,6 +47,7 @@ public class AuthSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth.requestMatchers(
                                 "/api/v1/token/login",
+                                "/api/v1/token/client-credentials",
                                 "/api/v1/token/register",
                                 "/api/v1/token/refresh",
                                 // 邮箱验证与密码重置为自助流程，必须匿名可访问
