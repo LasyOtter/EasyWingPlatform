@@ -186,7 +186,7 @@ class ContextUsageServiceTest {
         stubModel("m1", 1000, 100, 1.0);
         ConversationSession own = session("s1", "u1", "default", "m1");
         ConversationSession foreign = session("s2", "u1", "tenant-a", "m1");
-        when(sessionManager.getUserSessions("u1")).thenReturn(Mono.just(List.of(own, foreign)));
+        when(sessionManager.getUserSessions("u1", "default")).thenReturn(Mono.just(List.of(own, foreign)));
         when(usageLedger.getUserRecords("u1", "default")).thenReturn(List.of(usageRecord("u1", "default", "m1", 0.5)));
 
         ContextUsageService.ContextUsageSummary summary =

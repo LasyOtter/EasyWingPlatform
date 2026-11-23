@@ -83,7 +83,7 @@ public class SessionForkService {
      * 列出指定会话的直接分支（含间接分支以外的直接子会话）。
      */
     public Mono<List<ConversationSession>> branches(String sessionId, String userId, String tenantId) {
-        return sessionManager.getUserSessions(userId).map(sessions -> sessions.stream()
+        return sessionManager.getUserSessions(userId, tenantId).map(sessions -> sessions.stream()
                 .filter(session -> sessionId.equals(session.getParentSessionId()))
                 .filter(session -> tenantMatches(session, tenantId))
                 .sorted(Comparator.comparingLong(ConversationSession::getCreatedAt)

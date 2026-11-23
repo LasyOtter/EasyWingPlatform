@@ -69,7 +69,7 @@ public class ContextUsageService {
      */
     public Mono<ContextUsageSummary> getUserUsage(String userId, String tenantId) {
         return sessionManager
-                .getUserSessions(userId)
+                .getUserSessions(userId, tenantId)
                 .map(sessions -> sessions.stream()
                         .filter(session -> SessionOwnership.normalizeTenant(session.getTenantId())
                                 .equals(SessionOwnership.normalizeTenant(tenantId)))

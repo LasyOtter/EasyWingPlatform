@@ -53,7 +53,8 @@ class SessionSearchServiceTest {
 
     @Test
     void matchesMessageContentCaseInsensitive() {
-        when(sessionManager.getUserSessions("u1")).thenReturn(Mono.just(List.of(session("s1", "u1", "default", "对话"))));
+        when(sessionManager.getUserSessions("u1", "default"))
+                .thenReturn(Mono.just(List.of(session("s1", "u1", "default", "对话"))));
 
         List<SessionSearchHit> hits =
                 service.search("u1", "default", "java", 10).block();
@@ -67,7 +68,7 @@ class SessionSearchServiceTest {
 
     @Test
     void matchesSessionName() {
-        when(sessionManager.getUserSessions("u1"))
+        when(sessionManager.getUserSessions("u1", "default"))
                 .thenReturn(Mono.just(List.of(session("s1", "u1", "default", "虚拟线程调研"))));
 
         List<SessionSearchHit> hits = service.search("u1", "default", "调研", 10).block();
@@ -79,9 +80,10 @@ class SessionSearchServiceTest {
 
     @Test
     void rejectsOtherUsersSessions() {
-        when(sessionManager.getUserSessions("u1")).thenReturn(Mono.just(List.of(session("s1", "u2", "default", "对话"))));
+        when(sessionManager.getUserSessions("u1", "default"))
+                .thenReturn(Mono.just(List.of(session("s1", "u2", "default", "对话"))));
         lenient()
-                .when(sessionManager.getUserSessions("u2"))
+                .when(sessionManager.getUserSessions("u2", "default"))
                 .thenReturn(Mono.just(List.of(session("s1", "u2", "default", "对话"))));
 
         assertThat(service.search("u1", "default", "虚拟线程", 10).block()).isEmpty();
@@ -89,7 +91,7 @@ class SessionSearchServiceTest {
 
     @Test
     void rejectsOtherTenants() {
-        when(sessionManager.getUserSessions("u1"))
+        when(sessionManager.getUserSessions("u1", "tenant-b"))
                 .thenReturn(Mono.just(List.of(session("s1", "u1", "tenant-a", "对话"))));
 
         assertThat(service.search("u1", "tenant-b", "虚拟线程", 10).block()).isEmpty();
@@ -98,7 +100,7 @@ class SessionSearchServiceTest {
     @Test
     void limitCapsResults() {
         ConversationSession session = session("s1", "u1", "default", "命中");
-        when(sessionManager.getUserSessions("u1")).thenReturn(Mono.just(List.of(session)));
+        when(sessionManager.getUserSessions("u1", "default")).thenReturn(Mono.just(List.of(session)));
 
         assertThat(service.search("u1", "default", "线程", 1).block()).hasSize(1);
     }
@@ -113,7 +115,7 @@ class SessionSearchServiceTest {
                 .messages(List.of(
                         ChatMessage.builder().role("user").content(longContent).build()))
                 .build();
-        when(sessionManager.getUserSessions("u1")).thenReturn(Mono.just(List.of(session)));
+        when(sessionManager.getUserSessions("u1", "default")).thenReturn(Mono.just(List.of(session)));
 
         String snippet =
                 service.search("u1", "default", "关键字", 10).block().get(0).getSnippet();

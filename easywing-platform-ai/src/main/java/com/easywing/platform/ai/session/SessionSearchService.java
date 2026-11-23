@@ -44,7 +44,7 @@ public class SessionSearchService {
         int effectiveLimit = limit > 0 ? Math.min(limit, maxResults) : maxResults;
         String needle = query.trim().toLowerCase(Locale.ROOT);
         return sessionManager
-                .getUserSessions(userId)
+                .getUserSessions(userId, tenantId)
                 .map(sessions -> searchSessions(sessions, userId, tenantId, needle, effectiveLimit));
     }
 
