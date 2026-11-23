@@ -115,6 +115,14 @@ public class AiProperties {
      */
     private AgentDefConfig agentDef = new AgentDefConfig();
 
+    /**
+     * Custom Endpoint 运行时存储配置（PRD 4.3）。
+     * <p>
+     * {@code memory}（默认，单实例，进程重启后运行时新增/删除的端点丢失）或
+     * {@code redis}（多实例共享并持久化）。
+     */
+    private CustomEndpointStoreConfig customEndpointStore = new CustomEndpointStoreConfig();
+
     @Data
     public static class ProviderConfig {
         private boolean enabled = false;
@@ -509,5 +517,21 @@ public class AiProperties {
         private int maxSharedUsers = 100;
 
         private int maxSharedGroups = 50;
+    }
+
+    /**
+     * Custom Endpoint 运行时存储配置（PRD 4.3）。
+     * <p>
+     * {@code memory}（默认）只在当前进程生效，重启后运行时新增/删除的端点丢失；
+     * {@code redis} 把端点配置（含 apiKey）持久化到 Redis，供多实例共享。
+     * <p>
+     * 安全提示：Redis 模式会将端点的 {@code apiKey} 明文写入 Redis，
+     * 仅应在受信任的 Redis（启用 ACL/TLS、限制网络访问）上使用。
+     */
+    @Data
+    public static class CustomEndpointStoreConfig {
+
+        /** memory（默认） / redis（多实例共享并持久化） */
+        private String storageType = "memory";
     }
 }

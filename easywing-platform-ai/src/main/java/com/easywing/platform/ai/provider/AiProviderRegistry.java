@@ -28,16 +28,19 @@ public class AiProviderRegistry {
     private final AiProperties properties;
     private final WebClient.Builder webClientBuilder;
     private final UsageLedger usageLedger;
+    private final CustomEndpointStore customEndpointStore;
     private String defaultProvider;
 
     public AiProviderRegistry(
             List<AiProvider> providers,
             AiProperties properties,
             WebClient.Builder webClientBuilder,
-            UsageLedger usageLedger) {
+            UsageLedger usageLedger,
+            CustomEndpointStore customEndpointStore) {
         this.properties = properties;
         this.webClientBuilder = webClientBuilder;
         this.usageLedger = usageLedger;
+        this.customEndpointStore = customEndpointStore;
 
         for (AiProvider provider : providers) {
             if (provider != null) {
@@ -47,6 +50,17 @@ public class AiProviderRegistry {
 
         properties.getCustomEndpoints().forEach((id, endpoint) -> {
             if (endpoint != null && endpoint.isEnabled()) {
+                registerProvider(new CustomOpenAiProvider(id, endpoint, webClientBuilder));
+            }
+        });
+
+        // 运行时通过 API 变更的端点：同名时以持久化存储为准，进程重启后恢复
+        customEndpointStore.loadAll().forEach((id, endpoint) -> {
+            if (endpoint == null) {
+                return;
+            }
+            properties.getCustomEndpoints().put(id, endpoint);
+            if (endpoint.isEnabled()) {
                 registerProvider(new CustomOpenAiProvider(id, endpoint, webClientBuilder));
             }
         });
@@ -71,12 +85,14 @@ public class AiProviderRegistry {
         CustomOpenAiProvider provider = new CustomOpenAiProvider(id, endpoint, webClientBuilder);
         providers.put(provider.getProviderName(), provider);
         properties.getCustomEndpoints().put(id, endpoint);
+        customEndpointStore.save(id, endpoint);
         return provider;
     }
 
     public void removeCustomEndpoint(String id) {
         providers.remove("custom-" + id);
         properties.getCustomEndpoints().remove(id);
+        customEndpointStore.delete(id);
     }
 
     public Map<String, AiProperties.CustomEndpointConfig> getCustomEndpoints() {

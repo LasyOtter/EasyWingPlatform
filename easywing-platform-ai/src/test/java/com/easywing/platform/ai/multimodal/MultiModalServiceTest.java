@@ -18,6 +18,7 @@ import com.easywing.platform.ai.multimodal.MultiModalService.MultiModalResponse;
 import com.easywing.platform.ai.observability.UsageLedger;
 import com.easywing.platform.ai.provider.AiProvider;
 import com.easywing.platform.ai.provider.AiProviderRegistry;
+import com.easywing.platform.ai.provider.InMemoryCustomEndpointStore;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -53,8 +54,12 @@ class MultiModalServiceTest {
         captured = new AtomicReference<>();
         provider.captured = captured;
 
-        AiProviderRegistry registry =
-                new AiProviderRegistry(List.of(provider), properties, WebClient.builder(), (UsageLedger) null);
+        AiProviderRegistry registry = new AiProviderRegistry(
+                List.of(provider),
+                properties,
+                WebClient.builder(),
+                (UsageLedger) null,
+                new InMemoryCustomEndpointStore());
         service = new MultiModalService(registry, properties);
     }
 

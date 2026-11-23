@@ -37,8 +37,9 @@ public class AiAutoConfiguration {
             List<AiProvider> providers,
             AiProperties properties,
             WebClient.Builder webClientBuilder,
-            com.easywing.platform.ai.observability.UsageLedger usageLedger) {
-        return new AiProviderRegistry(providers, properties, webClientBuilder, usageLedger);
+            com.easywing.platform.ai.observability.UsageLedger usageLedger,
+            CustomEndpointStore customEndpointStore) {
+        return new AiProviderRegistry(providers, properties, webClientBuilder, usageLedger, customEndpointStore);
     }
 
     @Bean

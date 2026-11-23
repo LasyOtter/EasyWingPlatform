@@ -123,6 +123,11 @@ easywing:
         models:
           - deepseek-chat
 
+    # Custom Endpoint 运行时存储：memory（默认，重启丢失且多实例不共享）
+    # / redis（持久化并跨实例共享；apiKey 会明文写入 Redis，需使用受信任的 Redis）
+    custom-endpoint-store:
+      storage-type: ${AI_CUSTOM_ENDPOINT_STORAGE:memory}
+
     # 多模态图片理解（PRD 4.6）：把 ChatMessage.contentParts 中的图片交给视觉模型，
     # 由 Provider 序列化为各家协议（OpenAI / Anthropic / Gemini）。默认开启，
     # 但需要至少一个 supportsVision 的模型可用；AUDIO/VIDEO/DOCUMENT 会显式报错而非返回模拟数据。
