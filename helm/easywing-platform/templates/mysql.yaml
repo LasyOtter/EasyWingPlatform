@@ -1,0 +1,140 @@
+{{- if .Values.infra.mysql.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-initdb
+  labels:
+    {{- include "easywing.labels" . | nindent 4 }}
+data:
+  01-databases.sql: |
+    {{- range .Values.infra.mysql.databases }}
+    CREATE DATABASE IF NOT EXISTS {{ . }} DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    {{- end }}
+    CREATE USER IF NOT EXISTS '{{ .Values.infra.mysql.user }}'@'%' IDENTIFIED BY '{{ .Values.infra.mysql.password }}';
+    {{- range .Values.infra.mysql.databases }}
+    GRANT ALL PRIVILEGES ON {{ . }}.* TO '{{ $.Values.infra.mysql.user }}'@'%';
+    {{- end }}
+    FLUSH PRIVILEGES;
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  labels:
+    {{- include "easywing.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+spec:
+  type: {{ .Values.infra.mysql.serviceType }}
+  selector:
+    app.kubernetes.io/name: {{ include "easywing.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: mysql
+  ports:
+    - name: mysql
+      port: {{ .Values.infra.mysql.port }}
+      targetPort: mysql
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  labels:
+    {{- include "easywing.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "easywing.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: mysql
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "easywing.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: {{ include "easywing.image" .Values.infra.mysql }}
+          imagePullPolicy: {{ include "easywing.pullPolicy" . }}
+          args:
+            {{- toYaml .Values.infra.mysql.args | nindent 12 }}
+          ports:
+            - name: mysql
+              containerPort: {{ .Values.infra.mysql.port }}
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              value: {{ index .Values.infra.mysql.databases 0 | quote }}
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: MYSQL_PASSWORD
+            - name: TZ
+              valueFrom:
+                configMapKeyRef:
+                  name: easywing-config
+                  key: TZ
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+            - name: initdb
+              mountPath: /docker-entrypoint-initdb.d
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "mysqladmin ping -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD"]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "mysqladmin ping -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD"]
+            initialDelaySeconds: 40
+            periodSeconds: 20
+            timeoutSeconds: 5
+          {{- with .Values.infra.mysql.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: initdb
+          configMap:
+            name: mysql-initdb
+        {{- if .Values.infra.mysql.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: mysql-data
+        {{- else }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+---
+{{- if .Values.infra.mysql.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-data
+  labels:
+    {{- include "easywing.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+spec:
+  accessModes:
+    - {{ .Values.infra.mysql.persistence.accessMode | quote }}
+  storageClassName: {{ include "easywing.storageClass" . }}
+  resources:
+    requests:
+      storage: {{ .Values.infra.mysql.persistence.size | quote }}
+{{- end }}
+{{- end }}

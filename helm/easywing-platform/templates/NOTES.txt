@@ -1,0 +1,34 @@
+EasyWing Platform 已安装：{{ .Release.Name }}（命名空间 {{ .Release.Namespace }}）
+
+访问方式：
+{{- if .Values.ingress.enabled }}
+  Ingress：http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.host }}/
+{{- else }}
+{{- if eq .Values.services.gateway.serviceType "NodePort" }}
+  网关 NodePort：http://<节点IP>:{{ .Values.services.gateway.nodePort }}/
+{{- else }}
+  网关当前为 ClusterIP，请按需切换为 NodePort/LoadBalancer，或启用 ingress.enabled：
+    kubectl port-forward -n {{ .Release.Namespace }} svc/gateway 8080:8080
+{{- end }}
+{{- end }}
+
+服务清单：
+  gateway     {{ .Values.services.gateway.port }}
+  auth        {{ .Values.services.auth.port }}
+  system      {{ .Values.services.system.port }}
+  ai          {{ .Values.services.ai.port }}
+  led         {{ .Values.services.led.port }}
+
+健康检查：
+  kubectl get pods -n {{ .Release.Namespace }}
+  kubectl logs -n {{ .Release.Namespace }} deploy/auth-service
+
+内置账号（密码来自 values secrets.adminPassword / secrets.userPassword）：
+  admin / {{ .Values.secrets.adminPassword }}
+  user  / {{ .Values.secrets.userPassword }}
+  ⚠ 请在生产环境通过 --set 覆盖以上默认口令。
+
+后续步骤：
+  1. 配置模型 Provider 密钥（OPENAI_API_KEY 等）后重启 ai-service；
+  2. 如需对外提供 Agent 定义管理，配置 secrets.machineClients 并重启 auth-service；
+  3. 生产环境建议关闭注册：services.auth.env.ALLOW_REGISTRATION=false。

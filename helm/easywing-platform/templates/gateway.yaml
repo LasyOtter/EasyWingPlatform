@@ -1,0 +1,90 @@
+{{- if .Values.services.gateway.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.services.gateway.name }}
+  labels:
+    {{- include "easywing.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+spec:
+  type: {{ .Values.services.gateway.serviceType }}
+  selector:
+    app.kubernetes.io/name: {{ include "easywing.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: gateway
+  ports:
+    - name: http
+      port: {{ .Values.services.gateway.port }}
+      targetPort: http
+      {{- if eq .Values.services.gateway.serviceType "NodePort" }}
+      nodePort: {{ .Values.services.gateway.nodePort }}
+      {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.services.gateway.name }}
+  labels:
+    {{- include "easywing.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+spec:
+  replicas: {{ .Values.services.gateway.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "easywing.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "easywing.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: gateway
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: gateway
+          image: {{ include "easywing.image" .Values.services.gateway }}
+          imagePullPolicy: {{ include "easywing.pullPolicy" . }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.services.gateway.port }}
+          envFrom:
+            - configMapRef:
+                name: easywing-config
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: prod
+            - name: JAVA_OPTS
+              value: {{ .Values.services.gateway.javaOpts | quote }}
+            {{- range $k, $v := .Values.services.gateway.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: REDIS_PASSWORD
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+          {{- with .Values.services.gateway.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

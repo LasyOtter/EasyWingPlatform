@@ -63,3 +63,10 @@
 - `easywing.auth.user-store=redis`：共享用户库；`memory` 仅用于本地开发（默认，重启丢失）。
 - `ALLOW_REGISTRATION=false`：默认关闭注册。
 - `easywing.auth.oauth2.*` / `easywing.auth.ldap.*`：默认关闭，密钥经环境变量注入。
+
+## 部署层
+
+- Docker Compose：已完成。根 `docker-compose.yml` 覆盖 MySQL/Redis/Nacos + auth/system/ai/led/gateway 五个服务 + Sentinel/MinIO/RocketMQ/Zipkin/Prometheus/Grafana；`easywing-platform-samples/docker-compose.yml` 为精简版。镜像由 5 个多阶段 Dockerfile 构建（构建上下文为仓库根目录，Dockerfile 内含 Maven 构建阶段）。
+- Kubernetes：已完成（新增 `helm/easywing-platform/`）。Chart 含 ConfigMap、Secret、MySQL/Redis/Nacos 与五个服务的 Deployment/Service，以及可选 PVC 与 Ingress；`values.yaml` 覆盖 `global`/`infra`/`services`/`secrets`/`ingress`。已用 `helm lint` 与 `helm template` 验证渲染（默认值与一组覆盖值各渲染 22 个文档），并交叉校验所有 `secretKeyRef`/`configMapKeyRef` 均能在渲染出的 Secret/ConfigMap 中找到对应键——据此修正了 `NACOS_MYSQL_PASSWORD`、`ANTHROPIC_API_KEY`、`GOOGLE_API_KEY`、`AZURE_OPENAI_API_KEY`、`AZURE_OPENAI_BASE_URL`、`AZURE_OPENAI_API_VERSION`、`AZURE_OPENAI_DEPLOYMENT` 共 7 个缺失键。
+- 本地 Maven 开发：已完成，三条路径的统一说明见 `docs/EasyWingPlatform_部署指南.md`。
+- 未完成/未验证：当前环境无可用 Kubernetes 集群，Chart 仅完成渲染级验证（`helm lint` + `helm template` + 引用完整性校验），未做真实 `helm install` 与端到端部署验证。

@@ -1,0 +1,247 @@
+# EasyWing Platform Helm Chart 默认值。
+#
+# 安全约定：
+#   - 所有密钥/口令均通过 values 或外部 Secret 注入，Chart 内不保存真实凭据。
+#   - 部署前必须修改 infra.mysql.rootPassword / infra.mysql.password /
+#     infra.nacos.authToken / secrets.adminPassword / secrets.userPassword /
+#     secrets.defaultPassword，或通过 --set 覆盖。
+#   - 生产环境保持 ALLOW_REGISTRATION=false（默认即为 false）。
+#
+# 服务镜像需先构建并推送到可访问的仓库：
+#   docker build -t <registry>/easywing/auth-service:1.0.0 -f easywing-platform-auth/Dockerfile .
+#   docker push <registry>/easywing/auth-service:1.0.0
+
+global:
+  namespace: easywing
+  timezone: Asia/Shanghai
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
+  # 为空表示使用集群默认 StorageClass
+  storageClassName: ""
+  nacosNamespace: ""
+  nacosGroup: DEFAULT_GROUP
+  labels: {}
+
+infra:
+  mysql:
+    enabled: true
+    repository: mysql
+    tag: "8.0"
+    digest: ""
+    rootPassword: "change-me-root-password"
+    user: easywing
+    password: "change-me-user-password"
+    databases:
+      - easywing_platform
+      - easywing_system
+      - easywing_auth
+      - easywing_ai
+      - easywing_led
+      - nacos
+    port: 3306
+    serviceType: ClusterIP
+    persistence:
+      enabled: true
+      size: 10Gi
+      accessMode: ReadWriteOnce
+    resources: {}
+    args:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+
+  redis:
+    enabled: true
+    repository: redis
+    tag: "7-alpine"
+    digest: ""
+    password: ""
+    port: 6379
+    serviceType: ClusterIP
+    persistence:
+      enabled: true
+      size: 5Gi
+      accessMode: ReadWriteOnce
+    resources: {}
+
+  nacos:
+    enabled: true
+    repository: nacos/nacos-server
+    tag: v3.3.0
+    digest: ""
+    port: 8848
+    grpcPort: 9848
+    authToken: "change-me-nacos-auth-token-please-replace-with-32bytes"
+    identityKey: serverIdentity
+    identityValue: security
+    jvmXms: 512m
+    jvmXmx: 512m
+    jvmXmn: 256m
+    mysql:
+      host: mysql
+      port: 3306
+      database: nacos
+      user: root
+      password: ""
+    serviceType: ClusterIP
+    resources: {}
+
+services:
+  auth:
+    enabled: true
+    name: auth-service
+    repository: easywing/auth-service
+    tag: "1.0.0"
+    digest: ""
+    port: 8085
+    replicaCount: 1
+    serviceType: ClusterIP
+    javaOpts: "-XX:+UseG1GC -XX:MaxGCPauseMillis=100 -Xms128m -Xmx256m -Djava.security.egd=file:/dev/./urandom"
+    resources: {}
+    jwtKey:
+      enabled: true
+      mountPath: /app/keys
+      persistence:
+        enabled: true
+        size: 1Gi
+        accessMode: ReadWriteOnce
+    env:
+      NACOS_DISCOVERY_ENABLED: "true"
+      USER_STORE: redis
+      ALLOW_REGISTRATION: "false"
+      REQUIRE_EMAIL_VERIFICATION: "true"
+      REGISTRATION_DEFAULT_TENANT: default
+      JWT_ISSUER: https://auth.easywing.com
+      JWT_ACCESS_TOKEN_TTL: 30m
+      JWT_REFRESH_TOKEN_TTL: 7d
+      JWT_KEY_ID: easywing-key-1
+      EMAIL_ENABLED: "false"
+      EMAIL_FROM: no-reply@easywing.com
+      EMAIL_VERIFY_BASE_URL: http://localhost:5173
+      EMAIL_VERIFY_TTL: 24h
+      EMAIL_RESET_TTL: 1h
+      EMAIL_SMTP_HOST: ""
+      EMAIL_SMTP_PORT: "587"
+      EMAIL_SMTP_USERNAME: ""
+      EMAIL_SMTP_START_TLS: "true"
+      LDAP_ENABLED: "false"
+      LDAP_URL: ldap://localhost:389
+      LDAP_BASE_DN: ""
+      LDAP_USER_SEARCH_BASE: ""
+      LDAP_USER_SEARCH_FILTER: "(uid={0})"
+      LDAP_MANAGER_DN: ""
+      LDAP_DEFAULT_TENANT: default
+      OAUTH2_ENABLED: "false"
+      OAUTH2_DEFAULT_TENANT: default
+
+  system:
+    enabled: true
+    name: system-service
+    repository: easywing/system-service
+    tag: "1.0.0"
+    digest: ""
+    port: 8083
+    replicaCount: 1
+    serviceType: ClusterIP
+    javaOpts: "-XX:+UseG1GC -XX:MaxGCPauseMillis=100 -Xms256m -Xmx512m -Djava.security.egd=file:/dev/./urandom"
+    resources: {}
+    env:
+      NACOS_DISCOVERY_ENABLED: "true"
+      DATABASE_URL: "jdbc:mysql://mysql:3306/easywing_system?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true"
+      DATABASE_USERNAME: easywing
+      JWK_SET_URI: http://auth-service:8085/.well-known/jwks.json
+      ISSUER_URI: https://auth.easywing.com
+
+  ai:
+    enabled: true
+    name: ai-service
+    repository: easywing/ai-service
+    tag: "1.0.0"
+    digest: ""
+    port: 8082
+    replicaCount: 1
+    serviceType: ClusterIP
+    javaOpts: "-XX:+UseG1GC -XX:MaxGCPauseMillis=100 -Xms256m -Xmx512m -Djava.security.egd=file:/dev/./urandom"
+    resources: {}
+    env:
+      NACOS_DISCOVERY_ENABLED: "true"
+      AI_SERVER_PORT: "8082"
+      AI_AGENT_DEF_ENABLED: "true"
+      AI_AGENT_DEF_STORAGE_TYPE: redis
+      AI_MULTIMODAL_ENABLED: "true"
+      AI_IMAGE_GENERATION_ENABLED: "false"
+      AI_WORKSPACE_ENABLED: "false"
+      AI_SHARE_ENABLED: "false"
+      AI_WEB_SEARCH_ENABLED: "false"
+
+  gateway:
+    enabled: true
+    name: gateway
+    repository: easywing/gateway
+    tag: "1.0.0"
+    digest: ""
+    port: 8080
+    replicaCount: 1
+    serviceType: NodePort
+    nodePort: 30080
+    javaOpts: "-XX:+UseG1GC -XX:MaxGCPauseMillis=100 -Xms256m -Xmx512m -XX:MaxDirectMemorySize=100m -Djava.security.egd=file:/dev/./urandom -Dspring.main.lazy-initialization=true -Dspring.main.web-application-type=reactive"
+    resources: {}
+    env:
+      NACOS_DISCOVERY_ENABLED: "true"
+      JWT_ISSUER: https://auth.easywing.com
+      JWT_JWK_SET_URI: http://auth-service:8085/.well-known/jwks.json
+
+  led:
+    enabled: true
+    name: led-service
+    repository: easywing/led-service
+    tag: "1.0.0"
+    digest: ""
+    port: 8084
+    replicaCount: 1
+    serviceType: ClusterIP
+    javaOpts: "-XX:+UseG1GC -XX:MaxGCPauseMillis=100 -Xms128m -Xmx256m -Djava.security.egd=file:/dev/./urandom"
+    resources: {}
+    env:
+      NACOS_DISCOVERY_ENABLED: "true"
+      LED_BASE_DIR: /app
+      JWK_SET_URI: http://auth-service:8085/.well-known/jwks.json
+
+secrets:
+  adminPassword: "change-me-admin"
+  userPassword: "change-me-user"
+  defaultPassword: "change-me-default"
+  openaiApiKey: ""
+  anthropicApiKey: ""
+  googleApiKey: ""
+  azureApiKey: ""
+  azureBaseUrl: ""
+  azureApiVersion: "2024-06-01"
+  azureDeployment: gpt-4o
+  responsesApiKey: ""
+  responsesBaseUrl: "https://api.openai.com/v1"
+  vertexAccessToken: ""
+  vertexBaseUrl: ""
+  bedrockAccessKey: ""
+  bedrockSecretKey: ""
+  bedrockSessionToken: ""
+  bedrockRegion: us-east-1
+  ldapManagerPassword: ""
+  emailSmtpPassword: ""
+  # deployment-bound 机器客户端（client_credentials），scope 例：agent-management
+  # machineClients:
+  #   agent-service:
+  #     enabled: true
+  #     clientId: agent-service
+  #     clientSecret: "replace-me"
+  #     scopes: [agent-management]
+  #     tenant: default
+  #     tokenTtl: PT1H
+  machineClients: {}
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  host: easywing.example.com
+  tls: []

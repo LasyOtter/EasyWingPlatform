@@ -1,0 +1,164 @@
+{{- if .Values.services.ai.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.services.ai.name }}
+  labels:
+    {{- include "easywing.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ai
+spec:
+  type: {{ .Values.services.ai.serviceType }}
+  selector:
+    app.kubernetes.io/name: {{ include "easywing.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: ai
+  ports:
+    - name: http
+      port: {{ .Values.services.ai.port }}
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.services.ai.name }}
+  labels:
+    {{- include "easywing.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ai
+spec:
+  replicas: {{ .Values.services.ai.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "easywing.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: ai
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "easywing.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: ai
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: ai
+          image: {{ include "easywing.image" .Values.services.ai }}
+          imagePullPolicy: {{ include "easywing.pullPolicy" . }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.services.ai.port }}
+          envFrom:
+            - configMapRef:
+                name: easywing-config
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: prod
+            - name: JAVA_OPTS
+              value: {{ .Values.services.ai.javaOpts | quote }}
+            {{- range $k, $v := .Values.services.ai.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: REDIS_PASSWORD
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: OPENAI_API_KEY
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: ANTHROPIC_API_KEY
+            - name: GOOGLE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: GOOGLE_API_KEY
+            - name: AZURE_OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: AZURE_OPENAI_API_KEY
+            - name: AZURE_OPENAI_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: AZURE_OPENAI_BASE_URL
+            - name: AZURE_OPENAI_API_VERSION
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: AZURE_OPENAI_API_VERSION
+            - name: AZURE_OPENAI_DEPLOYMENT
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: AZURE_OPENAI_DEPLOYMENT
+            - name: RESPONSES_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: RESPONSES_API_KEY
+            - name: RESPONSES_API_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: RESPONSES_API_BASE_URL
+            - name: VERTEX_AI_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: VERTEX_AI_ACCESS_TOKEN
+            - name: VERTEX_AI_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: VERTEX_AI_BASE_URL
+            - name: BEDROCK_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: BEDROCK_ACCESS_KEY
+            - name: BEDROCK_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: BEDROCK_SECRET_KEY
+            - name: BEDROCK_SESSION_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: BEDROCK_SESSION_TOKEN
+            - name: BEDROCK_REGION
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: BEDROCK_REGION
+            - name: JWK_SET_URI
+              value: http://auth-service:8085/.well-known/jwks.json
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 15
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 80
+            periodSeconds: 20
+            timeoutSeconds: 5
+          {{- with .Values.services.ai.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

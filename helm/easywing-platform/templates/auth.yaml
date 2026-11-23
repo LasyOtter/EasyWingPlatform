@@ -1,0 +1,143 @@
+{{- if .Values.services.auth.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.services.auth.name }}
+  labels:
+    {{- include "easywing.labels" . | nindent 4 }}
+    app.kubernetes.io/component: auth
+spec:
+  type: {{ .Values.services.auth.serviceType }}
+  selector:
+    app.kubernetes.io/name: {{ include "easywing.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: auth
+  ports:
+    - name: http
+      port: {{ .Values.services.auth.port }}
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.services.auth.name }}
+  labels:
+    {{- include "easywing.labels" . | nindent 4 }}
+    app.kubernetes.io/component: auth
+spec:
+  replicas: {{ .Values.services.auth.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "easywing.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: auth
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "easywing.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: auth
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: auth
+          image: {{ include "easywing.image" .Values.services.auth }}
+          imagePullPolicy: {{ include "easywing.pullPolicy" . }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.services.auth.port }}
+          envFrom:
+            - configMapRef:
+                name: easywing-config
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: prod
+            - name: JAVA_OPTS
+              value: {{ .Values.services.auth.javaOpts | quote }}
+            {{- range $k, $v := .Values.services.auth.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: REDIS_PASSWORD
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: ADMIN_PASSWORD
+            - name: USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: USER_PASSWORD
+            - name: EMAIL_SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: EMAIL_SMTP_PASSWORD
+            - name: LDAP_MANAGER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: LDAP_MANAGER_PASSWORD
+            {{- if .Values.services.auth.jwtKey.enabled }}
+            - name: EASYWING_AUTH_JWT_KEY_PATH
+              value: {{ .Values.services.auth.jwtKey.mountPath }}/jwt-key.pem
+            {{- end }}
+            {{- if .Values.secrets.machineClients }}
+            - name: SPRING_APPLICATION_JSON
+              value: {{ include "easywing.machineClientsJson" . | quote }}
+            {{- end }}
+          {{- if .Values.services.auth.jwtKey.enabled }}
+          volumeMounts:
+            - name: jwt-key
+              mountPath: {{ .Values.services.auth.jwtKey.mountPath }}
+          {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+          {{- with .Values.services.auth.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- if .Values.services.auth.jwtKey.enabled }}
+      volumes:
+        - name: jwt-key
+          persistentVolumeClaim:
+            claimName: auth-jwt-key
+      {{- end }}
+---
+{{- if and .Values.services.auth.jwtKey.enabled .Values.services.auth.jwtKey.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: auth-jwt-key
+  labels:
+    {{- include "easywing.labels" . | nindent 4 }}
+    app.kubernetes.io/component: auth
+spec:
+  accessModes:
+    - {{ .Values.services.auth.jwtKey.persistence.accessMode | quote }}
+  storageClassName: {{ include "easywing.storageClass" . }}
+  resources:
+    requests:
+      storage: {{ .Values.services.auth.jwtKey.persistence.size | quote }}
+{{- end }}
+{{- end }}

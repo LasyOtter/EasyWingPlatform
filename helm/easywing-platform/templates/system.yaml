@@ -1,0 +1,107 @@
+{{- if .Values.services.system.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.services.system.name }}
+  labels:
+    {{- include "easywing.labels" . | nindent 4 }}
+    app.kubernetes.io/component: system
+spec:
+  type: {{ .Values.services.system.serviceType }}
+  selector:
+    app.kubernetes.io/name: {{ include "easywing.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: system
+  ports:
+    - name: http
+      port: {{ .Values.services.system.port }}
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.services.system.name }}
+  labels:
+    {{- include "easywing.labels" . | nindent 4 }}
+    app.kubernetes.io/component: system
+spec:
+  replicas: {{ .Values.services.system.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "easywing.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: system
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "easywing.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: system
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: system
+          image: {{ include "easywing.image" .Values.services.system }}
+          imagePullPolicy: {{ include "easywing.pullPolicy" . }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.services.system.port }}
+          envFrom:
+            - configMapRef:
+                name: easywing-config
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: prod
+            - name: JAVA_OPTS
+              value: {{ .Values.services.system.javaOpts | quote }}
+            {{- range $k, $v := .Values.services.system.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: REDIS_PASSWORD
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: MYSQL_PASSWORD
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: MYSQL_PASSWORD
+            - name: DEFAULT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: easywing-secrets
+                  key: DEFAULT_PASSWORD
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 15
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 80
+            periodSeconds: 20
+            timeoutSeconds: 5
+          {{- with .Values.services.system.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}
