@@ -76,7 +76,6 @@ import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -1454,15 +1453,15 @@ public class AiGatewayController {
     }
 
     private String tenantId(Jwt jwt) {
-        String tenantId = jwt.getClaimAsString("tenant_id");
-        return tenantId == null || tenantId.isBlank() ? "default" : tenantId;
+        return AgentCaller.tenantIdOf(jwt);
     }
 
     private AgentCaller agentCaller(Jwt jwt) {
-        if (jwt == null || !StringUtils.hasText(jwt.getSubject())) {
+        AgentCaller caller = AgentCaller.fromJwt(jwt);
+        if (caller == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
-        return AgentCaller.fromJwt(jwt);
+        return caller;
     }
 
     private void appendAssistantMessage(ConversationSession session, ChatCompletionResponse response) {

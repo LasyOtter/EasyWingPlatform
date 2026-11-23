@@ -69,4 +69,40 @@ class AgentCallerTest {
         AgentCaller caller = AgentCaller.fromJwt(jwt("u1", "tenant-a", "g1", "admin"));
         assertThat(caller.groups()).containsExactly("g1", "admin");
     }
+
+    @Test
+    @DisplayName("租户声明回退到 tenantId，空白归一为 default")
+    void shouldFallbackTenantClaim() {
+        var builder = Jwt.withTokenValue("token").header("alg", "RS256").subject("u1");
+        assertThat(AgentCaller.fromJwt(builder.claim("tenantId", "tenant-b").build())
+                        .tenantId())
+                .isEqualTo("tenant-b");
+        assertThat(AgentCaller.fromJwt(builder.claim("tenant_id", "  ").build()).tenantId())
+                .isEqualTo("default");
+        assertThat(AgentCaller.tenantIdOf(null)).isEqualTo("default");
+    }
+
+    @Test
+    @DisplayName("逗号或空白分隔的声明按多个令牌拆分")
+    void shouldSplitCompositeClaims() {
+        AgentCaller caller = AgentCaller.fromJwt(jwt("u1", "tenant-a", "g1 g2", "admin,ops"));
+        assertThat(caller.groups()).containsExactly("g1", "g2", "admin", "ops");
+    }
+
+    @Test
+    @DisplayName("额外 claim 仅在显式请求时并入群组")
+    void shouldMergeAdditionalClaimsOnDemand() {
+        var builder = Jwt.withTokenValue("token")
+                .header("alg", "RS256")
+                .subject("machine-client")
+                .claim("groups", java.util.List.of())
+                .claim("roles", java.util.List.of())
+                .claim("scope", "workspace-management other")
+                .claim("scp", java.util.List.of("read"));
+        Jwt token = builder.build();
+
+        assertThat(AgentCaller.fromJwt(token).groups()).isEmpty();
+        assertThat(AgentCaller.fromJwt(token, "scope", "scp").groups())
+                .containsExactly("workspace-management", "other", "read");
+    }
 }

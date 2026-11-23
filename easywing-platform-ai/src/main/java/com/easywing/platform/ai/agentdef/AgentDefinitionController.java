@@ -1,21 +1,16 @@
 package com.easywing.platform.ai.agentdef;
 
 import com.easywing.platform.ai.gateway.ApiVersion;
-import com.easywing.platform.ai.session.SessionOwnership;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -107,66 +102,22 @@ public class AgentDefinitionController {
     @PreAuthorize("hasAuthority('SCOPE_agent-management')")
     @Operation(summary = "列举租户内全部 Agent 定义（机器客户端）", description = "需 deployment-bound 机器客户端令牌，scope=agent-management")
     public Mono<ResponseEntity<List<AgentDefinition>>> listAll(@AuthenticationPrincipal Jwt jwt) {
-        return service.listAll(tenantId(jwt)).map(ResponseEntity::ok);
+        return service.listAll(AgentCaller.tenantIdOf(jwt)).map(ResponseEntity::ok);
     }
 
     @DeleteMapping("/admin/{id}")
     @PreAuthorize("hasAuthority('SCOPE_agent-management')")
     @Operation(summary = "删除租户内任意 Agent 定义（机器客户端）", description = "需 deployment-bound 机器客户端令牌，scope=agent-management")
     public Mono<ResponseEntity<Void>> deleteAny(@AuthenticationPrincipal Jwt jwt, @PathVariable String id) {
-        return service.deleteAny(tenantId(jwt), id)
+        return service.deleteAny(AgentCaller.tenantIdOf(jwt), id)
                 .then(Mono.just(ResponseEntity.noContent().build()));
     }
 
     private static AgentCaller caller(Jwt jwt) {
-        if (jwt == null || !StringUtils.hasText(jwt.getSubject())) {
+        AgentCaller caller = AgentCaller.fromJwt(jwt);
+        if (caller == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "缺少用户身份");
         }
-        return new AgentCaller(jwt.getSubject(), tenantId(jwt), groups(jwt));
-    }
-
-    private static String tenantId(Jwt jwt) {
-        Object tenant = jwt == null ? null : jwt.getClaim("tenant_id");
-        if (tenant == null && jwt != null) {
-            tenant = jwt.getClaim("tenantId");
-        }
-        return tenant == null ? SessionOwnership.DEFAULT_TENANT : tenant.toString();
-    }
-
-    private static List<String> groups(Jwt jwt) {
-        Set<String> result = new LinkedHashSet<>();
-        result.addAll(claimAsList(jwt, "groups"));
-        result.addAll(claimAsList(jwt, "roles"));
-        return new ArrayList<>(result);
-    }
-
-    private static List<String> claimAsList(Jwt jwt, String claim) {
-        if (jwt == null) {
-            return List.of();
-        }
-        Object value = jwt.getClaim(claim);
-        if (value == null) {
-            return List.of();
-        }
-        List<String> result = new ArrayList<>();
-        if (value instanceof List<?> list) {
-            for (Object item : list) {
-                addAll(result, item == null ? null : item.toString());
-            }
-        } else {
-            addAll(result, value.toString());
-        }
-        return result;
-    }
-
-    private static void addAll(List<String> target, String value) {
-        if (!StringUtils.hasText(value)) {
-            return;
-        }
-        for (String part : value.split("[,\\s]+")) {
-            if (StringUtils.hasText(part)) {
-                target.add(part.trim());
-            }
-        }
+        return caller;
     }
 }
