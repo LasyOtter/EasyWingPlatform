@@ -24,6 +24,18 @@ easywing:
       storage-type: redis
     trace:
       storage-type: redis
+    # 多实例共享的目录类状态一并落到 Redis（PRD 5.3 无状态后端、4.7 租户与共享隔离）：
+    # Agent 定义、Prompt 库、会话共享链接、Attached Workspaces。
+    # custom-endpoint-store 刻意保持 memory：Redis 模式会把 apiKey 明文写入 Redis，
+    # 需由运维显式设置 AI_CUSTOM_ENDPOINT_STORAGE=redis 并确保 Redis 受 ACL/TLS 保护。
+    agent-def:
+      storage-type: redis
+    prompt:
+      storage-type: redis
+    share:
+      storage-type: redis
+    workspace:
+      storage-type: redis
     responses:
       enabled: ${RESPONSES_API_ENABLED:false}
       api-key: ${RESPONSES_API_KEY:}
