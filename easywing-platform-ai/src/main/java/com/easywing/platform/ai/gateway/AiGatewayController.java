@@ -1122,7 +1122,9 @@ public class AiGatewayController {
 
     @GetMapping("/sessions")
     public Mono<ResponseEntity<List<ConversationSession>>> listSessions(@AuthenticationPrincipal Jwt jwt) {
-        return sessionManager.getUserSessions(requiredUserId(jwt)).map(ResponseEntity::ok);
+        return sessionManager
+                .getUserSessions(requiredUserId(jwt), AgentCaller.tenantIdOf(jwt))
+                .map(ResponseEntity::ok);
     }
 
     @PostMapping("/sessions")
