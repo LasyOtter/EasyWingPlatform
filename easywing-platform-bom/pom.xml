@@ -165,6 +165,12 @@
 
             <dependency>
                 <groupId>com.easywing.platform</groupId>
+                <artifactId>easywing-platform-aid</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.easywing.platform</groupId>
                 <artifactId>easywing-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
