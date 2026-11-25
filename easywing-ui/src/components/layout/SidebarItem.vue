@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { isExternalLink } from '@/utils/route'
+import i18n from '@/locales'
 
 const props = defineProps<{
   item: any
@@ -10,6 +11,15 @@ const props = defineProps<{
 
 const router = useRouter()
 const route = useRoute()
+
+/** 菜单标题：优先按 titleKey 翻译，兼容后端下发的 title。 */
+const displayTitle = (item: any): string => {
+  const key = item?.meta?.titleKey
+  if (key && i18n.global.te(key)) {
+    return i18n.global.t(key)
+  }
+  return item?.meta?.title ?? ''
+}
 
 const hasOneShowingChild = computed(() => {
   const children = props.item.children || []
@@ -56,7 +66,7 @@ const handleLink = () => {
         <component :is="item.meta.icon" />
       </el-icon>
       <template #title>
-        <span>{{ item.meta?.title }}</span>
+        <span>{{ displayTitle(item) }}</span>
       </template>
     </el-menu-item>
   </template>
@@ -66,7 +76,7 @@ const handleLink = () => {
       <el-icon v-if="item.meta?.icon">
         <component :is="item.meta.icon" />
       </el-icon>
-      <span>{{ item.meta?.title }}</span>
+      <span>{{ displayTitle(item) }}</span>
     </template>
     <template v-for="child in item.children" :key="child.path">
       <template v-if="!child.meta?.isHide">
@@ -79,7 +89,7 @@ const handleLink = () => {
           <el-icon v-if="child.meta?.icon">
             <component :is="child.meta.icon" />
           </el-icon>
-          <span>{{ child.meta?.title }}</span>
+          <span>{{ displayTitle(child) }}</span>
         </el-menu-item>
       </template>
     </template>

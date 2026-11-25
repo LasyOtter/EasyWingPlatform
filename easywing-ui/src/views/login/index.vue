@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, FormInstance, FormRules } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
 
+const { t } = useI18n()
+const appTitle = import.meta.env.VITE_APP_TITLE || 'EasyWing Platform'
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
@@ -17,8 +20,8 @@ const loginForm = reactive({
 })
 
 const rules: FormRules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  username: [{ required: true, message: t('login.usernamePlaceholder'), trigger: 'blur' }],
+  password: [{ required: true, message: t('login.passwordPlaceholder'), trigger: 'blur' }]
 }
 
 // 登录
@@ -30,11 +33,11 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
       try {
         loading.value = true
         await userStore.login(loginForm)
-        ElMessage.success('登录成功')
+        ElMessage.success(t('common.success'))
         const redirect = (route.query.redirect as string) || '/'
         router.push(redirect)
       } catch (error) {
-        ElMessage.error('登录失败')
+        ElMessage.error(t('login.loginFailed'))
       } finally {
         loading.value = false
       }
@@ -50,10 +53,10 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
       <!-- 左侧装饰 -->
       <div class="login-left">
         <div class="login-intro">
-          <h1>EasyWing Platform</h1>
-          <p>企业级后台管理系统</p>
+          <h1>{{ appTitle }}</h1>
+          <p>{{ t('login.subtitle') }}</p>
           <ul>
-            <li>微服务架构</li>
+            <li>{{ t('login.featureMicroservice') }}</li>
             <li>Spring Cloud Alibaba</li>
             <li>Spring Boot 3.x</li>
             <li>Vue 3.0</li>
@@ -64,7 +67,7 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
       <!-- 右侧表单 -->
       <div class="login-right">
         <div class="login-form">
-          <div class="title">欢迎登录</div>
+          <div class="title">{{ t('login.welcome') }}</div>
 
           <el-form
             ref="loginFormRef"
@@ -76,7 +79,7 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
             <el-form-item prop="username">
               <el-input
                 v-model="loginForm.username"
-                placeholder="用户名"
+                :placeholder="t('login.usernamePlaceholder')"
                 prefix-icon="User"
                 clearable
               />
@@ -86,7 +89,7 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
               <el-input
                 v-model="loginForm.password"
                 type="password"
-                placeholder="密码"
+                :placeholder="t('login.passwordPlaceholder')"
                 prefix-icon="Lock"
                 show-password
                 clearable
@@ -101,13 +104,13 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
                 class="login-btn"
                 @click="handleLogin(loginFormRef)"
               >
-                {{ loading ? '登录中...' : '登 录' }}
+                {{ loading ? t('login.loggingIn') : t('login.submit') }}
               </el-button>
             </el-form-item>
           </el-form>
 
           <div class="login-tip">
-            <span>默认账号：admin（密码见服务端日志，或设置 ADMIN_PASSWORD）</span>
+            <span>{{ t('login.defaultAccountTip') }}</span>
           </div>
         </div>
       </div>

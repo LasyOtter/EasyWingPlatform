@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
 import { usePermissionStore } from '@/store/modules/permission'
 
+const { t } = useI18n()
 const userStore = useUserStore()
 const permissionStore = usePermissionStore()
 
@@ -19,7 +21,7 @@ onMounted(async () => {
       await permissionStore.generateRoutes()
     } catch (error) {
       console.error('Initialization failed:', error)
-      ElMessage.error('获取用户信息失败，请重新登录')
+      ElMessage.error(t('app.initFailed'))
       userStore.logout()
     }
   }

@@ -14,6 +14,9 @@ dependencies:
   axios:
     specifier: ^1.8.0
     version: 1.21.1
+  dompurify:
+    specifier: 3.2.4
+    version: 3.2.4
   element-plus:
     specifier: ^2.9.0
     version: 2.14.8(vue@3.5.45)
@@ -23,6 +26,9 @@ dependencies:
   lodash-es:
     specifier: ^4.17.21
     version: 4.18.1
+  marked:
+    specifier: 15.0.7
+    version: 15.0.7
   normalize.css:
     specifier: ^8.0.1
     version: 8.0.1
@@ -38,6 +44,9 @@ dependencies:
   vue:
     specifier: ^3.5.0
     version: 3.5.45(typescript@5.6.3)
+  vue-i18n:
+    specifier: 9.14.5
+    version: 9.14.5(vue@3.5.45)
   vue-router:
     specifier: ^4.5.0
     version: 4.6.5(vue@3.5.45)
@@ -46,6 +55,9 @@ dependencies:
     version: 3.5.2
 
 devDependencies:
+  '@types/dompurify':
+    specifier: 3.0.5
+    version: 3.0.5
   '@types/js-cookie':
     specifier: ^3.0.6
     version: 3.0.6
@@ -112,6 +124,9 @@ devDependencies:
   vitest:
     specifier: ^2.1.9
     version: 2.1.9(@types/node@20.19.43)(sass@1.108.2)(terser@5.51.2)
+  vue-eslint-parser:
+    specifier: ^9.4.3
+    version: 9.4.3(eslint@8.57.1)
   vue-tsc:
     specifier: ~2.1.10
     version: 2.1.10(typescript@5.6.3)
@@ -907,6 +922,27 @@ packages:
     deprecated: Use @eslint/object-schema instead
     dev: true
 
+  /@intlify/core-base@9.14.5:
+    resolution: {integrity: sha512-5ah5FqZG4pOoHjkvs8mjtv+gPKYU0zCISaYNjBNNqYiaITxW8ZtVih3GS/oTOqN8d9/mDLyrjD46GBApNxmlsA==}
+    engines: {node: '>= 16'}
+    dependencies:
+      '@intlify/message-compiler': 9.14.5
+      '@intlify/shared': 9.14.5
+    dev: false
+
+  /@intlify/message-compiler@9.14.5:
+    resolution: {integrity: sha512-IHzgEu61/YIpQV5Pc3aRWScDcnFKWvQA9kigcINcCBXN8mbW+vk9SK+lDxA6STzKQsVJxUPg9ACC52pKKo3SVQ==}
+    engines: {node: '>= 16'}
+    dependencies:
+      '@intlify/shared': 9.14.5
+      source-map-js: 1.2.2
+    dev: false
+
+  /@intlify/shared@9.14.5:
+    resolution: {integrity: sha512-9gB+E53BYuAEMhbCAxVgG38EZrk59sxBtv3jSizNL2hEWlgjBjAw1AwpLHtNaeda12pe6W20OGEa0TwuMSRbyQ==}
+    engines: {node: '>= 16'}
+    dev: false
+
   /@jridgewell/gen-mapping@0.3.13:
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
     dependencies:
@@ -1385,6 +1421,12 @@ packages:
     resolution: {integrity: sha512-wOwESXvvED3S8xBmcPWHs2dUuzrE4XiZeFu7e1hROIJkm02a49N120pmOXxY33sBb6hArItm5W5tcg1cBtV+HQ==}
     dev: false
 
+  /@types/dompurify@3.0.5:
+    resolution: {integrity: sha512-1Wg0g3BtQF7sSb27fJQAKck1HECM6zV1EB66j8JH9i3LCjYabJa0FSdiSgsD5K/RbrsR0SiraKacLB+T8ZVYAg==}
+    dependencies:
+      '@types/trusted-types': 2.0.7
+    dev: true
+
   /@types/estree@1.0.10:
     resolution: {integrity: sha512-lTyOMnOcmRBzdCv6/4zUZCrEhV0xrqQiUZBZtVcbmLHBXKLnN8q89v/wKRF/Q0HbwVsqbIG3o5HDoFl9sduM+g==}
     dev: true
@@ -1416,6 +1458,10 @@ packages:
     dependencies:
       '@types/node': 20.19.43
     dev: true
+
+  /@types/trusted-types@2.0.7:
+    resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
+    requiresBuild: true
 
   /@types/web-bluetooth@0.0.21:
     resolution: {integrity: sha512-oIQLCGWtcFZy2JW77j9k8nHzAOpqMHLQejDA48XXMWH6tjCQHz5RCFz1bzsmROyL6PUm+LLnUiI4BCn221inxA==}
@@ -2579,6 +2625,12 @@ packages:
     dependencies:
       domelementtype: 2.3.0
     dev: true
+
+  /dompurify@3.2.4:
+    resolution: {integrity: sha512-ysFSFEDVduQpyhzAob/kkuJjf5zWkZD8/A9ywSp1byueyuCfHamrCBa14/Oc2iiB0e51B+NpxSl5gmzn+Ms/mg==}
+    optionalDependencies:
+      '@types/trusted-types': 2.0.7
+    dev: false
 
   /domutils@1.7.0:
     resolution: {integrity: sha512-Lgd2XcJ/NjEw+7tFvfKxOzCYKZsdct5lczQ2ZaQY8Djz7pfAD3Gbp8ySJWtreII/vDlMVmxwa6pHmdxIYgttDg==}
@@ -4065,6 +4117,12 @@ packages:
     dependencies:
       object-visit: 1.0.1
     dev: true
+
+  /marked@15.0.7:
+    resolution: {integrity: sha512-dgLIeKGLx5FwziAnsk4ONoGwHwGPJzselimvlVskE9XLN4Orv9u2VA3GWw/lYUqjfA0rUT/6fqKwfZJapP9BEg==}
+    engines: {node: '>= 18'}
+    hasBin: true
+    dev: false
 
   /math-intrinsics@1.1.0:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
@@ -5774,6 +5832,19 @@ packages:
     transitivePeerDependencies:
       - supports-color
     dev: true
+
+  /vue-i18n@9.14.5(vue@3.5.45):
+    resolution: {integrity: sha512-0jQ9Em3ymWngyiIkj0+c/k7WgaPO+TNzjKSNq9BvBQaKJECqn9cd9fL4tkDhB5G1QBskGl9YxxbDAhgbFtpe2g==}
+    engines: {node: '>= 16'}
+    deprecated: v9 and v10 no longer supported. please migrate to v11. about maintenance status, see https://vue-i18n.intlify.dev/guide/maintenance.html
+    peerDependencies:
+      vue: ^3.0.0
+    dependencies:
+      '@intlify/core-base': 9.14.5
+      '@intlify/shared': 9.14.5
+      '@vue/devtools-api': 6.6.4
+      vue: 3.5.45(typescript@5.6.3)
+    dev: false
 
   /vue-router@4.6.5(vue@3.5.45):
     resolution: {integrity: sha512-HBoGqixpB2ej1kI17NotdOatUdKIsi3yfOQ5vhwAhcoHk90+JtwtIy7MEeOqdPi1+npmQVMEu5F+Hvw+3TU48w==}

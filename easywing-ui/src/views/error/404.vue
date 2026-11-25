@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const router = useRouter()
 
 const handleBack = () => {
@@ -11,9 +13,9 @@ const handleBack = () => {
 <template>
   <div class="error-container">
     <div class="error-content">
-      <div class="error-code">404</div>
-      <div class="error-message">抱歉，您访问的页面不存在</div>
-      <el-button type="primary" @click="handleBack">返回首页</el-button>
+      <div class="error-code">{{ t('error.page404') }}</div>
+      <div class="error-message">{{ t('error.page404Desc') }}</div>
+      <el-button type="primary" @click="handleBack">{{ t('error.backHome') }}</el-button>
     </div>
   </div>
 </template>

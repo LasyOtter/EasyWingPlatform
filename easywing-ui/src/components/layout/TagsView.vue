@@ -2,10 +2,20 @@
 import { ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { usePermissionStore } from '@/store/modules/permission'
+import i18n from '@/locales'
 
 const router = useRouter()
 const route = useRoute()
 const permissionStore = usePermissionStore()
+
+/** 标签标题：优先按 titleKey 翻译。 */
+const displayTitle = (view: any): string => {
+  const key = view?.meta?.titleKey
+  if (key && i18n.global.te(key)) {
+    return i18n.global.t(key)
+  }
+  return view?.meta?.title ?? ''
+}
 
 const visitedViews = ref<any[]>([])
 const affixTags = ref<any[]>([])
@@ -71,7 +81,7 @@ initTags()
         class="tags-view-item"
         :class="{ active: isActive(tag) }"
       >
-        {{ tag.meta?.title }}
+        {{ displayTitle(tag) }}
         <span
           v-if="!tag.meta?.noClose"
           class="el-icon-close"

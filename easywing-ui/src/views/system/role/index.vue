@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const tableData = ref([
   { roleId: 1, roleName: '超级管理员', roleKey: 'admin', roleSort: 1, status: '0', createTime: '2024-01-01' },
@@ -11,25 +14,25 @@ const tableData = ref([
   <div class="role-management">
     <el-card shadow="never">
       <template #header>
-        <span>角色管理</span>
+        <span>{{ t('route.roleManagement') }}</span>
       </template>
       <el-table :data="tableData" stripe>
-        <el-table-column prop="roleId" label="角色编号" width="100" align="center" />
-        <el-table-column prop="roleName" label="角色名称" align="center" />
-        <el-table-column prop="roleKey" label="权限字符" align="center" />
-        <el-table-column prop="roleSort" label="显示顺序" width="100" align="center" />
-        <el-table-column prop="status" label="状态" width="100" align="center">
+        <el-table-column prop="roleId" :label="t('system.roleId')" width="100" align="center" />
+        <el-table-column prop="roleName" :label="t('system.roleName')" align="center" />
+        <el-table-column prop="roleKey" :label="t('system.roleKey')" align="center" />
+        <el-table-column prop="roleSort" :label="t('system.roleSort')" width="100" align="center" />
+        <el-table-column prop="status" :label="t('common.status')" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="row.status === '0' ? 'success' : 'danger'">
-              {{ row.status === '0' ? '正常' : '停用' }}
+              {{ row.status === '0' ? t('system.normal') : t('system.disabled') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" width="180" align="center" />
-        <el-table-column label="操作" width="200" align="center">
+        <el-table-column prop="createTime" :label="t('system.createTime')" width="180" align="center" />
+        <el-table-column :label="t('common.actions')" width="200" align="center">
           <template #default>
-            <el-button type="primary" link>编辑</el-button>
-            <el-button type="danger" link>删除</el-button>
+            <el-button type="primary" link>{{ t('common.edit') }}</el-button>
+            <el-button type="danger" link>{{ t('common.delete') }}</el-button>
           </template>
         </el-table-column>
       </el-table>

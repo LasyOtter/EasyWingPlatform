@@ -1,43 +1,47 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/store/modules/user'
 
+const { t } = useI18n()
 const userStore = useUserStore()
 
 const userInfo = computed(() => userStore.userInfo)
 const nickName = computed(() => userInfo.value?.nickName || userInfo.value?.userName || 'Admin')
 
-// 统计数据
+// 统计数据：titleKey 指向语言包词条
 const statisticsData = ref([
   {
-    title: '访问量',
+    titleKey: 'dashboard.visits',
     value: '10,284',
     increase: '+12.5%',
     icon: 'View',
     color: '#409eff'
   },
   {
-    title: '用户数',
+    titleKey: 'dashboard.users',
     value: '8,542',
     increase: '+8.2%',
     icon: 'User',
     color: '#67c23a'
   },
   {
-    title: '订单数',
+    titleKey: 'dashboard.orders',
     value: '3,215',
     increase: '+5.3%',
     icon: 'ShoppingCart',
     color: '#e6a23c'
   },
   {
-    title: '销售额',
+    titleKey: 'dashboard.sales',
     value: '¥125,680',
     increase: '+15.8%',
     icon: 'Money',
     color: '#f56c6c'
   }
 ])
+
+const statTitle = (item: { titleKey: string }) => t(item.titleKey)
 
 onMounted(() => {
   // 获取仪表盘数据
@@ -51,8 +55,8 @@ onMounted(() => {
       <el-col :span="24">
         <div class="welcome-card">
           <div class="welcome-content">
-            <h2>欢迎回来，{{ nickName }}！</h2>
-            <p>今天是美好的一天，让我们开始工作吧！</p>
+            <h2>{{ t('dashboard.welcome', { name: nickName }) }}</h2>
+            <p>{{ t('dashboard.welcomeSubtitle') }}</p>
           </div>
           <div class="welcome-illustration">
             <img src="@/assets/images/logo.svg" alt="welcome" />
@@ -67,11 +71,11 @@ onMounted(() => {
         <el-card shadow="hover" class="stat-card">
           <div class="stat-content">
             <div class="stat-info">
-              <div class="stat-title">{{ item.title }}</div>
+              <div class="stat-title">{{ statTitle(item) }}</div>
               <div class="stat-value">{{ item.value }}</div>
               <div class="stat-increase">
                 <span :style="{ color: item.color }">{{ item.increase }}</span>
-                <span class="text-gray">较上月</span>
+                <span class="text-gray">{{ t('dashboard.sinceLastMonth') }}</span>
               </div>
             </div>
             <div class="stat-icon" :style="{ backgroundColor: item.color + '15' }">
@@ -90,25 +94,25 @@ onMounted(() => {
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
-              <span>快捷入口</span>
+              <span>{{ t('dashboard.quickEntry') }}</span>
             </div>
           </template>
           <div class="quick-entry-grid">
             <div class="quick-entry-item">
               <el-icon :size="32" color="#409eff"><User /></el-icon>
-              <span>用户管理</span>
+              <span>{{ t('route.userManagement') }}</span>
             </div>
             <div class="quick-entry-item">
               <el-icon :size="32" color="#67c23a"><Role /></el-icon>
-              <span>角色管理</span>
+              <span>{{ t('route.roleManagement') }}</span>
             </div>
             <div class="quick-entry-item">
               <el-icon :size="32" color="#e6a23c"><Menu /></el-icon>
-              <span>菜单管理</span>
+              <span>{{ t('route.menuManagement') }}</span>
             </div>
             <div class="quick-entry-item">
               <el-icon :size="32" color="#f56c6c"><Setting /></el-icon>
-              <span>系统设置</span>
+              <span>{{ t('header.settings') }}</span>
             </div>
           </div>
         </el-card>
