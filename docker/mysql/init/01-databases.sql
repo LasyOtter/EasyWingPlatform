@@ -14,6 +14,8 @@ CREATE DATABASE IF NOT EXISTS easywing_ai
     DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE IF NOT EXISTS easywing_led
     DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS easywing_aid
+    DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- 开发用账号（与 compose 中的 MYSQL_USER / MYSQL_PASSWORD 一致）
 CREATE USER IF NOT EXISTS 'easywing'@'%' IDENTIFIED BY 'easywing123456';
@@ -22,4 +24,5 @@ GRANT ALL PRIVILEGES ON easywing_system.* TO 'easywing'@'%';
 GRANT ALL PRIVILEGES ON easywing_auth.* TO 'easywing'@'%';
 GRANT ALL PRIVILEGES ON easywing_ai.* TO 'easywing'@'%';
 GRANT ALL PRIVILEGES ON easywing_led.* TO 'easywing'@'%';
+GRANT ALL PRIVILEGES ON easywing_aid.* TO 'easywing'@'%';
 FLUSH PRIVILEGES;

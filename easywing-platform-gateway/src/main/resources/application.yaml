@@ -57,6 +57,12 @@ spring:
             - Path=/api/v1/ai/**
           filters:
             - StripPrefix=0
+        - id: aid-service
+          uri: lb://aid-service
+          predicates:
+            - Path=/api/v1/aid/**
+          filters:
+            - StripPrefix=0
         - id: user-service
           uri: lb://user-service
           predicates:
@@ -146,6 +152,8 @@ easywing:
         - /api/v1/ai/health
         # 会话共享链接只读视图：令牌即凭据，公开但受限流保护
         - /api/v1/ai/shared/**
+        # AID 参考图回显：<img> 不带 Authorization 头；文件名为 UUID 且需命中存储目录，不可遍历
+        - /api/v1/aid/assets/files/**
       user-id-claim-name: sub
       username-claim-name: preferred_username
       roles-claim-name: roles

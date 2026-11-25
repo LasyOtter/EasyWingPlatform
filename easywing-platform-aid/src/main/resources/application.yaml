@@ -1,6 +1,29 @@
+server:
+  port: ${AID_SERVER_PORT:8086}
+  shutdown: graceful
+  tomcat:
+    threads:
+      virtual: true
+
 spring:
   application:
     name: aid-service
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/easywing_aid?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 30000
+      pool-name: AidServiceHikariCP
+      max-lifetime: 1800000
+      connection-timeout: 30000
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
   servlet:
     multipart:
       max-file-size: 512MB
@@ -24,6 +47,21 @@ spring:
           max-idle: 10
           min-idle: 2
         shutdown-timeout: 100ms
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  global-config:
+    db-config:
+      id-type: assign_id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
 
 easywing:
   aid:
@@ -55,6 +93,21 @@ easywing:
       subtitle-font: ${AID_FFMPEG_SUB_FONT:Microsoft YaHei}
       subtitle-font-size: ${AID_FFMPEG_SUB_SIZE:22}
 
+    # 参考图/产物存储：M1 用本地磁盘 + 静态资源端点，生产换对象存储只改实现
+    storage:
+      enabled: ${AID_STORAGE_ENABLED:true}
+      base-dir: ${AID_STORAGE_DIR:${java.io.tmpdir}/easywing-aid/assets}
+      public-path: /api/v1/aid/assets/files
+      max-file-size: ${AID_STORAGE_MAX_SIZE:20971520}
+      allowed-extensions: jpg,jpeg,png,webp,gif
+
+  data:
+    audit-enabled: ${AID_AUDIT_ENABLED:true}
+    # 多租户：M1 先关闭。TenantLineInnerInterceptor 在 tenantEnabled=true 且
+    # TenantContext 无值时会退化为 tenant_id = 0，导致所有数据互不可见，
+    # 因此开启前必须先接入 JWT tenant_id claim → TenantContext 的过滤器。
+    tenant-enabled: ${AID_TENANT_ENABLED:false}
+
   security:
     public-paths:
       - /actuator/**
@@ -66,9 +119,6 @@ easywing:
         jwk-set-uri: ${JWK_SET_URI:http://auth-service/.well-known/jwks.json}
         authorities-claim-name: roles
         username-claim-name: preferred_username
-
-server:
-  port: ${AID_SERVER_PORT:8086}
 
 springdoc:
   api-docs:
