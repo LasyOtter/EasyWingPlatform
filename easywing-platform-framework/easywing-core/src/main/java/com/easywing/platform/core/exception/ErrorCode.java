@@ -103,6 +103,32 @@ public final class ErrorCode {
     public static final String REQUEST_DUPLICATE = "IDEM001";
     public static final String RATE_LIMIT_EXCEEDED = "RATE003";
 
+    // ==================== AID 漫剧工坊错误 ====================
+    /** 项目 / 分集 / 资产 / 分镜等资源不存在 */
+    public static final String AID_RESOURCE_NOT_FOUND = "AID001";
+    /** 资产编号在项目内重复 */
+    public static final String AID_ASSET_CODE_EXISTS = "AID002";
+    /** 生成任务不存在 */
+    public static final String AID_TASK_NOT_FOUND = "AID003";
+    /** 任务状态不允许该操作（如对已完成任务重新生成） */
+    public static final String AID_TASK_STATE_INVALID = "AID004";
+    /** 上游 Provider 调用失败 */
+    public static final String AID_PROVIDER_ERROR = "AID005";
+    /** Provider 参数超出模型能力（分辨率/时长/比例/参考图数量） */
+    public static final String AID_CAPABILITY_EXCEEDED = "AID006";
+    /** 引用的资产在当前项目内不存在 */
+    public static final String AID_ASSET_REF_UNRESOLVED = "AID007";
+    /** 提示词命中禁用词 */
+    public static final String AID_PROMPT_BANNED_WORD = "AID008";
+    /** 并发槽位已满，任务排队中 */
+    public static final String AID_SLOT_FULL = "AID009";
+    /** 余额不足，无法预冻结 */
+    public static final String AID_BALANCE_INSUFFICIENT = "AID010";
+    /** FFmpeg 合成失败 */
+    public static final String AID_FFMPEG_FAILED = "AID011";
+    /** 导出任务已过期或产物已被清理 */
+    public static final String AID_EXPORT_EXPIRED = "AID012";
+
     // ==================== 错误信息映射 ====================
     private static final Map<String, ErrorInfo> ERROR_MAP = new HashMap<>();
 
@@ -155,6 +181,20 @@ public final class ErrorCode {
 
         // 幂等性错误
         register(REQUEST_DUPLICATE, TOO_MANY_REQUESTS_STATUS, "Duplicate Request", "请求处理中，请勿重复提交");
+
+        // AID 漫剧工坊
+        register(AID_RESOURCE_NOT_FOUND, NOT_FOUND_STATUS, "AID Resource Not Found", "创作资源不存在");
+        register(AID_ASSET_CODE_EXISTS, CONFLICT_STATUS, "AID Asset Code Exists", "资产编号在项目内已存在");
+        register(AID_TASK_NOT_FOUND, NOT_FOUND_STATUS, "AID Task Not Found", "生成任务不存在");
+        register(AID_TASK_STATE_INVALID, UNPROCESSABLE_ENTITY_STATUS, "AID Task State Invalid", "当前任务状态不允许该操作");
+        register(AID_PROVIDER_ERROR, SERVICE_UNAVAILABLE_STATUS, "AID Provider Error", "上游模型服务调用失败");
+        register(AID_CAPABILITY_EXCEEDED, BAD_REQUEST_STATUS, "AID Capability Exceeded", "参数超出目标模型的能力范围");
+        register(AID_ASSET_REF_UNRESOLVED, BAD_REQUEST_STATUS, "AID Asset Reference Unresolved", "提示词引用了不存在的资产");
+        register(AID_PROMPT_BANNED_WORD, UNPROCESSABLE_ENTITY_STATUS, "AID Prompt Banned Word", "提示词命中禁用词");
+        register(AID_SLOT_FULL, TOO_MANY_REQUESTS_STATUS, "AID Slot Full", "并发槽位已满，任务已排队");
+        register(AID_BALANCE_INSUFFICIENT, UNPROCESSABLE_ENTITY_STATUS, "AID Balance Insufficient", "账户余额不足");
+        register(AID_FFMPEG_FAILED, INTERNAL_SERVER_ERROR_STATUS, "AID FFmpeg Failed", "视频合成失败");
+        register(AID_EXPORT_EXPIRED, NOT_FOUND_STATUS, "AID Export Expired", "导出产物已过期或已被清理");
     }
 
     private static void register(String code, int status, String title, String message) {
