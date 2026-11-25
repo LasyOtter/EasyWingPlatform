@@ -1,0 +1,99 @@
+spring:
+  application:
+    name: aid-service
+  servlet:
+    multipart:
+      max-file-size: 512MB
+      max-request-size: 512MB
+  cloud:
+    nacos:
+      discovery:
+        enabled: ${NACOS_DISCOVERY_ENABLED:false}
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:0}
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 2
+        shutdown-timeout: 100ms
+
+easywing:
+  aid:
+    # 任务队列：redis-stream（默认）| local（无 Redis 降级，对应 NFR-9 / FR-10.9）
+    queue:
+      type: ${AID_QUEUE_TYPE:redis-stream}
+      stream-key: ${AID_QUEUE_STREAM:aid:tasks}
+      group: ${AID_QUEUE_GROUP:aid-workers}
+      consumer-threads: ${AID_QUEUE_THREADS:2}
+      batch-size: ${AID_QUEUE_BATCH:32}
+      block-timeout-ms: ${AID_QUEUE_BLOCK_MS:2000}
+      poll-interval-ms: ${AID_QUEUE_POLL_MS:200}
+      reclaim-interval-ms: ${AID_QUEUE_RECLAIM_INTERVAL_MS:30000}
+      reclaim-min-idle-ms: ${AID_QUEUE_RECLAIM_MIN_IDLE_MS:60000}
+      dedup-ttl-seconds: ${AID_QUEUE_DEDUP_TTL:86400}
+      max-len: ${AID_QUEUE_MAX_LEN:100000}
+
+    # FFmpeg：成片合成、配音对位、字幕烧录、首尾帧抽取
+    ffmpeg:
+      enabled: ${AID_FFMPEG_ENABLED:true}
+      binary-path: ${AID_FFMPEG_BIN:ffmpeg}
+      probe-path: ${AID_FFMPEG_PROBE:ffprobe}
+      work-dir: ${AID_FFMPEG_WORK_DIR:${java.io.tmpdir}/easywing-aid}
+      timeout-ms: ${AID_FFMPEG_TIMEOUT_MS:300000}
+      default-resolution: ${AID_FFMPEG_RESOLUTION:1280x720}
+      default-frame-rate: ${AID_FFMPEG_FPS:25}
+      video-bitrate: ${AID_FFMPEG_BITRATE:2M}
+      audio-sample-rate: ${AID_FFMPEG_AUDIO_RATE:44100}
+      subtitle-font: ${AID_FFMPEG_SUB_FONT:Microsoft YaHei}
+      subtitle-font-size: ${AID_FFMPEG_SUB_SIZE:22}
+
+  security:
+    public-paths:
+      - /actuator/**
+      - /api/v1/aid/health
+      - /swagger-ui/**
+      - /v3/api-docs/**
+    oauth2:
+      jwt:
+        jwk-set-uri: ${JWK_SET_URI:http://auth-service/.well-known/jwks.json}
+        authorities-claim-name: roles
+        username-claim-name: preferred_username
+
+server:
+  port: ${AID_SERVER_PORT:8086}
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+  enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.easywing.platform.aid: INFO
