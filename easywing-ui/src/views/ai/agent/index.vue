@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
+
+const { t } = useI18n()
 import {
   ChatDotRound,
   Plus,
@@ -84,7 +87,7 @@ const getAgentConfigData = async () => {
       agentSettings.model = res.availableModels[0].id
     }
   } catch (error) {
-    console.error('获取Agent配置失败:', error)
+    console.error(t('agent.loadConfigFailed'), error)
   } finally {
     configLoading.value = false
   }
@@ -96,7 +99,7 @@ const getSessionsData = async () => {
     const res = await getSessions('default')
     sessions.value = res || []
   } catch (error) {
-    console.error('获取会话列表失败:', error)
+    console.error(t('agent.loadSessionsFailed'), error)
   } finally {
     sessionsLoading.value = false
   }
@@ -116,7 +119,7 @@ const loadConversation = async (sessionId: string) => {
     }))
     scrollToBottom()
   } catch (error) {
-    console.error('加载会话失败:', error)
+    console.error(t('agent.loadConversationFailed'), error)
   } finally {
     memoryLoading.value = false
   }
@@ -124,7 +127,7 @@ const loadConversation = async (sessionId: string) => {
 
 const handleCreateSession = async () => {
   if (!newSessionName.value.trim()) {
-    ElMessage.warning('请输入会话名称')
+    ElMessage.warning(t('agent.sessionNameRequired'))
     return
   }
   try {
@@ -135,16 +138,16 @@ const handleCreateSession = async () => {
     messages.value = []
     showSessionDialog.value = false
     newSessionName.value = ''
-    ElMessage.success('会话创建成功')
+    ElMessage.success(t('agent.sessionCreated'))
   } catch (error) {
-    console.error('创建会话失败:', error)
-    ElMessage.error('创建会话失败')
+    console.error(t('agent.createSessionFailed'), error)
+    ElMessage.error(t('agent.createSessionFailed'))
   }
 }
 
 const handleDeleteSession = async (session: ConversationSession) => {
   try {
-    await ElMessageBox.confirm(`确定要删除会话"${session.name}"吗？`, '提示', { type: 'warning' })
+    await ElMessageBox.confirm(t('agent.deleteSessionConfirm', { name: session.name }), t('common.tip'), { type: 'warning' })
     await deleteSession(session.id)
     sessions.value = sessions.value.filter(s => s.id !== session.id)
     if (currentSessionId.value === session.id) {
@@ -152,10 +155,10 @@ const handleDeleteSession = async (session: ConversationSession) => {
       messages.value = []
       currentConversation.value = null
     }
-    ElMessage.success('删除成功')
+    ElMessage.success(t('common.success'))
   } catch (error: any) {
     if (error !== 'cancel') {
-      console.error('删除会话失败:', error)
+      console.error(t('agent.deleteSessionFailed'), error)
     }
   }
 }
@@ -170,7 +173,7 @@ const scrollToBottom = () => {
 
 const sendMessage = async () => {
   if (!inputMessage.value.trim()) {
-    ElMessage.warning('请输入消息')
+    ElMessage.warning(t('chat.messageRequired'))
     return
   }
 
@@ -247,7 +250,7 @@ const sendMessage = async () => {
       await saveCurrentMemory()
     }
   } catch (error: any) {
-    ElMessage.error(error.message || '发送消息失败')
+    ElMessage.error(error.message || t('chat.sendFailed'))
   } finally {
     sending.value = false
   }
@@ -272,29 +275,29 @@ const saveCurrentMemory = async () => {
     }
     await saveMemory(currentSessionId.value, context)
   } catch (error) {
-    console.error('保存记忆失败:', error)
+    console.error(t('agent.saveMemoryFailed'), error)
   }
 }
 
 const clearHistory = () => {
   messages.value = []
-  ElMessage.success('聊天记录已清空')
+  ElMessage.success(t('chat.cleared'))
 }
 
 const clearMemory = async () => {
   if (!currentSessionId.value) {
-    ElMessage.warning('当前没有活动的会话')
+    ElMessage.warning(t('agent.noActiveSession'))
     return
   }
   try {
-    await ElMessageBox.confirm('确定要清空当前会话的记忆吗？', '提示', { type: 'warning' })
+    await ElMessageBox.confirm(t('agent.clearMemoryConfirm'), t('common.tip'), { type: 'warning' })
     await deleteMemory(currentSessionId.value)
     messages.value = []
     currentConversation.value = null
-    ElMessage.success('记忆已清空')
+    ElMessage.success(t('agent.memoryCleared'))
   } catch (error: any) {
     if (error !== 'cancel') {
-      console.error('清空记忆失败:', error)
+      console.error(t('agent.clearMemoryFailed'), error)
     }
   }
 }
@@ -320,12 +323,12 @@ const handleToolExecute = async (toolName: string) => {
       arguments: {}
     })
     if (res.success) {
-      ElMessage.success(`工具 ${toolName} 执行成功`)
+      ElMessage.success(t('agent.toolSuccess', { name: toolName }))
     } else {
-      ElMessage.error(`工具 ${toolName} 执行失败: ${res.error}`)
+      ElMessage.error(t('agent.toolFailed', { name: toolName, error: res.error }))
     }
   } catch (error: any) {
-    ElMessage.error(`工具执行失败: ${error.message}`)
+    ElMessage.error(t('agent.toolRunFailed', { error: error.message }))
   }
 }
 
@@ -339,7 +342,7 @@ onMounted(() => {
   <div class="ai-agent">
     <div class="agent-sidebar">
       <div class="sidebar-header">
-        <span class="title">会话列表</span>
+        <span class="title">{{ t('chat.conversations') }}</span>
         <el-button
           type="primary"
           :icon="Plus"
@@ -356,13 +359,13 @@ onMounted(() => {
           <el-icon class="is-loading">
             <Loading />
           </el-icon>
-          加载中...
+          {{ t('common.loading') }}
         </div>
         <div
           v-else-if="sessions.length === 0"
           class="empty-tip"
         >
-          暂无会话
+          {{ t('agent.noSessions') }}
         </div>
         <div
           v-for="session in sessions"
@@ -397,7 +400,7 @@ onMounted(() => {
           <div class="card-header">
             <span class="title">
               <el-icon><MagicStick /></el-icon>
-              智能体对话
+              {{ t('route.aiAgent') }}
             </span>
             <div class="actions">
               <el-button
@@ -406,7 +409,7 @@ onMounted(() => {
                 :icon="Delete"
                 @click="clearHistory"
               >
-                清空对话
+                {{ t('chat.clear') }}
               </el-button>
               <el-button
                 type="primary"
@@ -414,7 +417,7 @@ onMounted(() => {
                 :icon="Refresh"
                 @click="getAgentConfigData"
               >
-                刷新配置
+                {{ t('agent.refreshConfig') }}
               </el-button>
             </div>
           </div>
@@ -431,9 +434,9 @@ onMounted(() => {
             <el-icon size="48">
               <ChatDotRound />
             </el-icon>
-            <p>开始与智能体对话</p>
+            <p>{{ t('agent.emptyTitle') }}</p>
             <p class="sub-tip">
-              智能体可以调用工具、使用技能、记忆上下文
+              {{ t('agent.emptySubtitle') }}
             </p>
           </div>
 
@@ -458,7 +461,7 @@ onMounted(() => {
             </div>
             <div class="message-content">
               <div class="message-header">
-                <span class="sender">{{ msg.role === 'user' ? '我' : '智能体' }}</span>
+                <span class="sender">{{ msg.role === 'user' ? t('chat.you') : t('agent.title') }}</span>
                 <span class="time">{{ formatDate(msg.timestamp) }}</span>
               </div>
               <div class="message-body">
@@ -498,8 +501,8 @@ onMounted(() => {
             </div>
             <div class="message-content">
               <div class="message-header">
-                <span class="sender">智能体</span>
-                <span class="time">思考中...</span>
+                <span class="sender">{{ t('agent.title') }}</span>
+                <span class="time">{{ t('chat.thinking') }}</span>
               </div>
               <div class="message-body">
                 <el-icon class="loading">
@@ -515,18 +518,18 @@ onMounted(() => {
             v-model="inputMessage"
             type="textarea"
             :rows="3"
-            placeholder="输入消息，按 Ctrl+Enter 发送"
+            :placeholder="t('chat.inputPlaceholder')"
             resize="none"
             @keydown.ctrl.enter="sendMessage"
           />
           <div class="input-actions">
-            <span class="tip">Ctrl+Enter 发送 | 当前模型: {{ agentSettings.model || '未选择' }}</span>
+            <span class="tip">Ctrl+Enter | {{ t('agent.currentModel') }}: {{ agentSettings.model || t('agent.modelNotSelected') }}</span>
             <el-button
               type="primary"
               :loading="sending"
               @click="sendMessage"
             >
-              发送
+              {{ t('chat.send') }}
             </el-button>
           </div>
         </div>
@@ -539,19 +542,19 @@ onMounted(() => {
         class="config-tabs"
       >
         <el-tab-pane
-          label="配置"
+          :label="t('agent.config')"
           name="config"
         >
           <div class="config-section">
-            <h4><el-icon><ChatDotRound /></el-icon> 模型设置</h4>
+            <h4><el-icon><ChatDotRound /></el-icon> {{ t('agent.modelSettings') }}</h4>
             <el-form
               label-width="80px"
               label-position="left"
             >
-              <el-form-item label="AI 模型">
+              <el-form-item :label="t('agent.aiModel')">
                 <el-select
                   v-model="agentSettings.model"
-                  placeholder="选择模型"
+                  :placeholder="t('chat.selectModel')"
                   style="width: 100%"
                 >
                   <el-option
@@ -562,7 +565,7 @@ onMounted(() => {
                   />
                 </el-select>
               </el-form-item>
-              <el-form-item label="温度">
+              <el-form-item :label="t('chat.temperature')">
                 <el-slider
                   v-model="agentSettings.temperature"
                   :min="0"
@@ -575,26 +578,26 @@ onMounted(() => {
           </div>
 
           <div class="config-section">
-            <h4><el-icon><MagicStick /></el-icon> Agent 设置</h4>
+            <h4><el-icon><MagicStick /></el-icon> {{ t('agent.settings') }}</h4>
             <el-form
               label-width="80px"
               label-position="left"
             >
-              <el-form-item label="最大迭代">
+              <el-form-item :label="t('agent.maxIterations')">
                 <el-input-number
                   v-model="agentSettings.maxIterations"
                   :min="1"
                   :max="50"
                 />
               </el-form-item>
-              <el-form-item label="最大工具调用">
+              <el-form-item :label="t('agent.maxToolCalls')">
                 <el-input-number
                   v-model="agentSettings.maxToolCalls"
                   :min="0"
                   :max="20"
                 />
               </el-form-item>
-              <el-form-item label="系统提示词">
+              <el-form-item :label="t('chat.systemPrompt')">
                 <el-input
                   v-model="agentSettings.systemPrompt"
                   type="textarea"
@@ -606,11 +609,11 @@ onMounted(() => {
         </el-tab-pane>
 
         <el-tab-pane
-          label="工具"
+          :label="t('agent.tools')"
           name="tools"
         >
           <div class="config-section">
-            <h4><el-icon><Tools /></el-icon> 可用工具</h4>
+            <h4><el-icon><Tools /></el-icon> {{ t('agent.availableTools') }}</h4>
             <el-checkbox-group
               v-model="agentSettings.enabledTools"
               class="tool-list"
@@ -623,7 +626,7 @@ onMounted(() => {
               >
                 <div class="tool-info">
                   <span class="tool-name">{{ tool.name }}</span>
-                  <span class="tool-desc">{{ tool.description || '无描述' }}</span>
+                  <span class="tool-desc">{{ tool.description || t('agent.noDescription') }}</span>
                 </div>
                 <el-button
                   size="small"
@@ -631,7 +634,7 @@ onMounted(() => {
                   link
                   @click.stop="handleToolExecute(tool.name)"
                 >
-                  测试
+                  {{ t('agent.test') }}
                 </el-button>
               </el-checkbox>
             </el-checkbox-group>
@@ -639,17 +642,17 @@ onMounted(() => {
               v-if="agentConfig.availableTools.length === 0"
               class="empty-tip"
             >
-              暂无可用工具
+              {{ t('agent.noTools') }}
             </div>
           </div>
         </el-tab-pane>
 
         <el-tab-pane
-          label="技能"
+          :label="t('agent.skills')"
           name="skills"
         >
           <div class="config-section">
-            <h4><el-icon><Collection /></el-icon> 可用技能</h4>
+            <h4><el-icon><Collection /></el-icon> {{ t('agent.availableSkills') }}</h4>
             <el-checkbox-group
               v-model="agentSettings.enabledSkills"
               class="skill-list"
@@ -662,7 +665,7 @@ onMounted(() => {
               >
                 <div class="skill-info">
                   <span class="skill-name">{{ skill.name }}</span>
-                  <span class="skill-desc">{{ skill.description || '无描述' }}</span>
+                  <span class="skill-desc">{{ skill.description || t('agent.noDescription') }}</span>
                   <el-tag
                     v-if="skill.category"
                     size="small"
@@ -677,31 +680,31 @@ onMounted(() => {
               v-if="agentConfig.availableSkills.length === 0"
               class="empty-tip"
             >
-              暂无可用技能
+              {{ t('agent.noSkills') }}
             </div>
           </div>
         </el-tab-pane>
 
         <el-tab-pane
-          label="记忆"
+          :label="t('agent.memory')"
           name="memory"
         >
           <div class="config-section">
-            <h4><el-icon><Memo /></el-icon> 记忆管理</h4>
+            <h4><el-icon><Memo /></el-icon> {{ t('agent.memorySettings') }}</h4>
             <el-form
               label-width="100px"
               label-position="left"
             >
-              <el-form-item label="启用记忆">
+              <el-form-item :label="t('agent.memoryEnabled')">
                 <el-switch v-model="agentSettings.memoryEnabled" />
               </el-form-item>
-              <el-form-item label="当前会话">
-                <span>{{ currentSessionId || '无活动会话' }}</span>
+              <el-form-item :label="t('agent.currentSession')">
+                <span>{{ currentSessionId || t('agent.noActiveSession') }}</span>
               </el-form-item>
-              <el-form-item label="消息数量">
+              <el-form-item :label="t('agent.messageCount')">
                 <span>{{ currentConversation?.messageCount || 0 }}</span>
               </el-form-item>
-              <el-form-item label="创建时间">
+              <el-form-item :label="t('system.createTime')">
                 <span>{{ currentConversation?.createdAt ? formatTime(currentConversation.createdAt) : '-' }}</span>
               </el-form-item>
             </el-form>
@@ -710,7 +713,7 @@ onMounted(() => {
               :icon="Delete"
               @click="clearMemory"
             >
-              清空记忆
+              {{ t('agent.clearMemory') }}
             </el-button>
           </div>
         </el-tab-pane>
@@ -719,26 +722,26 @@ onMounted(() => {
 
     <el-dialog
       v-model="showSessionDialog"
-      title="创建新会话"
+      :title="t('agent.createSession')"
       width="400px"
     >
       <el-form>
-        <el-form-item label="会话名称">
+        <el-form-item :label="t('agent.sessionName')">
           <el-input
             v-model="newSessionName"
-            placeholder="请输入会话名称"
+            :placeholder="t('agent.sessionNamePlaceholder')"
           />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showSessionDialog = false">
-          取消
+          {{ t('common.cancel') }}
         </el-button>
         <el-button
           type="primary"
           @click="handleCreateSession"
         >
-          创建
+          {{ t('common.create') }}
         </el-button>
       </template>
     </el-dialog>

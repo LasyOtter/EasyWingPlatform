@@ -1,9 +1,13 @@
 import { request } from '@/api/core/request'
 
 export interface ChatMessage {
+  id?: string
   role: 'user' | 'assistant' | 'system' | 'tool'
   content: string
   name?: string
+  /** 思考过程（推理模型），后端 ChatMessage#thinking。 */
+  thinking?: string
+  toolCallId?: string
   toolCalls?: ToolCall[]
 }
 
@@ -35,10 +39,15 @@ export interface ModelInfo {
 
 export interface ChatCompletionRequest {
   model: string
+  /** 指定 Provider；为空时由后端按模型路由。 */
+  provider?: string
   messages: ChatMessage[]
   temperature?: number
   maxTokens?: number
   stream?: boolean
+  systemPrompt?: string
+  userId?: string
+  tenantId?: string
 }
 
 export interface ChatCompletionResponse {

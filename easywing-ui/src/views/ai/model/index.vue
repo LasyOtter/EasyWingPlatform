@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import { getModelList, getProviders, type ModelInfo } from '@/api/ai/chat'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const modelList = ref<ModelInfo[]>([])
@@ -16,8 +19,8 @@ const getModels = async () => {
     modelList.value = models || []
     providerList.value = providers || []
   } catch (error) {
-    console.error('获取模型列表失败:', error)
-    ElMessage.error('获取模型列表失败')
+    console.error(t('model.loadFailed'), error)
+    ElMessage.error(t('model.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -39,10 +42,10 @@ interface CapabilityTag {
 
 const getCapabilityTags = (model: ModelInfo): CapabilityTag[] => {
   const tags: CapabilityTag[] = []
-  if (model.supportsStreaming) tags.push({ text: '流式输出', type: 'success' })
-  if (model.supportsTools) tags.push({ text: '工具调用', type: 'warning' })
-  if (model.supportsVision) tags.push({ text: '视觉理解', type: 'info' })
-  if (model.supportsThinking) tags.push({ text: '思考模式', type: 'danger' })
+  if (model.supportsStreaming) tags.push({ text: t('model.capabilityStreaming'), type: 'success' })
+  if (model.supportsTools) tags.push({ text: t('model.capabilityTools'), type: 'warning' })
+  if (model.supportsVision) tags.push({ text: t('model.capabilityVision'), type: 'info' })
+  if (model.supportsThinking) tags.push({ text: t('model.capabilityThinking'), type: 'danger' })
   return tags
 }
 
@@ -65,10 +68,10 @@ onMounted(() => {
       class="search-card"
     >
       <el-form :inline="true">
-        <el-form-item label="提供商">
+        <el-form-item :label="t('model.provider')">
           <el-select
             v-model="selectedProvider"
-            placeholder="全部提供商"
+            :placeholder="t('model.allProviders')"
             clearable
             style="width: 200px"
           >
@@ -86,7 +89,7 @@ onMounted(() => {
             :icon="Refresh"
             @click="getModels"
           >
-            刷新
+            {{ t('common.refresh') }}
           </el-button>
         </el-form-item>
       </el-form>
@@ -98,8 +101,8 @@ onMounted(() => {
     >
       <template #header>
         <div class="card-header">
-          <span class="title">AI 模型列表</span>
-          <span class="total">共 {{ filteredModels().length }} 个模型</span>
+          <span class="title">{{ t('model.title') }}</span>
+          <span class="total">{{ t('model.totalCount', { count: filteredModels().length }) }}</span>
         </div>
       </template>
 
@@ -110,7 +113,7 @@ onMounted(() => {
         style="width: 100%"
       >
         <el-table-column
-          label="模型名称"
+          :label="t('model.name')"
           prop="name"
           width="180"
         >
@@ -122,7 +125,7 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column
-          label="模型ID"
+          :label="t('model.id')"
           prop="id"
           width="200"
         >
@@ -131,7 +134,7 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column
-          label="提供商"
+          :label="t('model.provider')"
           prop="provider"
           width="120"
           align="center"
@@ -143,16 +146,16 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column
-          label="描述"
+          :label="t('model.description')"
           prop="description"
           min-width="200"
         >
           <template #default="{ row }">
-            <span class="description">{{ row.description || '暂无描述' }}</span>
+            <span class="description">{{ row.description || t('model.noDescription') }}</span>
           </template>
         </el-table-column>
         <el-table-column
-          label="上下文窗口"
+          :label="t('model.contextWindow')"
           width="120"
           align="center"
         >
@@ -161,7 +164,7 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column
-          label="最大输出"
+          :label="t('model.maxOutput')"
           width="120"
           align="center"
         >
@@ -170,7 +173,7 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column
-          label="输入价格"
+          :label="t('model.inputPrice')"
           width="100"
           align="center"
         >
@@ -181,11 +184,11 @@ onMounted(() => {
             <span
               v-else
               class="free"
-            >免费</span>
+            >{{ t('model.free') }}</span>
           </template>
         </el-table-column>
         <el-table-column
-          label="输出价格"
+          :label="t('model.outputPrice')"
           width="100"
           align="center"
         >
@@ -196,11 +199,11 @@ onMounted(() => {
             <span
               v-else
               class="free"
-            >免费</span>
+            >{{ t('model.free') }}</span>
           </template>
         </el-table-column>
         <el-table-column
-          label="能力"
+          :label="t('model.capabilities')"
           width="180"
           align="center"
         >
